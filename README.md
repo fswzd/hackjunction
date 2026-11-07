@@ -7,7 +7,19 @@ hackjunction_26.1106 — 多 Agent 自媒体内容系统 · 七角色工作流�
 串成可运行 workflow。七角色业务实现由各队员开发，本层只做接口、状态、路由、
 预算、闸门、版本与恢复；队员真实入口尚未交接，当前以 Mock 接通全流程。
 
-## 快速开始
+## 启动（一键）
+
+```powershell
+.\start.ps1        # .env 加载 → 数据库迁移 → Flask API(5001) → 前端 Vite(4173)
+.\stop.ps1         # 停止
+```
+
+- 前端工作台 `http://127.0.0.1:4173`（默认演示适配器，不依赖后端也可体验）
+- 后端 API `http://127.0.0.1:5001`（`/api/v1/session` 等；数据目录 `birthco-local\data`）
+- 可选参数：`-SkipFrontend` / `-SkipApi` / `-DataDir X:\data`
+- 已知边界（评审 F-01）：队列→工作流自动执行 worker 未接入，业务推进用 CLI 与 Mock 演示驱动
+
+## 快速开始（验证）
 
 ```text
 python -m pip install langgraph==1.1.10 jsonschema pytest
