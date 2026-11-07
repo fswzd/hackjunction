@@ -129,6 +129,9 @@ export default function CourtyardCanvas({
     setZoom: (z: number) => void;
     rushTo: (region: RegionId) => void;
   } | null>(null);
+  // 模型加载完之前滚轮/按钮调过的缩放不能丢
+  const zoomRef = useRef(userZoom);
+  zoomRef.current = userZoom;
   const [labels, setLabels] = useState<
     { region: RegionId; x: number; y: number }[]
   >([]);
@@ -154,7 +157,7 @@ export default function CourtyardCanvas({
     let theta = HOME.theta;
     let phi = HOME.phi;
     let radius = HOME.radius;
-    let baseZoom = 1;
+    let targetZoom = zoomRef.current;
 
     function applyOrbit() {
       const s = Math.sin(phi);
@@ -750,15 +753,13 @@ void main(){ vec2 c=gl_PointCoord-0.5; float d=length(c); if(d>0.5) discard; flo
         onReady();
         api.current = {
           reset: resetView,
+          // 只记目标值，渲染循环里平滑逼近，滚轮不会一格一跳
           setZoom: (z: number) => {
-            baseZoom = z;
-            camera.zoom = z;
-            camera.updateProjectionMatrix();
-            syncLabels();
+            targetZoom = z;
           },
           rushTo,
         };
-        camera.zoom = baseZoom;
+        camera.zoom = targetZoom = zoomRef.current;
         camera.updateProjectionMatrix();
         syncLabels();
         // 沉浸模式整屏挂载时容器尺寸会晚一拍，补两次投影，保证标签一进来就在
@@ -952,6 +953,13 @@ void main(){ vec2 c=gl_PointCoord-0.5; float d=length(c); if(d>0.5) discard; flo
           0.23 + (!reducedMotion && moving ? Math.sin(now * 0.018) * 0.035 : 0);
 
       updateTrail(dt);
+      // 缩放平滑逼近目标值（滚轮一次一格不会瞬移）
+      if (Math.abs(targetZoom - camera.zoom) > 0.0004) {
+        const next = camera.zoom + (targetZoom - camera.zoom) * Math.min(dt * 14, 1);
+        camera.zoom = Math.abs(targetZoom - next) < 0.002 ? targetZoom : next;
+        camera.updateProjectionMatrix();
+        syncLabels();
+      }
       const glowTarget = cursorGlow.visible ? 0.62 : 0;
       const gm = cursorGlowMat.uniforms.uOpacity;
       gm.value += (glowTarget - gm.value) * Math.min(dt * 9, 1);

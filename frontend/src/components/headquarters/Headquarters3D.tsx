@@ -87,19 +87,24 @@ export function Headquarters3D({
   const stageRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
 
-  const clampZoom = (value: number) => Math.min(2.6, Math.max(0.72, value));
+  const clampZoom = (value: number) => Math.min(2.2, Math.max(0.8, value));
   const nudgeZoom = (factor: number) =>
     setUserZoom((current) => clampZoom(current * factor));
 
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
-    // Wheel zooms the scene (ctrl/⌘ still works, plain wheel too, since the
-    // in-card hint now promises 滚轮缩放). Non-passive listener so preventDefault
-    // can stop the page from scrolling while the cursor is over the scene.
+    // Wheel zooms the scene. The step is proportional to the scrolled distance
+    // instead of a fixed ratio per event: trackpads and smooth wheels fire dozens
+    // of tiny events per swipe, and a fixed 10% per event would slam the zoom to
+    // its limit after one flick. Non-passive so the page never scrolls under it.
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
-      nudgeZoom(event.deltaY > 0 ? 0.9 : 1.11);
+      event.stopPropagation();
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1;
+      const step = Math.max(-260, Math.min(260, event.deltaY * unit));
+      if (!step) return;
+      nudgeZoom(Math.pow(1.0009, -step));
     };
     stage.addEventListener("wheel", onWheel, { passive: false });
     return () => stage.removeEventListener("wheel", onWheel);
@@ -149,7 +154,7 @@ export function Headquarters3D({
               aria-label="缩小协作现场"
               title="缩小"
               className="p-2 text-muted transition hover:text-text disabled:opacity-40"
-              disabled={userZoom <= 0.73}
+              disabled={userZoom <= 0.81}
             >
               <ZoomOut size={14} />
             </button>
@@ -162,7 +167,7 @@ export function Headquarters3D({
               aria-label="放大协作现场"
               title="放大"
               className="p-2 text-muted transition hover:text-text disabled:opacity-40"
-              disabled={userZoom >= 2.59}
+              disabled={userZoom >= 2.19}
             >
               <ZoomIn size={14} />
             </button>
