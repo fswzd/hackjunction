@@ -66,6 +66,19 @@ def mark_pending_adapter(db_path, external_account_id: str) -> dict:
                                      status="pending_adapter_setup")
 
 
+def delete_account(db_path, external_account_id: str) -> dict:
+    """回滚接入登记：删除账号行、经验库数据与本地会话文件（登录失败后调用）。"""
+    account = storage.get_external_account(db_path, external_account_id)
+    result = storage.delete_external_account(db_path, external_account_id)
+    try:
+        session_file = Path(_platform_session(account["platform"])
+                            .session_paths(external_account_id))
+        session_file.unlink(missing_ok=True)
+    except Exception:
+        pass  # 会话文件清理尽力而为，不影响删除结果
+    return result
+
+
 def attach_session(db_path, external_account_id: str, session_path: Path) -> dict:
     """扫码登录完成后：登记会话引用与指纹（凭据文件不入库）。"""
     account = storage.get_external_account(db_path, external_account_id)

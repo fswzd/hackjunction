@@ -125,19 +125,22 @@ export function AccountConnect() {
           ? "已启动登录：请在弹出的浏览器窗口中扫码，登录成功后会自动抓取最近作品实绩写入经验库…"
           : "演示模式：正在模拟登录与实绩导入…",
     });
+    let registered: ExternalAccount | null = null;
     try {
-      const account = await client.register({
+      registered = await client.register({
         platform,
         handle: handleValue,
         displayName: displayName.trim(),
       });
-      await refresh();
-      await client.login(account.external_account_id);
-      const status = await pollUntilDone(account.external_account_id);
+      // 登录成功前不入列；失败则回滚登记——账号不添加、库里不留痕
+      await client.login(registered.external_account_id);
+      const status = await pollUntilDone(registered.external_account_id);
       if (status.session_status === "logged_in") {
-        const exp = await client.experience(account.external_account_id);
+        const confirmedId = registered.external_account_id;
+        registered = null; // 已确认登录，后续异常不再回滚
+        const exp = await client.experience(confirmedId);
         setExperience(exp);
-        setExpandedId(account.external_account_id);
+        setExpandedId(confirmedId);
         const importNote = status.import_error
           ? `实绩抓取未完成（${status.import_error}），可稍后“重新抓取”或手动导入。`
           : `已导入 ${status.imported_count} 条作品实绩，基准播放 ${
@@ -148,22 +151,30 @@ export function AccountConnect() {
           text: `登录成功。${importNote}`,
         });
         showToast("账号已接入，实绩已入库作为经验库。", "success");
-      } else if (status.login_error) {
-        setMessage({
-          tone: "error",
-          text: `登录未完成：${status.login_error}。可重试，或用“手动导入 JSON”补录实绩。`,
-        });
       } else {
+        const target = registered.external_account_id;
+        registered = null;
+        await client.remove(target).catch(() => undefined);
+        const reason =
+          status.login_error ??
+          (status.session_status === "logging_in" ? "登录等待超时" : "登录未完成");
         setMessage({
           tone: "error",
-          text: "登录等待超时。可重新点击登录，或用“手动导入 JSON”补录实绩。",
+          text: `登录失败（${reason}），账号未添加。可修改信息后重试；如需补录历史实绩，请用「手动导入 JSON」（会登记该账号）。`,
         });
       }
       await refresh();
     } catch (error) {
+      if (registered) {
+        await client.remove(registered.external_account_id).catch(() => undefined);
+        registered = null;
+        await refresh().catch(() => undefined);
+      }
       setMessage({
         tone: "error",
-        text: error instanceof Error ? error.message : "接入失败，请重试。",
+        text: `登录失败，账号未添加：${
+          error instanceof Error ? error.message : "接入失败，请重试"
+        }。`,
       });
     } finally {
       setBusy("");

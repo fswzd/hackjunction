@@ -182,6 +182,24 @@ def upsert_imported_videos(db_path, external_account_id: str, videos: list[dict]
     return inserted
 
 
+def delete_external_account(db_path, external_account_id: str) -> dict:
+    """删除接入登记及其经验库数据（登录失败后回滚，不留痕）。"""
+    with connect(_db_file(db_path)) as db:
+        with immediate(db):
+            row = db.execute("SELECT id FROM external_accounts WHERE id=?",
+                             (external_account_id,)).fetchone()
+            if row is None:
+                raise KeyError(external_account_id)
+            removed = db.execute(
+                "SELECT COUNT(*) AS n FROM imported_videos WHERE external_account_id=?",
+                (external_account_id,)).fetchone()["n"]
+            db.execute("DELETE FROM imported_videos WHERE external_account_id=?",
+                       (external_account_id,))
+            db.execute("DELETE FROM external_accounts WHERE id=?",
+                       (external_account_id,))
+    return {"deleted": True, "removed_videos": removed}
+
+
 def list_imported_videos(db_path, external_account_id: str) -> list[dict]:
     with connect(_db_file(db_path)) as db:
         rows = db.execute(

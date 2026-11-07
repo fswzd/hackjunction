@@ -119,3 +119,30 @@ def test_status_and_login_unknown_account_returns_404(tmp_path):
             base_url=BASE)
         assert response.status_code == 404
         assert response.get_json()["data"]["error"]["code"] == "NOT_FOUND"
+
+
+def test_delete_external_account_rolls_back_registration(tmp_path):
+    client, headers = _client(tmp_path)
+    external_id = _register(client, headers)
+    videos = {"source": "manual", "videos": [
+        {"platform_video_id": "v1", "title": "作品一", "plays": 1000, "likes": 10},
+        {"platform_video_id": "v2", "plays": 2000, "likes": 20},
+    ]}
+    imported = client.post(f"/api/v1/accounts/external/{external_id}/import",
+                           headers={**headers, "Idempotency-Key": "delexpimport1234567ab"},
+                           base_url=BASE, json=videos).get_json()["data"]
+    assert imported["imported"] == 2
+
+    deleted = client.delete(f"/api/v1/accounts/external/{external_id}",
+                            headers={**headers, "Idempotency-Key": "deleteext1234567890ab"},
+                            base_url=BASE)
+    assert deleted.status_code == 200
+    assert deleted.get_json()["data"]["removed_videos"] == 2, "经验库数据一并回滚"
+    listed = client.get("/api/v1/accounts/external", base_url=BASE).get_json()["data"]
+    assert all(row["external_account_id"] != external_id for row in listed), "列表不留痕"
+    assert client.get(f"/api/v1/accounts/external/{external_id}/status",
+                      base_url=BASE).status_code == 404
+    again = client.delete(f"/api/v1/accounts/external/{external_id}",
+                          headers={**headers, "Idempotency-Key": "deleteext2234567890ab"},
+                          base_url=BASE)
+    assert again.status_code == 404, "重复删除返回 404 而非假成功"

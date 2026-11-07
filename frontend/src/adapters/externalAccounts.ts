@@ -97,6 +97,8 @@ export interface ExternalAccountsClient {
   register(input: RegisterInput): Promise<ExternalAccount>;
   login(externalAccountId: string): Promise<{ session_status: string; next_action?: string }>;
   status(externalAccountId: string): Promise<ExternalAccountStatus>;
+  /** 回滚登记（登录失败后调用）：账号不入列、库里不留痕。 */
+  remove(externalAccountId: string): Promise<{ deleted: boolean }>;
   importAdapter(externalAccountId: string, count?: number): Promise<ImportResult>;
   importManual(externalAccountId: string, videos: ManualVideo[]): Promise<ImportResult>;
   experience(externalAccountId: string): Promise<ExperienceSummary>;
@@ -221,6 +223,13 @@ class ApiExternalAccounts implements ExternalAccountsClient {
   async status(externalAccountId: string) {
     return this.request<ExternalAccountStatus>(
       `/api/v1/accounts/external/${encodeURIComponent(externalAccountId)}/status`,
+    );
+  }
+
+  async remove(externalAccountId: string) {
+    return this.request<{ deleted: boolean }>(
+      `/api/v1/accounts/external/${encodeURIComponent(externalAccountId)}`,
+      { method: "DELETE", headers: await this.writeHeaders() },
     );
   }
 
@@ -431,6 +440,19 @@ class MockExternalAccounts implements ExternalAccountsClient {
       imported_count: account.imported_count,
       baseline_plays: account.baseline_plays,
     };
+  }
+
+  async remove(externalAccountId: string) {
+    let deleted = false;
+    this.mutate((store) => {
+      const before = store.accounts.length;
+      store.accounts = store.accounts.filter(
+        (item) => item.external_account_id !== externalAccountId,
+      );
+      deleted = store.accounts.length < before;
+      delete store.videos[externalAccountId];
+    });
+    return { deleted };
   }
 
   async importAdapter(externalAccountId: string) {

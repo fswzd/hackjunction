@@ -149,6 +149,20 @@ def external_account_status(external_account_id: str):
         return success({"error": {"code": "NOT_FOUND", "detail": "unknown external account"}}, 404)
 
 
+@blueprint.delete("/api/v1/accounts/external/<external_account_id>")
+def remove_external_account(external_account_id: str):
+    """回滚接入登记（登录失败后前端调用）：账号不入列、库里不留痕。"""
+    require_write()
+    db_path = current_app.config["DB_PATH"]
+    storage.ensure_integration_tables(db_path)
+    _login_jobs.pop(external_account_id, None)
+    try:
+        result = intake.delete_account(db_path, external_account_id)
+    except KeyError:
+        return success({"error": {"code": "NOT_FOUND", "detail": "unknown external account"}}, 404)
+    return success({"external_account_id": external_account_id, **result})
+
+
 @blueprint.get("/api/v1/accounts/external/<external_account_id>/experience")
 def external_account_experience(external_account_id: str):
     """经验库聚合：作品实绩汇总、baseline 与热评，供后续分析与选题引用。"""
