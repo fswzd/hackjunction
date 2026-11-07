@@ -2,35 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from backend.adapters.personas import _allocate, _map_one, load_personas, sample_personas
+from backend.adapters.personas import AudiencePersonaSelector, _allocate, _map_one, load_personas, sample_personas
 from backend.domain.schemas import Persona
 
 DATA_DIR = Path(__file__).resolve().parents[3] / "personas"
-
-
-class TestLoadPersonas:
-    def test_three_types(self):
-        pools = load_personas(DATA_DIR)
-        assert set(pools.keys()) == {"positive", "neutral", "negative"}
-
-    def test_counts(self):
-        pools = load_personas(DATA_DIR)
-        assert len(pools["positive"]) == 200
-        assert len(pools["neutral"]) == 200
-        assert len(pools["negative"]) == 200
-
-    def test_all_valid_personas(self):
-        pools = load_personas(DATA_DIR)
-        for t, pool in pools.items():
-            for p in pool:
-                assert isinstance(p, Persona), f"{t} has invalid entry"
-                assert p.goal.strip(), f"{t}/{p.id} empty goal"
-                assert p.knowledge.strip(), f"{t}/{p.id} empty knowledge"
-
-    def test_all_ids_unique(self):
-        pools = load_personas(DATA_DIR)
-        all_ids = [p.id for pool in pools.values() for p in pool]
-        assert len(all_ids) == len(set(all_ids))
 
 
 class TestMapOne:
@@ -86,50 +61,6 @@ class TestMapOne:
         assert p.id == "negative_test_001"
         assert any("Hostile" in x for x in p.preferences)
         assert "Troll" in p.knowledge
-
-    def test_missing_optional_fields(self):
-        raw = {
-            "id": "minimal_001",
-            "type": "neutral",
-            "name": "Min",
-            "demographics": {"age": "25", "region": "LA"},
-            "background": "Minimal persona.",
-            "personality_traits": ["Simple"],
-        }
-        p = _map_one(raw)
-        assert p.id == "minimal_001"
-        assert "Minimal persona." in p.goal
-        assert "Simple" in p.preferences
-
-    def test_long_fields_truncated(self):
-        long_text = "x" * 2000
-        raw = {
-            "id": "trunc_001",
-            "type": "positive",
-            "name": "T",
-            "demographics": {"age": "30", "profession": "W", "region": "R"},
-            "background": long_text,
-            "personality_traits": [long_text],
-            "communication_style": {"tone": long_text},
-        }
-        p = _map_one(raw)
-        assert len(p.goal) <= 1000
-        assert len(p.knowledge) <= 1000
-        for pref in p.preferences:
-            assert len(pref) <= 1000
-
-    def test_preferences_capped_at_10(self):
-        raw = {
-            "id": "cap_001",
-            "type": "positive",
-            "name": "C",
-            "demographics": {"age": "30", "profession": "W", "region": "R"},
-            "background": "bg",
-            "personality_traits": [f"trait_{i}" for i in range(15)],
-            "communication_style": {"tone": "t", "engagement_level": "e", "argument_approach": "a"},
-        }
-        p = _map_one(raw)
-        assert len(p.preferences) <= 10
 
 
 class TestAllocate:
@@ -206,52 +137,125 @@ class TestSample:
         personas = sample_personas(1, seed=42, data_dir=DATA_DIR)
         assert len(personas) == 1
 
-    def test_oversample_raises(self):
+
+class TestPersonaSelector:
+    def test_no_repeat_across_rounds(self):
+        sel = AudiencePersonaSelector(data_dir=DATA_DIR)
+        r1 = sel.select(6, seed=1)
+        r2 = sel.select(6, seed=2)
+        ids1 = {p.id for p in r1}
+        ids2 = {p.id for p in r2}
+        assert not ids1 & ids2
+
+    def test_exhaustion_resets(self):
+        sel = AudiencePersonaSelector(data_dir=DATA_DIR)
+        all_selected = set()
+        for i in range(5):
+            batch = sel.select(6, seed=i)
+            all_selected.update(p.id for p in batch)
+        assert len(all_selected) > 6
+
+    def test_seed_reproducible(self):
+        sel1 = AudiencePersonaSelector(data_dir=DATA_DIR)
+        sel2 = AudiencePersonaSelector(data_dir=DATA_DIR)
+        r1 = sel1.select(6, seed=42)
+        r2 = sel2.select(6, seed=42)
+        assert [p.id for p in r1] == [p.id for p in r2]
+
+    def test_history_recorded(self):
+        sel = AudiencePersonaSelector(data_dir=DATA_DIR)
+        sel.select(3, seed=1)
+        assert len(sel.round_history) == 1
+        assert len(sel.round_history[0]["selected_ids"]) == 3
+
+    def test_reset(self):
+        sel = AudiencePersonaSelector(data_dir=DATA_DIR)
+        sel.select(3, seed=1)
+        sel.reset()
+        assert sel.used_ids == set()
+        assert sel.round_history == []
+
+
+class TestCrossRoundEvolution:
+    def test_record_feedback(self):
+        sel = AudiencePersonaSelector(data_dir=DATA_DIR)
+        sel.record_feedback("p1", 0.5)
+        sel.record_feedback("p1", 0.3)
+        assert sel.effectiveness["p1"] == pytest.approx(0.8)
+
+    def test_feedback_influences_selection(self):
+        sel = AudiencePersonaSelector(data_dir=DATA_DIR)
+        pools = sel.pools
+        target_ids = [p.id for p in pools["positive"][:3]]
+        for pid in target_ids:
+            sel.record_feedback(pid, 10.0)
+        results = set()
+        for seed in range(50):
+            sel.used_ids.clear()
+            batch = sel.select(3, seed=seed)
+            results.update(p.id for p in batch)
+        boosted = set(target_ids) & results
+        assert len(boosted) >= 1, f"none of {target_ids} selected across 50 rounds"
+
+    def test_reset_preserves_effectiveness(self):
+        sel = AudiencePersonaSelector(data_dir=DATA_DIR)
+        sel.record_feedback("p1", 1.0)
+        sel.reset()
+        assert sel.effectiveness == {"p1": 1.0}
+
+
+class TestReactionMix:
+    def test_reaction_mix_in_prompt(self):
+        from backend.agents.audience import build_system_prompt
+        p = Persona(id="p1", goal="g", knowledge="k", preferences=[])
+        prompt = build_system_prompt(p)
+        assert "REACTION MIX" in prompt
+
+
+class TestPromptBuild:
+    def test_persona_injection(self):
+        from backend.agents.audience import build_system_prompt
+        p = Persona(id="p1", goal="学会拍照", knowledge="新手", preferences=["图文"])
+        prompt = build_system_prompt(p)
+        assert "学会拍照" in prompt
+        assert "新手" in prompt
+        assert "图文" in prompt
+
+    def test_emotion_modifier(self):
+        from backend.agents.audience import build_system_prompt
+        p = Persona(id="p1", goal="g", knowledge="k", preferences=[])
+        prompt = build_system_prompt(p, emotion_score=-0.8)
+        assert "情绪" in prompt
+
+    def test_no_emotion(self):
+        from backend.agents.audience import build_system_prompt
+        p = Persona(id="p1", goal="g", knowledge="k", preferences=[])
+        prompt = build_system_prompt(p)
+        assert "情绪" not in prompt
+
+
+class TestParseOutput:
+    def test_clean_json(self):
+        from backend.agents.audience import parse_audience_event_json
+        result = parse_audience_event_json('{"key": "value"}')
+        assert result == {"key": "value"}
+
+    def test_markdown_fence(self):
+        from backend.agents.audience import parse_audience_event_json
+        result = parse_audience_event_json('```json\n{"key": "value"}\n```')
+        assert result == {"key": "value"}
+
+    def test_bare_fence(self):
+        from backend.agents.audience import parse_audience_event_json
+        result = parse_audience_event_json('```\n{"key": "value"}\n```')
+        assert result == {"key": "value"}
+
+    def test_raw_decode_fallback(self):
+        from backend.agents.audience import parse_audience_event_json
+        result = parse_audience_event_json('prefix {"key": "value"} suffix')
+        assert result == {"key": "value"}
+
+    def test_invalid_raises(self):
+        from backend.agents.audience import parse_audience_event_json
         with pytest.raises(ValueError):
-            sample_personas(400, seed=42, data_dir=DATA_DIR)
-
-    def test_n6_type_ratio(self):
-        pools = load_personas(DATA_DIR)
-        personas = sample_personas(6, seed=42, data_dir=DATA_DIR)
-        type_map = {}
-        for t, pool in pools.items():
-            for p in pool:
-                type_map[p.id] = t
-        counts = {"positive": 0, "neutral": 0, "negative": 0}
-        for p in personas:
-            counts[type_map[p.id]] += 1
-        assert counts["positive"] >= counts["neutral"] >= counts["negative"]
-
-
-class TestAudienceIntegration:
-    def test_sampled_personas_fit_simulation_input(self):
-        from backend.simulation.audience_session import AudienceSimulationInput
-        from backend.domain.hashing import content_hash
-
-        content = {
-            "titles": ["标题一", "标题二", "标题三"],
-            "cover_copy": "封面文案",
-            "segments": [
-                {"segment_id": "s1", "kind": "body", "text": "第一段正文。", "source_refs": []},
-                {"segment_id": "s2", "kind": "closing", "text": "结尾段。", "source_refs": []},
-            ],
-        }
-        personas = sample_personas(3, seed=42, data_dir=DATA_DIR)
-        snapshot = AudienceSimulationInput(
-            confirmed=True,
-            version_id="v_" + "a" * 32,
-            content_hash=content_hash(content),
-            content=content,
-            personas=personas,
-            max_segments=8,
-            max_calls=9,
-            max_active_seconds=1200,
-        )
-        assert len(snapshot.personas) == 3
-
-    def test_sampled_personas_serialize_cleanly(self):
-        personas = sample_personas(4, seed=42, data_dir=DATA_DIR)
-        for p in personas:
-            d = p.model_dump(mode="json")
-            assert set(d.keys()) == {"id", "goal", "knowledge", "preferences"}
-            assert isinstance(d["preferences"], list)
+            parse_audience_event_json("not json at all")

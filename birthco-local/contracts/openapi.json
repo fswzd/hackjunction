@@ -12422,6 +12422,557 @@
         "title": "ToolResult[FeedbackRead]",
         "type": "object"
       },
+      "AudienceSimulationInput": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmed": {
+            "const": true,
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "version_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Version Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/ContentDelivery"
+          },
+          "personas": {
+            "items": {
+              "$ref": "#/components/schemas/Persona"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Personas",
+            "type": "array"
+          },
+          "max_segments": {
+            "default": 8,
+            "maximum": 8,
+            "minimum": 1,
+            "title": "Max Segments",
+            "type": "integer"
+          },
+          "max_calls": {
+            "maximum": 48,
+            "minimum": 1,
+            "title": "Max Calls",
+            "type": "integer"
+          },
+          "max_active_seconds": {
+            "default": 1200,
+            "maximum": 1200,
+            "minimum": 1,
+            "title": "Max Active Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "confirmed",
+          "version_id",
+          "content_hash",
+          "content",
+          "personas",
+          "max_calls"
+        ],
+        "title": "AudienceSimulationInput",
+        "type": "object"
+      },
+      "TokenUsage": {
+        "additionalProperties": false,
+        "properties": {
+          "input": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Input"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Output"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Total"
+          },
+          "cached": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cached"
+          },
+          "reasoning": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reasoning"
+          }
+        },
+        "title": "TokenUsage",
+        "type": "object"
+      },
+      "Observation": {
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "seq": {
+            "maximum": 7,
+            "minimum": 0,
+            "title": "Seq",
+            "type": "integer"
+          },
+          "call_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Call Id",
+            "type": "string"
+          },
+          "event": {
+            "$ref": "#/components/schemas/AudienceEvent"
+          }
+        },
+        "required": [
+          "event_id",
+          "seq",
+          "call_id",
+          "event"
+        ],
+        "title": "Observation",
+        "type": "object"
+      },
+      "ObservedSession": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "persona_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Persona Id",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "completed",
+              "exited",
+              "incomplete"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "stop_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "viewer_exit",
+                  "call_budget",
+                  "time_budget",
+                  "unknown_remote_outcome",
+                  "invalid_or_failed_response"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Reason"
+          },
+          "cursor": {
+            "maximum": 8,
+            "minimum": 0,
+            "title": "Cursor",
+            "type": "integer"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/Observation"
+            },
+            "maxItems": 8,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "session_id",
+          "persona_id",
+          "outcome",
+          "stop_reason",
+          "cursor",
+          "events"
+        ],
+        "title": "ObservedSession",
+        "type": "object"
+      },
+      "ObservedCall": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "persona_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Persona Id",
+            "type": "string"
+          },
+          "ordinal": {
+            "maximum": 7,
+            "minimum": 0,
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "mock",
+              "live"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "call_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Call Id",
+            "type": "string"
+          },
+          "input_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "received",
+              "failed",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AudienceEvent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "usage": {
+            "$ref": "#/components/schemas/TokenUsage"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "session_id",
+          "persona_id",
+          "ordinal",
+          "mode",
+          "call_id",
+          "input_hash",
+          "status",
+          "event",
+          "usage",
+          "error"
+        ],
+        "title": "ObservedCall",
+        "type": "object"
+      },
+      "ViewerUsage": {
+        "additionalProperties": false,
+        "properties": {
+          "known_total_tokens": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Known Total Tokens"
+          },
+          "usage_not_reported_calls": {
+            "maximum": 48,
+            "minimum": 0,
+            "title": "Usage Not Reported Calls",
+            "type": "integer"
+          },
+          "remote_outcome_unknown_calls": {
+            "maximum": 48,
+            "minimum": 0,
+            "title": "Remote Outcome Unknown Calls",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "known_total_tokens",
+          "usage_not_reported_calls",
+          "remote_outcome_unknown_calls"
+        ],
+        "title": "ViewerUsage",
+        "type": "object"
+      },
+      "SimulationReport": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "mock",
+              "live"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "medium": {
+            "const": "text",
+            "title": "Medium",
+            "type": "string"
+          },
+          "version_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Version Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "input_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "COMPLETED",
+              "INCOMPLETE",
+              "INTERRUPTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "persona_count": {
+            "maximum": 6,
+            "minimum": 1,
+            "title": "Persona Count",
+            "type": "integer"
+          },
+          "segment_count": {
+            "maximum": 8,
+            "minimum": 1,
+            "title": "Segment Count",
+            "type": "integer"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedSession"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Sessions",
+            "type": "array"
+          },
+          "calls": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedCall"
+            },
+            "maxItems": 48,
+            "title": "Calls",
+            "type": "array"
+          },
+          "calls_attempted": {
+            "maximum": 48,
+            "minimum": 0,
+            "title": "Calls Attempted",
+            "type": "integer"
+          },
+          "call_budget": {
+            "maximum": 48,
+            "minimum": 1,
+            "title": "Call Budget",
+            "type": "integer"
+          },
+          "time_budget_seconds": {
+            "maximum": 1200,
+            "minimum": 1,
+            "title": "Time Budget Seconds",
+            "type": "integer"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/ViewerUsage"
+          },
+          "mock_fixture_exit_ordinal": {
+            "anyOf": [
+              {
+                "maximum": 7,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mock Fixture Exit Ordinal"
+          },
+          "is_simulation": {
+            "const": true,
+            "title": "Is Simulation",
+            "type": "boolean"
+          },
+          "predicts_real_traffic": {
+            "const": false,
+            "title": "Predicts Real Traffic",
+            "type": "boolean"
+          },
+          "automatic_resume": {
+            "const": false,
+            "title": "Automatic Resume",
+            "type": "boolean"
+          },
+          "explicit_new_request_required": {
+            "const": true,
+            "title": "Explicit New Request Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mode",
+          "medium",
+          "version_id",
+          "content_hash",
+          "input_hash",
+          "status",
+          "persona_count",
+          "segment_count",
+          "sessions",
+          "calls",
+          "calls_attempted",
+          "call_budget",
+          "time_budget_seconds",
+          "usage",
+          "mock_fixture_exit_ordinal",
+          "is_simulation",
+          "predicts_real_traffic",
+          "automatic_resume",
+          "explicit_new_request_required"
+        ],
+        "title": "SimulationReport",
+        "type": "object"
+      },
+      "AnalystInput": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_requested": {
+            "const": true,
+            "title": "Analysis Requested",
+            "type": "boolean"
+          },
+          "source": {
+            "$ref": "#/components/schemas/AudienceSimulationInput"
+          },
+          "simulation": {
+            "$ref": "#/components/schemas/SimulationReport"
+          },
+          "comparison_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AudienceSimulationInput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "comparison_simulation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulationReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "allow_descriptive_comparison": {
+            "default": false,
+            "title": "Allow Descriptive Comparison",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "analysis_requested",
+          "source",
+          "simulation"
+        ],
+        "title": "AnalystInput",
+        "type": "object"
+      },
       "ApiSuccess_SessionRead_": {
         "additionalProperties": false,
         "properties": {

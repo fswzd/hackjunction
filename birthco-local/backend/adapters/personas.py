@@ -10,6 +10,57 @@ _TYPES = ("positive", "neutral", "negative")
 _RATIO = (0.6, 0.3, 0.1)
 
 
+class AudiencePersonaSelector:
+    """Multi-round persona selector with dedup pool and exhaustion reset."""
+
+    def __init__(self, data_dir: Path | None = None, pools: dict[str, list[Persona]] | None = None):
+        self.pools = pools or load_personas(data_dir)
+        self.used_ids: set[str] = set()
+        self.round_history: list[dict] = []
+        self.effectiveness: dict[str, float] = {}
+
+    def select(self, n: int, *, seed: int | None = None) -> list[Persona]:
+        counts = _allocate(n)
+        rng = random.Random(seed)
+        result: list[Persona] = []
+        for type_name, count in zip(_TYPES, counts):
+            if count == 0:
+                continue
+            available = [p for p in self.pools[type_name] if p.id not in self.used_ids]
+            if len(available) < count:
+                self.used_ids.clear()
+                available = list(self.pools[type_name])
+            if self.effectiveness:
+                weights = [1.0 + self.effectiveness.get(p.id, 0.0) for p in available]
+                picked = rng.choices(available, weights=weights, k=count)
+                seen: set[str] = set()
+                unique_picked = []
+                for p in picked:
+                    if p.id not in seen:
+                        seen.add(p.id)
+                        unique_picked.append(p)
+                while len(unique_picked) < count:
+                    extra = rng.choice(available)
+                    if extra.id not in seen:
+                        seen.add(extra.id)
+                        unique_picked.append(extra)
+                picked = unique_picked
+            else:
+                picked = rng.sample(available, count)
+            result.extend(picked)
+        rng.shuffle(result)
+        self.used_ids.update(p.id for p in result)
+        self.round_history.append({"seed": seed, "selected_ids": [p.id for p in result]})
+        return result
+
+    def record_feedback(self, persona_id: str, effectiveness: float) -> None:
+        self.effectiveness[persona_id] = self.effectiveness.get(persona_id, 0.0) + effectiveness
+
+    def reset(self) -> None:
+        self.used_ids.clear()
+        self.round_history.clear()
+
+
 def _profession(raw: dict) -> str:
     if "profession" in raw.get("demographics", {}):
         return raw["demographics"]["profession"]
