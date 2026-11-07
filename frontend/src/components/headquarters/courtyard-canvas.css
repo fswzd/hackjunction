@@ -1,0 +1,133 @@
+/* 众幕庭院场景（嵌入版）——只作用在 .courtyard-stage 内，避免污染全局 */
+
+.courtyard-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #07050c;
+  --mono: ui-monospace, "JetBrains Mono", "Cascadia Mono", Consolas,
+    "Microsoft YaHei", monospace;
+}
+
+.courtyard-host {
+  position: absolute;
+  inset: 0;
+}
+
+.courtyard-host canvas {
+  display: block;
+}
+
+/* 屏幕质感：暗角 + 细扫描线 */
+.courtyard-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    radial-gradient(
+      122% 96% at 50% 46%,
+      rgba(0, 0, 0, 0) 52%,
+      rgba(4, 3, 9, 0.46) 100%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(190, 205, 255, 0.03) 0 1px,
+      rgba(0, 0, 0, 0) 1px 3px
+    );
+}
+
+/* 工位标签：赛博小弹窗，颜色随区域 */
+.courtyard-label {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  display: grid;
+  gap: 1px;
+  padding: 5px 8px 6px;
+  z-index: 3;
+  background: linear-gradient(180deg, rgba(10, 8, 18, 0.94), rgba(10, 8, 18, 0.7));
+  border: 1px solid color-mix(in srgb, var(--c) 34%, transparent);
+  border-left: 2px solid var(--c);
+  color: #cfd6f0;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 0 18px -6px var(--c), inset 0 0 14px -10px var(--c);
+  backdrop-filter: blur(4px);
+  transition: box-shadow 0.16s, border-color 0.16s, transform 0.16s;
+}
+
+.courtyard-label::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 6px;
+  height: 6px;
+  border-right: 1px solid var(--c);
+  border-bottom: 1px solid var(--c);
+  opacity: 0.75;
+}
+
+.courtyard-label:hover,
+.courtyard-label.is-selected {
+  border-color: var(--c);
+  box-shadow: 0 0 26px -3px var(--c), inset 0 0 20px -10px var(--c);
+  transform: translate(-50%, -100%) translateY(-2px);
+}
+
+.courtyard-label .cl-id {
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  color: var(--c);
+  opacity: 0.75;
+}
+
+.courtyard-label b {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #f2f5ff;
+}
+
+.courtyard-label small {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: #98a2c4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.courtyard-label .cl-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #5cf2b4;
+  box-shadow: 0 0 6px currentColor;
+  color: #5cf2b4;
+}
+
+.courtyard-label .cl-dot.bad {
+  background: #ff5a5a;
+  box-shadow: 0 0 6px #ff5a5a;
+}
+
+.courtyard-error {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  color: #7a84a6;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}

@@ -13,7 +13,7 @@ import { AGENT_META, STATUS_META } from "@/domain/agents";
 import { cn } from "@/lib/format";
 import { HeadquartersFallback } from "./HeadquartersFallback";
 
-const HeadquartersCanvas = lazy(() => import("./HeadquartersCanvas"));
+const CourtyardCanvas = lazy(() => import("./CourtyardCanvas"));
 
 function detectWebGL(): boolean {
   if (typeof window === "undefined") return false;
@@ -119,7 +119,7 @@ export function Headquarters3D({
     <div
       ref={stageRef}
       className={cn(
-        "relative isolate overflow-hidden bg-[#12110e]",
+        "relative isolate overflow-hidden bg-[#07050c]",
         className,
       )}
       onDoubleClick={(event) => {
@@ -128,7 +128,7 @@ export function Headquarters3D({
       }}
     >
       {showHeader && !immersive ? (
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 hidden items-start justify-between gap-3 bg-gradient-to-b from-[#12110e]/90 to-transparent p-4 sm:flex">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 hidden items-start justify-between gap-3 bg-gradient-to-b from-[#07050c]/90 to-transparent p-4 sm:flex">
           <div className="min-w-0">
             <p className="text-[10px] tracking-[0.2em] text-muted/90">
               众幕 AI · 内容工作室
@@ -204,7 +204,7 @@ export function Headquarters3D({
 
       <SceneErrorBoundary fallback={fallback}>
         <Suspense fallback={null}>
-          <HeadquartersCanvas
+          <CourtyardCanvas
             agents={agents}
             selectedAgentId={selectedAgentId}
             onSelectAgent={onSelectAgent}
@@ -217,7 +217,7 @@ export function Headquarters3D({
       </SceneErrorBoundary>
 
       {/* Keyboard-accessible equivalent of the 3D hotspots */}
-      <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#12110e] via-[#12110e]/85 to-transparent px-3 pb-3 pt-8">
+      <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#07050c] via-[#07050c]/85 to-transparent px-3 pb-3 pt-8">
         <div className="flex gap-1.5 overflow-x-auto pb-0.5">
           {agents.map((agent) => {
             const meta = AGENT_META[agent.id];
