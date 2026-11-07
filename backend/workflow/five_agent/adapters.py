@@ -290,16 +290,16 @@ def gen_analysis(call: AgentCall, resolver: TaskResolver) -> dict:
         findings.append({
             "id": f"find_{idx+1}", "segment_id": seg_metric["segment_id"],
             "observation_refs": obs[:3],
-            "interpretation": f"该段退出率 {seg_metric['exit_rate']}，观众反馈集中在理解成本",
-            "alternative_explanation": "也可能是受众画像与内容不完全匹配",
-            "suggested_edit": "把抽象表述换成材料中的具体步骤",
+            "interpretation": f"本次模拟中该段退出 {seg_metric['exits']}/{seg_metric['exposures']}；只描述模拟事件，不证明真实受众因内容离开。",
+            "alternative_explanation": "退出可能是预设测试fixture、persona偏好或信息不足，不能据此确认内容是原因。",
+            "suggested_edit": "作为待用户选择的试验：把抽象表述换成材料中的具体步骤，保留原稿并在明确条件下重测。",
         })
     data = {
         "findings": findings,
-        "comparison": {"conditions_match": True,
-                       "reason": "本次为单次模拟，无历史对照条件差异",
-                       "summary": "在给定画像下定位了主要流失片段"},
-        "next_experiment": "对高退出段改写后同条件重测",
+        "comparison": {"conditions_match": False,
+                       "reason": "单版本分析：没有可比较的第二版。",
+                       "summary": "只展示完整分母与缺失情况；没有经过核验的同条件实验，不宣称优胜版本或因果改善。"},
+        "next_experiment": "对高退出段改写后，在明确测试条件下重测，并补充少量真实读者反馈核对假设。",
     }
     return {"kind": "ok", "data": data, "usage": Usage.known(_tokens(data)).to_dict()}
 
