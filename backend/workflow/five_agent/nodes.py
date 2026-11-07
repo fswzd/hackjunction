@@ -20,7 +20,7 @@ from .gateway import (AgentUnavailable, BudgetExceeded, CancelledError, GatewayE
 from .graphstate import FiveAgentState, Services, validate_state_patch
 from .repository import DomainError, object_hash
 from .registry import (
-    BUDGETS, LIMITS, PROMPT_SCHEMA_VERSION, SEGMENTER_VERSION,
+    BUDGETS, LIMITS, PROMPT_SCHEMA_VERSION, REVIEW_PROMPT_SCHEMA_HASH, SEGMENTER_VERSION,
     step_key_analysis, step_key_audience, step_key_brief, step_key_draft,
     step_key_export, step_key_pr, step_key_repair, step_key_review, step_key_scout,
 )
@@ -71,11 +71,12 @@ def _consume_decision(svc: Services, gate_row: dict, resume: dict) -> dict:
 
 
 def _call(state: FiveAgentState, svc: Services, step_key: str, action: str, input_payload: dict,
-          run_id: str | None = None, max_attempts: int = 3, unknown_policy: str = "run_interrupt"):
+          run_id: str | None = None, max_attempts: int = 3, unknown_policy: str = "run_interrupt",
+          prompt_schema_version: str | None = None):
     return svc.gateway.invoke(
         run_id or state["run_id"], step_key, action, input_payload,
         account_id=state["account_id"], task_id=state["task_id"],
-        prompt_schema_version=PROMPT_SCHEMA_VERSION,
+        prompt_schema_version=prompt_schema_version or PROMPT_SCHEMA_VERSION,
         max_attempts=max_attempts, unknown_policy=unknown_policy)
 
 
@@ -364,14 +365,21 @@ def node_brief(state: FiveAgentState, svc: Services) -> dict:
                 "materials": _materials_fp(material_refs),
                 "selected_opportunity_ref": selected}
     # 商单链：把 pr_analyst 已就绪的客户硬性要求并入需求整理输入（可追溯到 artifact）
+    # 结构化 requirements 带原始 requirement_id 传递（F-O5），文本并入仅作叙述；
+    # edit_scope 通道承载旧稿授权修改范围（F-O3，payload 携带时生效）。
     pr = _find_pr_analysis(state, svc)
+    structured_requirements = None
     if pr and pr["payload"].get("ready_for_operator"):
-        req_text = "；".join(r["text"] for r in pr["payload"].get("requirements", []))
-        if req_text:
-            user_input += "\n客户要求：" + req_text
+        reqs = [{"id": r["id"], "text": r["text"]} for r in pr["payload"].get("requirements", [])]
+        if reqs:
+            structured_requirements = reqs
+            user_input += "\n客户要求：" + "；".join(r["text"] for r in reqs)
         planning["pr_analysis_id"] = pr["id"]
     step_key = step_key_brief(_fp(planning)[:16])
-    input_payload = proj.build_prepare_brief_input(user_input, input_mode, material_refs, selected)
+    input_payload = proj.build_prepare_brief_input(
+        user_input, input_mode, material_refs, selected,
+        requirements=structured_requirements,
+        edit_scope=payload.get("edit_scope") if input_mode == "existing_draft" else None)
     svc.router.bind_task(state["task_id"])
     outcome = _call(state, svc, step_key, "prepare_brief", input_payload)
 
@@ -572,15 +580,21 @@ def node_review(state: FiveAgentState, svc: Services) -> dict:
                  "brief_hash": brief["brief_hash"]}
     version = svc.repo.get_version(state["version_ref"]["id"])
     rule_report = svc.repo.get_artifact(state["rule_ref"]["id"])["payload"]
-    material_refs = [{"id": mid, "sha256": object_hash({"text": mid})}
-                     for mid in brief["payload"].get("material_ids", [])]
+    # F-01: 素材指纹必须承诺素材正文内容（与 traffic/brief 同一公式），正文变更即换指纹。
+    materials = {m["id"]: m for m in svc.repo.list_materials(state["task_id"])}
+    material_refs = []
+    for mid in brief["payload"].get("material_ids", []):
+        if mid not in materials:
+            raise DomainError("brief references unknown material", "INPUT_MISSING")
+        material_refs.append({"id": mid, "sha256": object_hash({"text": materials[mid]["text"]})})
     step_key = step_key_review(version["id"])
     input_payload = proj.build_assess_input(
         brief_ref, {"id": version["id"], "sha256": version["content_hash"]},
         {"id": state["rule_ref"]["id"], "sha256": object_hash(rule_report)}, material_refs)
     svc.router.bind_task(state["task_id"])
     try:
-        outcome = _call(state, svc, step_key, "assess_content", input_payload)
+        outcome = _call(state, svc, step_key, "assess_content", input_payload,
+                        prompt_schema_version=f"{PROMPT_SCHEMA_VERSION}+review:{REVIEW_PROMPT_SCHEMA_HASH[:16]}")
     except (BudgetExceeded, AgentUnavailable, CancelledError, InterruptedUnknown):
         raise
     except GatewayError:

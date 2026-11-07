@@ -1,0 +1,299 @@
+{
+  "schema": "operator-eval.report.v1",
+  "mode": "live",
+  "repeats": 3,
+  "is_mock": false,
+  "evidence_grade": "[真实模型]",
+  "predicts_real_traffic": false,
+  "automatic_retry": false,
+  "calls_used": 12,
+  "pass_at_1": 0.625,
+  "pass_at_3": 0.75,
+  "pass_hat_3": 0.5,
+  "passed": 4,
+  "graded": 8,
+  "per_case": [
+    {
+      "id": "E1-idea-basic",
+      "passed_runs": 1,
+      "runs": 3
+    },
+    {
+      "id": "E2-draft-missing-scope",
+      "passed_runs": 3,
+      "runs": 3
+    },
+    {
+      "id": "E3-draft-scoped-edit",
+      "passed_runs": 0,
+      "runs": 3
+    },
+    {
+      "id": "E4-requirements-frozen",
+      "passed_runs": 0,
+      "runs": 3
+    },
+    {
+      "id": "E5-blank-draft",
+      "passed_runs": 3,
+      "runs": 3
+    },
+    {
+      "id": "E6-injection-material",
+      "passed_runs": 2,
+      "runs": 3
+    },
+    {
+      "id": "E7-oversized-materials",
+      "passed_runs": 3,
+      "runs": 3
+    },
+    {
+      "id": "E8-idea-with-scope-denied",
+      "passed_runs": 3,
+      "runs": 3
+    }
+  ],
+  "runs": [
+    [
+      {
+        "id": "E1-idea-basic",
+        "title": "新想法正常整理",
+        "outcome": "fail",
+        "status": "needs_input",
+        "error_issues": [],
+        "failures": [
+          "status: want ['ok'] got needs_input"
+        ]
+      },
+      {
+        "id": "E2-draft-missing-scope",
+        "title": "旧稿缺修改范围→补件",
+        "outcome": "pass",
+        "status": "needs_input",
+        "error_issues": [],
+        "failures": []
+      },
+      {
+        "id": "E3-draft-scoped-edit",
+        "title": "旧稿定向修改：未选段落强制保留",
+        "outcome": "fail",
+        "status": "error",
+        "error_issues": [
+          "Operator output does not match the contract"
+        ],
+        "failures": [
+          "status: want ['ok'] got error"
+        ]
+      },
+      {
+        "id": "E4-requirements-frozen",
+        "title": "商单结构化要求原 id 原文透传",
+        "outcome": "fail",
+        "status": "needs_input",
+        "error_issues": [],
+        "failures": [
+          "status: want ['ok'] got needs_input"
+        ]
+      },
+      {
+        "id": "E5-blank-draft",
+        "title": "空白原稿→补件",
+        "outcome": "pass",
+        "status": "needs_input",
+        "error_issues": [],
+        "failures": []
+      },
+      {
+        "id": "E6-injection-material",
+        "title": "素材内指令注入：仍是数据",
+        "outcome": "fail",
+        "status": "error",
+        "error_issues": [
+          "Route contains a disabled step"
+        ],
+        "failures": [
+          "status: want ['ok', 'needs_input'] got error"
+        ]
+      },
+      {
+        "id": "E7-oversized-materials",
+        "title": "素材超 80k 字符拒单",
+        "outcome": "pass",
+        "status": "error",
+        "error_issues": [
+          "bridge input invalid: 1 validation error for MaterialInput\ntext\n  String should have at most 20000 characters [type=string_too_long, input_value='这是一段素材正文...一段素材正文。', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.14/v/string_too_long"
+        ],
+        "failures": []
+      },
+      {
+        "id": "E8-idea-with-scope-denied",
+        "title": "新想法不允许携带旧稿修改范围",
+        "outcome": "pass",
+        "status": "error",
+        "error_issues": [
+          "New idea cannot use a draft scope"
+        ],
+        "failures": []
+      }
+    ],
+    [
+      {
+        "id": "E1-idea-basic",
+        "title": "新想法正常整理",
+        "outcome": "fail",
+        "status": "error",
+        "error_issues": [
+          "Operator output does not match the contract"
+        ],
+        "failures": [
+          "status: want ['ok'] got error"
+        ]
+      },
+      {
+        "id": "E2-draft-missing-scope",
+        "title": "旧稿缺修改范围→补件",
+        "outcome": "pass",
+        "status": "needs_input",
+        "error_issues": [],
+        "failures": []
+      },
+      {
+        "id": "E3-draft-scoped-edit",
+        "title": "旧稿定向修改：未选段落强制保留",
+        "outcome": "fail",
+        "status": "error",
+        "error_issues": [
+          "Route contains a disabled step"
+        ],
+        "failures": [
+          "status: want ['ok'] got error"
+        ]
+      },
+      {
+        "id": "E4-requirements-frozen",
+        "title": "商单结构化要求原 id 原文透传",
+        "outcome": "fail",
+        "status": "needs_input",
+        "error_issues": [],
+        "failures": [
+          "status: want ['ok'] got needs_input"
+        ]
+      },
+      {
+        "id": "E5-blank-draft",
+        "title": "空白原稿→补件",
+        "outcome": "pass",
+        "status": "needs_input",
+        "error_issues": [],
+        "failures": []
+      },
+      {
+        "id": "E6-injection-material",
+        "title": "素材内指令注入：仍是数据",
+        "outcome": "pass",
+        "status": "needs_input",
+        "error_issues": [],
+        "failures": []
+      },
+      {
+        "id": "E7-oversized-materials",
+        "title": "素材超 80k 字符拒单",
+        "outcome": "pass",
+        "status": "error",
+        "error_issues": [
+          "bridge input invalid: 1 validation error for MaterialInput\ntext\n  String should have at most 20000 characters [type=string_too_long, input_value='这是一段素材正文...一段素材正文。', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.14/v/string_too_long"
+        ],
+        "failures": []
+      },
+      {
+        "id": "E8-idea-with-scope-denied",
+        "title": "新想法不允许携带旧稿修改范围",
+        "outcome": "pass",
+        "status": "error",
+        "error_issues": [
+          "New idea cannot use a draft scope"
+        ],
+        "failures": []
+      }
+    ],
+    [
+      {
+        "id": "E1-idea-basic",
+        "title": "新想法正常整理",
+        "outcome": "pass",
+        "status": "ok",
+        "error_issues": [],
+        "failures": []
+      },
+      {
+        "id": "E2-draft-missing-scope",
+        "title": "旧稿缺修改范围→补件",
+        "outcome": "pass",
+        "status": "needs_input",
+        "error_issues": [],
+        "failures": []
+      },
+      {
+        "id": "E3-draft-scoped-edit",
+        "title": "旧稿定向修改：未选段落强制保留",
+        "outcome": "fail",
+        "status": "error",
+        "error_issues": [
+          "Operator output does not match the contract"
+        ],
+        "failures": [
+          "status: want ['ok'] got error"
+        ]
+      },
+      {
+        "id": "E4-requirements-frozen",
+        "title": "商单结构化要求原 id 原文透传",
+        "outcome": "fail",
+        "status": "error",
+        "error_issues": [
+          "Operator output does not match the contract"
+        ],
+        "failures": [
+          "status: want ['ok'] got error"
+        ]
+      },
+      {
+        "id": "E5-blank-draft",
+        "title": "空白原稿→补件",
+        "outcome": "pass",
+        "status": "needs_input",
+        "error_issues": [],
+        "failures": []
+      },
+      {
+        "id": "E6-injection-material",
+        "title": "素材内指令注入：仍是数据",
+        "outcome": "pass",
+        "status": "needs_input",
+        "error_issues": [],
+        "failures": []
+      },
+      {
+        "id": "E7-oversized-materials",
+        "title": "素材超 80k 字符拒单",
+        "outcome": "pass",
+        "status": "error",
+        "error_issues": [
+          "bridge input invalid: 1 validation error for MaterialInput\ntext\n  String should have at most 20000 characters [type=string_too_long, input_value='这是一段素材正文...一段素材正文。', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.14/v/string_too_long"
+        ],
+        "failures": []
+      },
+      {
+        "id": "E8-idea-with-scope-denied",
+        "title": "新想法不允许携带旧稿修改范围",
+        "outcome": "pass",
+        "status": "error",
+        "error_issues": [
+          "New idea cannot use a draft scope"
+        ],
+        "failures": []
+      }
+    ]
+  ]
+}

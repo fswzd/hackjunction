@@ -153,9 +153,12 @@ def test_material_fingerprint_mismatch_refuses_before_model_call():
     call = make_call({"user_input": "写一篇图文", "input_mode": "idea",
                       "material_refs": [{"id": "m1", "sha256": "0" * 64}],
                       "selected_opportunity_ref": None})
-    adapter = OperatorTeamAdapter(resolve_material=resolver([bad]))
-    with pytest.raises(BridgePreSendFailure):
-        adapter.invoke(call)
+    adapter = OperatorTeamAdapter(resolve_material=resolver([bad]),
+                                  model_adapter=FixtureAdapter({}),
+                                  mode="live", model_id="fixture-model")
+    result = adapter.invoke(call)
+    assert result["status"] == "error" and "fingerprint mismatch" in result["issues"][0]["reason"]
+    assert adapter.agent.adapter.requests == [], "确定性拒单零模型调用、不烧预算"
 
 
 def test_material_instructions_stay_in_user_data():

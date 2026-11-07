@@ -155,6 +155,22 @@ def gen_brief(call: AgentCall, resolver: TaskResolver) -> dict:
     if inp.get("selected_opportunity_ref"):
         opp = resolver.artifact(inp["selected_opportunity_ref"])["payload"]
     objective = (opp["angle"] if opp else goal)
+    if inp.get("input_mode") == "existing_draft" and inp.get("edit_scope") is None:
+        # Mirror the production entry: a draft scope is user-supplied, never invented.
+        return {"kind": "needs_input",
+                "questions": [{"id": "draft_scope",
+                               "question": "请指定哪些原稿段落可以修改，以及标题和封面是否允许调整。",
+                               "reason": "保留未授权修改的原文"}],
+                "usage": Usage.known(120).to_dict()}
+    # Structured user requirements pass through with their original ids (F-O5);
+    # without them the generator may propose its own operational requirements.
+    if inp.get("requirements") is not None:
+        requirements = [{"id": r["id"], "text": r["text"]} for r in inp["requirements"]]
+    else:
+        requirements = [
+            {"id": "req_style", "text": "口语化、可操作、不夸大"},
+            {"id": "req_facts", "text": "事实与数据只来自授权材料"},
+        ]
     data = {
         "input_mode": inp.get("input_mode", "idea"),
         "objective": objective[:1000],
@@ -162,15 +178,12 @@ def gen_brief(call: AgentCall, resolver: TaskResolver) -> dict:
         "platform": "图文平台",
         "format": "text",
         "core_promise": f"让读者理解并能动手实践：{objective[:80]}",
-        "requirements": [
-            {"id": "req_style", "text": "口语化、可操作、不夸大"},
-            {"id": "req_facts", "text": "事实与数据只来自授权材料"},
-        ],
+        "requirements": requirements,
         "material_ids": [ref["id"] for ref in inp.get("material_refs", [])],
         "open_questions": [],
         "route": ["draft", "review", "export"],
         "length_rule": {"minimum": 300, "maximum": 20000},
-        "edit_scope": None,
+        "edit_scope": inp.get("edit_scope"),
     }
     return {"kind": "ok", "data": data, "usage": Usage.known(_tokens(data)).to_dict()}
 
@@ -469,7 +482,8 @@ class AdapterRouter:
                  scripts: dict[tuple[str, str], list[Behaviour]] | None = None,
                  audience_exits: dict[str, int | None] | None = None,
                  audience_timeout_at: dict[str, int] | None = None,
-                 agent_modes: dict[str, str] | None = None):
+                 agent_modes: dict[str, str] | None = None,
+                 reals: dict[str, Any] | None = None):
         if mode not in ("mock", "live"):
             raise ValueError("mode must be mock|live")
         self.mode = mode
@@ -526,6 +540,12 @@ class AdapterRouter:
             "data_analyst": RealAdapterStub("data_analyst", ("diagnose_preview",)),
             "simulated_audience": RealAdapterStub("simulated_audience", ("read_segment",)),
         }
+        # Real-entry injection: a teammate's real adapter replaces its stub here
+        # (single-role rollout). Never routed unless agent_modes/mode selects live.
+        for agent_id, adapter in (reals or {}).items():
+            if agent_id not in self.reals:
+                raise ValueError(f"reals has unknown agent ids: {agent_id}")
+            self.reals[agent_id] = adapter
         for agent_id, m in self.agent_modes.items():
             if m not in ("mock", "live"):
                 raise ValueError(f"agent_modes[{agent_id}] must be mock|live")

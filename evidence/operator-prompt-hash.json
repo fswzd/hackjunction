@@ -1,0 +1,14 @@
+{
+  "schema": "operator-prompt-hash.v1",
+  "frozen_at": "2026-11-07",
+  "supersedes": "U-6 prompt 分支纪律增强后重申报",
+  "formula": "prompt_hash = sha256_json({system: sha256(SYSTEM), schema: sha256(canonical(Envelope[Brief].model_json_schema()))})",
+  "system_sha256": "831754a73d7bba80edf50d554b85cba4add3ef31e3f2944f1f78ca51f602e121",
+  "schema_sha256": "b9b33cc948caeccb5c3c983e93db57ec84c9455ffc404de063cacdf18d83c654",
+  "prompt_hash": "1198118a069befd1342789033cd0f0d7ecff9e52cb2ee320979c10c38f613cf0",
+  "source_files": {
+    "birthco-local/backend/agents/operator.py": "0ded12fc3b242841f7e2bcea0f72740e8009f2b025944cf796e80501531bc90e",
+    "birthco-local/backend/domain/schemas.py": "d468c704bac129fad64458ec25d7c783bd379c863e2006e914d5947ab294c6c0"
+  },
+  "note": "SYSTEM/schema 任一变更 → prompt_hash 失效须重报冻结（G-06）；source_files 供溯源，测试锁定 prompt_hash 三项"
+}
