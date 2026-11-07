@@ -40,7 +40,6 @@ cd frontend && BIRTHCO_PORT=5001 npm run dev
 
 ## 主要路由
 
-- `/` 产品落地页：程序化虹彩球体、滚动推进、鼠标视差、颗粒质感，随后进入可上下浏览的项目介绍；WebGL 不可用时回退为 CSS 球体
 - `/onboarding` 四步工作空间画像
 - `/workspace/overview` 总览 + 3D 总部
 - `/workspace/workforce` AI 员工
@@ -77,15 +76,6 @@ cd frontend && BIRTHCO_PORT=5001 npm run dev
 | `data_analyst` | 数据分析师 | `diagnose_preview` |
 
 任务路由由后端决定：商单（PR）与选题捕捉、模拟观众试映均为可选阶段。人工闸门只有两个——`WAITING_CONFIRMATION` 确认 Brief，`READY` 验收内容。真实模式下界面状态只来自后端任务与事件，不由动画伪造完成。
-
-## 落地页
-
-落地页与工作台共用同一套暖色编辑风格与品牌信息，但不依赖后端数据：即使本地 API 不可用，`/` 仍可正常展示。视觉效果全部是程序化实现，没有外部模型、纹理或网络请求：
-
-- `src/components/landing/IridescentOrb.tsx`：单 pass 片元着色器球体，滚动推进镜头、鼠标视差、自动降分辨率、上下文丢失回退
-- `src/pages/Landing.tsx`：七角色、两个人工闸门、工作流和工程现状，数据取自 `domain/agents.ts`，与后端契约保持一致
-- `src/pages/landing.css`：字体节奏、颗粒、滚动揭示、卡片倾斜与响应式布局
-- 遵循 `prefers-reduced-motion`；球体离开首屏后停止渲染
 
 ## 已知限制
 

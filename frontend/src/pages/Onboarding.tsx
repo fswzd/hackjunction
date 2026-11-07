@@ -125,8 +125,12 @@ export function Onboarding() {
       await completeOnboarding({
         ...profile,
         creatorName: profile.creatorName.trim() || "创作者",
+<<<<<<< Updated upstream
         workspaceName: profile.workspaceName.trim() || "我的内容工作室",
         creatorStage: normalizeCreatorStage(profile.creatorStage),
+=======
+        workspaceName: profile.workspaceName.trim() || "我的 AI 公司",
+>>>>>>> Stashed changes
         completedAt: new Date().toISOString(),
       });
       navigate("/workspace/overview", { replace: true });
@@ -178,21 +182,33 @@ export function Onboarding() {
         <div className="inner-grid absolute inset-0 opacity-60" />
         <div className="relative">
           <div className="flex items-center gap-3">
+<<<<<<< Updated upstream
             <BrandMark size={36} />
             <div>
               <p className="studio-brand text-lg">众幕 AI</p>
               <p className="studio-subtitle">一人内容工作室</p>
+=======
+            <span className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-blue/30 bg-blue/10">
+              <span className="text-base font-bold text-blue">C</span>
+              <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-cyan" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold tracking-tight">Creator OS</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">
+                One Creator. One AI Company.
+              </p>
+>>>>>>> Stashed changes
             </div>
           </div>
 
           <h1 className="mt-16 text-balance text-4xl font-semibold leading-[1.15] tracking-tight">
             一个人，
             <br />
-            也有一支内容团队。
+            就是一家公司。
           </h1>
           <p className="mt-5 max-w-sm text-sm leading-7 text-muted">
             先告诉我们你在做什么、说给谁听。
-            从任务书到交付稿，让创作、审稿与修改有据可循。
+            运营官会据此安排六名专业 AI 员工的协作方式。
           </p>
         </div>
 
@@ -237,9 +253,17 @@ export function Onboarding() {
 
       <main className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
+<<<<<<< Updated upstream
           <div className="flex items-center gap-2.5 lg:hidden">
             <BrandMark size={28} />
             <span className="studio-brand text-base">众幕 AI</span>
+=======
+          <div className="flex items-center gap-3 lg:hidden">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue/30 bg-blue/10 text-xs font-bold text-blue">
+              C
+            </span>
+            <span className="text-sm font-semibold">Creator OS</span>
+>>>>>>> Stashed changes
           </div>
           <div className="hidden items-center gap-2 lg:flex">
             {STEPS.map((item, index) => (
@@ -289,7 +313,11 @@ export function Onboarding() {
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted">
               {step === 0
+<<<<<<< Updated upstream
                 ? "这些信息会显示在你的内容工作室里，也用于任务书的默认称呼；账号阶段会同步到本地后端。"
+=======
+                ? "这些信息会显示在你的 AI 公司里，也用于任务书的默认称呼。"
+>>>>>>> Stashed changes
                 : step === 1
                   ? "领域会影响选题捕捉与内容创作的默认方向，可以随时在设置里修改。"
                   : step === 2
@@ -563,7 +591,7 @@ export function Onboarding() {
                   {saving
                     ? "正在保存…"
                     : step === STEPS.length - 1
-                      ? "走进协作现场"
+                      ? "进入我的 AI 公司"
                       : "继续"}
                 </Button>
               </div>

@@ -480,7 +480,7 @@ export function Settings() {
           </Card>
 
           <div className="rounded-2xl border border-line bg-raised/40 p-4 text-[10px] leading-5 text-muted">
-            <p className="font-medium text-text">众幕 AI · 前端原型</p>
+            <p className="font-medium text-text">Creator OS · 前端原型</p>
             <p className="mt-1">
               React 19 · Vite · TypeScript · Tailwind v4 · R3F。3D 场景为本地程序化几何，无外部模型与网络请求。
             </p>

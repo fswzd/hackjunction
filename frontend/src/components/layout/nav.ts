@@ -18,6 +18,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
+<<<<<<< Updated upstream
   { to: "/workspace/overview", label: "工作台总览", sub: "今天的工作台", icon: LayoutDashboard },
   { to: "/workspace/workforce", label: "协作团队", sub: "七位角色的分工与状态", icon: Users },
   { to: "/workspace/projects", label: "内容项目", sub: "持续创作的主题", icon: FolderKanban },
@@ -26,6 +27,16 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/workspace/assets", label: "素材库", sub: "已验收的内容资产", icon: Library },
   { to: "/workspace/analytics", label: "运营分析", sub: "内容表现与诊断", icon: BarChart3 },
   { to: "/workspace/settings", label: "设置", sub: "本地工作区与接口", icon: Settings },
+=======
+  { to: "/workspace/overview", label: "工作台总览", en: "Overview", icon: LayoutDashboard },
+  { to: "/workspace/workforce", label: "AI 员工", en: "AI Workforce", icon: Users },
+  { to: "/workspace/projects", label: "内容项目", en: "Projects", icon: FolderKanban },
+  { to: "/workspace/tasks", label: "任务中心", en: "Tasks", icon: ListChecks },
+  { to: "/workspace/calendar", label: "创作日历", en: "Calendar", icon: CalendarDays },
+  { to: "/workspace/assets", label: "素材库", en: "Assets", icon: Library },
+  { to: "/workspace/analytics", label: "运营分析", en: "Analytics", icon: BarChart3 },
+  { to: "/workspace/settings", label: "设置", en: "Settings", icon: Settings },
+>>>>>>> Stashed changes
 ];
 
 export function pageTitle(pathname: string): { title: string; sub: string } {

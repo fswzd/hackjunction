@@ -130,11 +130,24 @@ export function Headquarters3D({
       {showHeader && !immersive ? (
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 hidden items-start justify-between gap-3 bg-gradient-to-b from-[#12110e]/90 to-transparent p-4 sm:flex">
           <div className="min-w-0">
+<<<<<<< Updated upstream
             <p className="text-[10px] tracking-[0.2em] text-muted/90">
               众幕 AI · 内容工作室
             </p>
             <p className="mt-1 text-xs font-medium text-text">
               七个角色 · 围绕同一份任务书
+=======
+            <p className="hidden text-[10px] uppercase tracking-[0.22em] text-muted sm:block">
+              AI Company Headquarters
+            </p>
+            <p className="mt-1 text-xs font-medium text-text">
+              {immersive ? "沉浸式总部大厅" : (
+                <>
+                  总部大厅
+                  <span className="hidden sm:inline"> · 六个专业工位与一位运营官</span>
+                </>
+              )}
+>>>>>>> Stashed changes
             </p>
           </div>
         </div>
@@ -169,12 +182,18 @@ export function Headquarters3D({
           </div>
           <button
             type="button"
+<<<<<<< Updated upstream
             onClick={() => {
               onSelectAgent(null);
               setUserZoom(1);
             }}
             aria-label="重置镜头到工作室全景"
             title="重置镜头与缩放"
+=======
+            onClick={() => onSelectAgent(null)}
+            aria-label="重置镜头到公司全景"
+            title="重置镜头"
+>>>>>>> Stashed changes
             className="rounded-lg border border-line bg-surface/80 p-2 text-muted backdrop-blur transition hover:text-text"
           >
             <RotateCcw size={14} />
@@ -183,11 +202,11 @@ export function Headquarters3D({
             <button
               type="button"
               onClick={onToggleImmersive}
-              aria-label="走进协作现场"
+              aria-label="进入我的 AI 公司"
               className="flex items-center gap-1.5 rounded-lg border border-line bg-surface/90 px-2.5 py-2 text-[11px] font-medium text-text backdrop-blur transition hover:border-blue/40 hover:text-blue"
             >
               <Expand size={14} />
-              走进协作现场
+              进入我的 AI 公司
             </button>
           ) : null}
         </div>
@@ -197,7 +216,7 @@ export function Headquarters3D({
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
           <div className="flex items-center gap-2 rounded-full border border-line bg-surface/80 px-4 py-2 text-[11px] text-muted backdrop-blur">
             <Loader2 size={14} className="animate-spin" />
-            正在打开协作现场…
+            正在搭建 AI 公司总部…
           </div>
         </div>
       ) : null}

@@ -25,8 +25,13 @@ export function Workforce() {
   return (
     <div className="space-y-6">
       <SectionHeader
+<<<<<<< Updated upstream
         eyebrow="协作团队"
         title="你的 协作团队"
+=======
+        eyebrow="AI Workforce"
+        title="你的 AI 员工"
+>>>>>>> Stashed changes
         description="一位运营官与六位专业员工，对应后端 seven-agent.v0.1 的七个业务角色。每个角色都有清楚的职责、真实的任务状态和可追溯的交付物。"
         action={
           <Button

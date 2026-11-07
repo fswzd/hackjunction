@@ -1,14 +1,14 @@
 {
   "evidence_kind": "mock_flow_end_to_end",
   "mode": "mock_dev_no_live_model_no_teammate_code_no_real_user",
-  "observed_at": "2026-11-07T02:21:40.029961+00:00",
+  "observed_at": "2026-11-07T07:58:29.055611+00:00",
   "command": "python run_mock_demo.py",
   "cwd": "E:\\hackjunction\\hackjunction",
   "exit_code": 0,
   "trace": [
     {
       "step": "start_content_run",
-      "run_id": "run_demo_task_content_50b04139",
+      "run_id": "run_demo_task_content_716a6a2c",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -24,7 +24,7 @@
     },
     {
       "step": "confirm_brief",
-      "run_id": "run_demo_task_content_50b04139",
+      "run_id": "run_demo_task_content_716a6a2c",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -40,7 +40,7 @@
     },
     {
       "step": "accept_delivery",
-      "run_id": "run_demo_task_content_50b04139",
+      "run_id": "run_demo_task_content_716a6a2c",
       "status": "READY",
       "terminal": "READY",
       "pending_gates": [],
@@ -54,7 +54,7 @@
     },
     {
       "step": "start_preview_run",
-      "run_id": "run_demo_task_preview_e0525d09",
+      "run_id": "run_demo_task_preview_1b90a025",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -70,7 +70,7 @@
     },
     {
       "step": "preview_run",
-      "run_id": "run_demo_task_preview_e0525d09",
+      "run_id": "run_demo_task_preview_1b90a025",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -80,13 +80,13 @@
         "normal_calls": 8,
         "tech_retries": 0,
         "calls_completed": 7,
-        "tokens_known": 1380,
+        "tokens_known": 1499,
         "unknown_usage_calls": 1
       }
     },
     {
       "step": "select_findings",
-      "run_id": "run_demo_task_preview_e0525d09",
+      "run_id": "run_demo_task_preview_1b90a025",
       "status": "READY",
       "terminal": "READY",
       "pending_gates": [],
@@ -94,13 +94,13 @@
         "normal_calls": 8,
         "tech_retries": 0,
         "calls_completed": 7,
-        "tokens_known": 1380,
+        "tokens_known": 1499,
         "unknown_usage_calls": 1
       }
     },
     {
       "step": "start_revision_run",
-      "run_id": "run_demo_task_revision_3d363a84",
+      "run_id": "run_demo_task_revision_76ae0cc7",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -116,7 +116,7 @@
     },
     {
       "step": "accept_revision",
-      "run_id": "run_demo_task_revision_3d363a84",
+      "run_id": "run_demo_task_revision_76ae0cc7",
       "status": "READY",
       "terminal": "READY",
       "pending_gates": [],
@@ -130,7 +130,7 @@
     }
   ],
   "runs": {
-    "run_demo_task_content_50b04139": {
+    "run_demo_task_content_716a6a2c": {
       "kind": "content",
       "status": "READY",
       "calls": [
@@ -154,7 +154,7 @@
         }
       ],
       "usage": {
-        "run_id": "run_demo_task_content_50b04139",
+        "run_id": "run_demo_task_content_716a6a2c",
         "calls_reserved": 3,
         "normal_calls": 3,
         "tech_retries": 0,
@@ -163,7 +163,7 @@
         "unknown_usage_calls": 0
       }
     },
-    "run_demo_task_preview_e0525d09": {
+    "run_demo_task_preview_1b90a025": {
       "kind": "preview",
       "status": "READY",
       "calls": [
@@ -213,20 +213,20 @@
           "action": "diagnose_preview",
           "attempt": 1,
           "status": "received",
-          "usage_tokens": 359
+          "usage_tokens": 478
         }
       ],
       "usage": {
-        "run_id": "run_demo_task_preview_e0525d09",
+        "run_id": "run_demo_task_preview_1b90a025",
         "calls_reserved": 8,
         "normal_calls": 8,
         "tech_retries": 0,
         "calls_completed": 7,
-        "tokens_known": 1380,
+        "tokens_known": 1499,
         "unknown_usage_calls": 1
       }
     },
-    "run_demo_task_revision_3d363a84": {
+    "run_demo_task_revision_76ae0cc7": {
       "kind": "revision",
       "status": "READY",
       "calls": [
@@ -244,7 +244,7 @@
         }
       ],
       "usage": {
-        "run_id": "run_demo_task_revision_3d363a84",
+        "run_id": "run_demo_task_revision_76ae0cc7",
         "calls_reserved": 2,
         "normal_calls": 2,
         "tech_retries": 0,
@@ -256,7 +256,7 @@
   },
   "versions": {
     "v1": {
-      "id": "ver_9d3e6cd13b7e51ddb94b6375",
+      "id": "ver_bcd6382411b988c97e2360b1",
       "status": "accepted",
       "content_hash": "3119c9f39f4236daefa4ef503bc9b09ee0c7de3339a11ed30422457a5fa6e87b",
       "titles": [
@@ -270,9 +270,9 @@
       ]
     },
     "v2": {
-      "id": "ver_c6892a04cf7cd186d71770b0",
+      "id": "ver_dda618d470baf1deba951e15",
       "status": "accepted",
-      "base_version_id": "ver_9d3e6cd13b7e51ddb94b6375",
+      "base_version_id": "ver_bcd6382411b988c97e2360b1",
       "content_hash": "9cf5e23585a97aaa4e15264f1fefcd59a5976c9576e43299756aac65a5d7068b",
       "change_log": [
         {
@@ -288,7 +288,7 @@
     "v1_preserved": true
   },
   "preview": {
-    "preview_id": "preview_84d2c8f65edceaf08976232f",
+    "preview_id": "preview_cfae3619e2fdc3ae4d7c2e0a",
     "metrics": {
       "started": 3,
       "completed": 1,
@@ -300,23 +300,23 @@
         "id": "find_1",
         "segment_id": "cover_v1",
         "observation_refs": [
-          "evt_sess_cc2eb4e81e76b57b35320b3b_0",
-          "evt_sess_88555301dfbe7fe9fb2c20e6_0",
-          "evt_sess_149327d87f36a011e4490743_0"
+          "evt_sess_bf56108fe6d20d951a444142_0",
+          "evt_sess_40a96080de86cbe67aaa6cf8_0",
+          "evt_sess_0fb810e3a5010d8d35d8ad76_0"
         ],
-        "interpretation": "该段退出率 0.3333333333333333，观众反馈集中在理解成本",
-        "alternative_explanation": "也可能是受众画像与内容不完全匹配",
-        "suggested_edit": "把抽象表述换成材料中的具体步骤"
+        "interpretation": "本次模拟中该段退出 1/3；只描述模拟事件，不证明真实受众因内容离开。",
+        "alternative_explanation": "退出可能是预设测试fixture、persona偏好或信息不足，不能据此确认内容是原因。",
+        "suggested_edit": "作为待用户选择的试验：把抽象表述换成材料中的具体步骤，保留原稿并在明确条件下重测。"
       },
       {
         "id": "find_2",
         "segment_id": "seg_hook_1",
         "observation_refs": [
-          "evt_sess_88555301dfbe7fe9fb2c20e6_1"
+          "evt_sess_40a96080de86cbe67aaa6cf8_1"
         ],
-        "interpretation": "该段退出率 0.0，观众反馈集中在理解成本",
-        "alternative_explanation": "也可能是受众画像与内容不完全匹配",
-        "suggested_edit": "把抽象表述换成材料中的具体步骤"
+        "interpretation": "本次模拟中该段退出 0/1；只描述模拟事件，不证明真实受众因内容离开。",
+        "alternative_explanation": "退出可能是预设测试fixture、persona偏好或信息不足，不能据此确认内容是原因。",
+        "suggested_edit": "作为待用户选择的试验：把抽象表述换成材料中的具体步骤，保留原稿并在明确条件下重测。"
       }
     ],
     "selected_finding": "find_2"

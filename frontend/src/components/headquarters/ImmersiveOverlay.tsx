@@ -39,11 +39,16 @@ export function ImmersiveOverlay() {
       />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between p-5">
         <div>
+<<<<<<< Updated upstream
           <p className="text-[10px] tracking-[0.16em] text-muted">
             众幕 AI · 协作现场
+=======
+          <p className="text-[10px] uppercase tracking-[0.24em] text-muted">
+            Creator OS · Immersive Headquarters
+>>>>>>> Stashed changes
           </p>
           <h2 className="mt-1 text-balance text-xl font-semibold tracking-tight text-text">
-            {snapshot.profile?.workspaceName || "我的内容工作室"}
+            {snapshot.profile?.workspaceName || "我的 AI 公司"}
           </h2>
           <p className="mt-1 max-w-md text-[11px] leading-5 text-muted">
             这是一个可点击的展示、观察与导航空间。内容编辑、审批和排期仍在 2D 工作台完成。

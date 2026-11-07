@@ -739,10 +739,15 @@ export function OperatorDesk({
         accent={meta.accent}
         selected={selected}
         dimmed={dimmed}
+<<<<<<< Updated upstream
         subtitle={
           selected || isActive ? agent.activeTaskTitle ?? "任务书整理" : "任务书整理"
         }
         positionY={2.5}
+=======
+        subtitle="总协调"
+        positionY={2.42}
+>>>>>>> Stashed changes
       />
     </group>
   );
