@@ -1,0 +1,94 @@
+{
+ "RequestAnalysis": {
+  "additionalProperties": false,
+  "properties": {
+   "summary": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 2000
+   },
+   "requirements": {
+    "type": "array",
+    "maxItems": 30,
+    "items": {
+     "additionalProperties": false,
+     "properties": {
+      "id": {
+       "type": "string",
+       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+      },
+      "text": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 1000
+      }
+     },
+     "required": [
+      "id",
+      "text"
+     ],
+     "type": "object"
+    }
+   },
+   "open_questions": {
+    "type": "array",
+    "maxItems": 20,
+    "items": {
+     "additionalProperties": false,
+     "properties": {
+      "id": {
+       "type": "string",
+       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+      },
+      "question": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 1000
+      },
+      "reason": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 1000
+      }
+     },
+     "required": [
+      "id",
+      "question",
+      "reason"
+     ],
+     "type": "object"
+    }
+   },
+   "unprovided_business_fields": {
+    "type": "array",
+    "maxItems": 20,
+    "items": {
+     "type": "string",
+     "minLength": 1,
+     "maxLength": 200
+    }
+   },
+   "ready_for_operator": {
+    "type": "boolean"
+   },
+   "source_refs": {
+    "type": "array",
+    "maxItems": 20,
+    "items": {
+     "type": "string",
+     "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+    }
+   }
+  },
+  "required": [
+   "summary",
+   "requirements",
+   "open_questions",
+   "unprovided_business_fields",
+   "ready_for_operator",
+   "source_refs"
+  ],
+  "title": "RequestAnalysis",
+  "type": "object"
+ }
+}

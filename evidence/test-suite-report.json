@@ -1,0 +1,96 @@
+{
+  "evidence_kind": "mock_test_suite_run",
+  "mode": "mock_dev_no_live_model",
+  "contract_version": "seven-agent.v0.1",
+  "observed_at": "2026-11-07T02:21:42.486028+00:00",
+  "command": "python -m pytest tests/five_agent -q",
+  "cwd": "E:\\hackjunction\\hackjunction",
+  "exit_code": 0,
+  "tests_passed": 55,
+  "implementation_manifest": [
+    {
+      "path": "backend/workflow/five_agent/contracts.py",
+      "sha256": "35322a45e7150bddc6b22d95df91d716c7d4345546ec3d48f8f5d59764c08b73"
+    },
+    {
+      "path": "backend/workflow/five_agent/registry.py",
+      "sha256": "51eb91ae76c910eae813190fb1ca4c5bcf54ab2c405fab9d1bc2d8453b5cefef"
+    },
+    {
+      "path": "backend/workflow/five_agent/repository.py",
+      "sha256": "f1f01a0dbd0864c628bcb9c096c12633a3c0b0a726dc4ba4a990c77442af0837"
+    },
+    {
+      "path": "backend/workflow/five_agent/gateway.py",
+      "sha256": "1baf62d3d3c2c3334fc331be5060a273f28c45a19cdd3b546a06742d191a70dc"
+    },
+    {
+      "path": "backend/workflow/five_agent/adapters.py",
+      "sha256": "61e5e3c9e785249f070f94dc0d765742798f2b44df487617ed1b69ae7d694fc0"
+    },
+    {
+      "path": "backend/workflow/five_agent/projection.py",
+      "sha256": "42d95830956f3ebbac55572f9a4e0c246f0d8d2254497166a5876802aaee2b5f"
+    },
+    {
+      "path": "backend/workflow/five_agent/program.py",
+      "sha256": "35a872f4c98dd3f36f88e48817fb8b4ead4631f1b82329aa58a7b1b0596db587"
+    },
+    {
+      "path": "backend/workflow/five_agent/graphstate.py",
+      "sha256": "3bd3bdef5940f74adbe15f9ee28d957ea46b9b3f173bdb2e5e9d77ea1341b26c"
+    },
+    {
+      "path": "backend/workflow/five_agent/nodes.py",
+      "sha256": "24d761a894b289433951c47f3861a2bdf13355496246e33ee5382a70b7622733"
+    },
+    {
+      "path": "backend/workflow/five_agent/graph.py",
+      "sha256": "0bdcaf28b68bd4931d70a0085a882b40ff2c46f6be3a36930d5b91fd69301aec"
+    },
+    {
+      "path": "backend/workflow/five_agent/driver.py",
+      "sha256": "85ae18175372d301afc7482b4ffffcaca9c187f2adefa75154fc2ef3eb35ec0b"
+    },
+    {
+      "path": "backend/workflow/five_agent/resources.py",
+      "sha256": "ff546ba2d9d53b79ed41bd0d59140a8366fa4bf0da27d76db9ba6bf541d3cf5d"
+    },
+    {
+      "path": "backend/workflow/five_agent/resources/agent-interface-seven.json",
+      "sha256": "89a3f663f55bdecfdcfbaaa7128623e8afe1e81156d6b819bf456eddc5a327bd"
+    },
+    {
+      "path": "backend/workflow/five_agent/resources/extension_schemas.json",
+      "sha256": "8961df5443cb69315501465dd97557ff0514d241efdfec5474af46354a6d4137"
+    },
+    {
+      "path": "run_mock_demo.py",
+      "sha256": "47c85a2ffe9a2432690a064e1697d10362f81e6a5d082798f6ca96bb84c254cf"
+    },
+    {
+      "path": "tests/five_agent/conftest.py",
+      "sha256": "8272fc84154cd247177f2aa759df74e5b588f170036aaf8a3a06c67be93d4500"
+    },
+    {
+      "path": "tests/five_agent/test_contract.py",
+      "sha256": "d817013148e77f459d9a8feaf77406ebf2898f009b78c1a8349b2264d0206287"
+    },
+    {
+      "path": "tests/five_agent/test_main_chain.py",
+      "sha256": "3cca1e79a5785f3da73c727369ec273ad6dbe3a23582c959a848a182c6e1bc27"
+    },
+    {
+      "path": "tests/five_agent/test_branches.py",
+      "sha256": "208eab4aae61b793b089fd34799582cf66cf53b57b8b3745e9f6aed32babf69a"
+    },
+    {
+      "path": "tests/five_agent/test_recovery_budget.py",
+      "sha256": "b2a74b010aaf60a34f55fb441b3a8faed0320bbc35920de50949cd9bd818eda3"
+    },
+    {
+      "path": "tests/five_agent/test_seven_roles.py",
+      "sha256": "c731c15596865971a2f74f978dfd96f88f949af9d4a9e7b03565e18a5ed8fb56"
+    }
+  ]
+}

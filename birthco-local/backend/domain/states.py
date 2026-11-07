@@ -1,0 +1,40 @@
+"""Stable persisted state values. Unlisted transitions are rejected by the runner."""
+from enum import Enum
+
+
+class TaskState(str, Enum):
+    DRAFT = "DRAFT"
+    PLANNING = "PLANNING"
+    WAITING_CONFIRMATION = "WAITING_CONFIRMATION"
+    QUEUED = "QUEUED"
+    GENERATING = "GENERATING"
+    VALIDATING = "VALIDATING"
+    REVISING = "REVISING"
+    EXPORTING = "EXPORTING"
+    READY = "READY"
+    ACCEPTED = "ACCEPTED"
+    WAITING_INPUT = "WAITING_INPUT"
+    NEEDS_REVIEW = "NEEDS_REVIEW"
+    FAILED = "FAILED"
+    INTERRUPTED = "INTERRUPTED"
+    CANCELLED = "CANCELLED"
+
+
+class RunState(str, Enum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    WAITING = "WAITING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+    INTERRUPTED = "INTERRUPTED"
+    CANCELLED = "CANCELLED"
+
+
+class PreviewState(str, Enum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    FAILED = "FAILED"
+    INTERRUPTED = "INTERRUPTED"
+    INCOMPLETE = "INCOMPLETE"

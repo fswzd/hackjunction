@@ -1,0 +1,15 @@
+{
+  "task": {
+    "account_id": "demo_account",
+    "input_mode": "idea",
+    "objective": "写一篇帮助摄影新手选择第一台相机的图文",
+    "audience": "预算有限、刚开始学习摄影的新手",
+    "platform": "小红书",
+    "format": "text",
+    "style": "清楚、克制，不夸大效果",
+    "requirements": [{"id": "r1", "text": "解释预算、用途和便携性三个选择条件"}],
+    "materials": [{"kind": "user_supplied_experience", "label": "作者经验", "text": "我经常带相机通勤，重量会影响携带频率。这是我的个人经验。", "source_url": null, "authorized": true}],
+    "preview_requested": false,
+    "length_rule": {"minimum": null, "maximum": 1200}
+  }
+}

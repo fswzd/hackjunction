@@ -1,0 +1,592 @@
+{
+  "analysis_requested": true,
+  "source": {
+    "confirmed": true,
+    "version_id": "v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "content_hash": "aabb8b517da91769ea0252334be80036d80dc995b2740029ce9fbec16d171e73",
+    "content": {
+      "titles": [
+        "轻便相机的取舍",
+        "带出门才有机会拍",
+        "先考虑使用场景"
+      ],
+      "cover_copy": "从通勤经验看便携性的选择",
+      "segments": [
+        {
+          "segment_id": "s1",
+          "kind": "body",
+          "text": "作者通勤时愿意携带轻便的相机，这是个人经验。",
+          "source_refs": []
+        },
+        {
+          "segment_id": "s2",
+          "kind": "closing",
+          "text": "请先确认使用场景，再比较预算与重量。",
+          "source_refs": []
+        }
+      ]
+    },
+    "personas": [
+      {
+        "id": "p1",
+        "goal": "选一台方便通勤携带的相机",
+        "knowledge": "摄影初学者",
+        "preferences": [
+          "具体例子",
+          "短句"
+        ]
+      },
+      {
+        "id": "p2",
+        "goal": "理解轻便与功能的取舍",
+        "knowledge": "有少量拍摄经验",
+        "preferences": [
+          "说清前提"
+        ]
+      }
+    ],
+    "max_segments": 8,
+    "max_calls": 6,
+    "max_active_seconds": 1200
+  },
+  "simulation": {
+    "mode": "mock",
+    "medium": "text",
+    "version_id": "v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "content_hash": "aabb8b517da91769ea0252334be80036d80dc995b2740029ce9fbec16d171e73",
+    "input_hash": "4495908eeadf084e8c68866977bc8fa1f8439620db309d1c0546da8aa29de547",
+    "status": "COMPLETED",
+    "persona_count": 2,
+    "segment_count": 3,
+    "sessions": [
+      {
+        "session_id": "session_1b4d0bf24db14961a86eb7755216d2e8",
+        "persona_id": "p1",
+        "outcome": "exited",
+        "stop_reason": "viewer_exit",
+        "cursor": 2,
+        "events": [
+          {
+            "event_id": "event_e31c9e8f153d4504b656ac249a570478",
+            "seq": 0,
+            "call_id": "audience_79704fc749304cfea99ea9fd51cdb8ca",
+            "event": {
+              "segment_id": "cover_v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "action": "continue",
+              "understanding": "Mock：当前看到的内容片段是「轻便相机的取舍\n从通勤经验看便携性的选择」。",
+              "question": null,
+              "reaction": "Mock机械继续示例，不代表真实观众意见。",
+              "interactions": [],
+              "comment_text": null
+            }
+          },
+          {
+            "event_id": "event_db58fdc66c0844d4a109c9acae37ff30",
+            "seq": 1,
+            "call_id": "audience_cf905c63a852415ea9606aedca99aebf",
+            "event": {
+              "segment_id": "s1",
+              "action": "exit",
+              "understanding": "Mock：当前看到的内容片段是「作者通勤时愿意携带轻便的相机，这是个人经验。」。",
+              "question": null,
+              "reaction": "Mock机械退出示例，不代表真实观众意见。",
+              "interactions": [],
+              "comment_text": null
+            }
+          }
+        ]
+      },
+      {
+        "session_id": "session_1b015a4301754d1bb104e24f6983d055",
+        "persona_id": "p2",
+        "outcome": "exited",
+        "stop_reason": "viewer_exit",
+        "cursor": 2,
+        "events": [
+          {
+            "event_id": "event_8c9e1e4facbe47d986db3e58263b546e",
+            "seq": 0,
+            "call_id": "audience_1f128e2111024f0da4a253634e0f76b1",
+            "event": {
+              "segment_id": "cover_v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "action": "continue",
+              "understanding": "Mock：当前看到的内容片段是「轻便相机的取舍\n从通勤经验看便携性的选择」。",
+              "question": null,
+              "reaction": "Mock机械继续示例，不代表真实观众意见。",
+              "interactions": [],
+              "comment_text": null
+            }
+          },
+          {
+            "event_id": "event_3977c5eeb93442538410b2a78cabd24a",
+            "seq": 1,
+            "call_id": "audience_9fed9b3b3b5d444c8e552d64f212b1cb",
+            "event": {
+              "segment_id": "s1",
+              "action": "exit",
+              "understanding": "Mock：当前看到的内容片段是「作者通勤时愿意携带轻便的相机，这是个人经验。」。",
+              "question": null,
+              "reaction": "Mock机械退出示例，不代表真实观众意见。",
+              "interactions": [],
+              "comment_text": null
+            }
+          }
+        ]
+      }
+    ],
+    "calls": [
+      {
+        "session_id": "session_1b4d0bf24db14961a86eb7755216d2e8",
+        "persona_id": "p1",
+        "ordinal": 0,
+        "mode": "mock",
+        "call_id": "audience_79704fc749304cfea99ea9fd51cdb8ca",
+        "input_hash": "8c40a95473d626bd7780f160655dc81278eaa277709396d7bf69bc331a244c70",
+        "status": "received",
+        "event": {
+          "segment_id": "cover_v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "action": "continue",
+          "understanding": "Mock：当前看到的内容片段是「轻便相机的取舍\n从通勤经验看便携性的选择」。",
+          "question": null,
+          "reaction": "Mock机械继续示例，不代表真实观众意见。",
+          "interactions": [],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_1b4d0bf24db14961a86eb7755216d2e8",
+        "persona_id": "p1",
+        "ordinal": 1,
+        "mode": "mock",
+        "call_id": "audience_cf905c63a852415ea9606aedca99aebf",
+        "input_hash": "95cf55a2adf4ae8e3540f414b4c344f07cea1da966b80e283a440ff3393a7de9",
+        "status": "received",
+        "event": {
+          "segment_id": "s1",
+          "action": "exit",
+          "understanding": "Mock：当前看到的内容片段是「作者通勤时愿意携带轻便的相机，这是个人经验。」。",
+          "question": null,
+          "reaction": "Mock机械退出示例，不代表真实观众意见。",
+          "interactions": [],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_1b015a4301754d1bb104e24f6983d055",
+        "persona_id": "p2",
+        "ordinal": 0,
+        "mode": "mock",
+        "call_id": "audience_1f128e2111024f0da4a253634e0f76b1",
+        "input_hash": "19778806764e9b13ce5816f7525cb7220e65ce456ec4bad529f7dc45e7016fca",
+        "status": "received",
+        "event": {
+          "segment_id": "cover_v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "action": "continue",
+          "understanding": "Mock：当前看到的内容片段是「轻便相机的取舍\n从通勤经验看便携性的选择」。",
+          "question": null,
+          "reaction": "Mock机械继续示例，不代表真实观众意见。",
+          "interactions": [],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_1b015a4301754d1bb104e24f6983d055",
+        "persona_id": "p2",
+        "ordinal": 1,
+        "mode": "mock",
+        "call_id": "audience_9fed9b3b3b5d444c8e552d64f212b1cb",
+        "input_hash": "7b523a8b41eb6cdb56fdc228bed13cff0d67d61019c60ea3352bfb1375d9148b",
+        "status": "received",
+        "event": {
+          "segment_id": "s1",
+          "action": "exit",
+          "understanding": "Mock：当前看到的内容片段是「作者通勤时愿意携带轻便的相机，这是个人经验。」。",
+          "question": null,
+          "reaction": "Mock机械退出示例，不代表真实观众意见。",
+          "interactions": [],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      }
+    ],
+    "calls_attempted": 4,
+    "call_budget": 6,
+    "time_budget_seconds": 1200,
+    "usage": {
+      "known_total_tokens": null,
+      "usage_not_reported_calls": 4,
+      "remote_outcome_unknown_calls": 0
+    },
+    "mock_fixture_exit_ordinal": 1,
+    "is_simulation": true,
+    "predicts_real_traffic": false,
+    "automatic_resume": false,
+    "explicit_new_request_required": true
+  },
+  "comparison_source": {
+    "confirmed": true,
+    "version_id": "v_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "content_hash": "a60ace59082add3c87d726d8c46f66f34070588c108fd30f7c700581481ef49c",
+    "content": {
+      "titles": [
+        "轻便相机的取舍",
+        "带出门才有机会拍",
+        "先考虑使用场景"
+      ],
+      "cover_copy": "从通勤经验看便携性的选择",
+      "segments": [
+        {
+          "segment_id": "s1",
+          "kind": "body",
+          "text": "作者通勤时愿意携带轻便的相机，这是个人经验。",
+          "source_refs": []
+        },
+        {
+          "segment_id": "s2",
+          "kind": "closing",
+          "text": "请列出自己的通勤需求，再确认预算。",
+          "source_refs": []
+        }
+      ]
+    },
+    "personas": [
+      {
+        "id": "p1",
+        "goal": "选一台方便通勤携带的相机",
+        "knowledge": "摄影初学者",
+        "preferences": [
+          "具体例子",
+          "短句"
+        ]
+      },
+      {
+        "id": "p2",
+        "goal": "理解轻便与功能的取舍",
+        "knowledge": "有少量拍摄经验",
+        "preferences": [
+          "说清前提"
+        ]
+      }
+    ],
+    "max_segments": 8,
+    "max_calls": 6,
+    "max_active_seconds": 1200
+  },
+  "comparison_simulation": {
+    "mode": "mock",
+    "medium": "text",
+    "version_id": "v_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "content_hash": "a60ace59082add3c87d726d8c46f66f34070588c108fd30f7c700581481ef49c",
+    "input_hash": "2ee3ebf8dc1e978545c945eaf76ca40e45c7b152eff4fe069bf2b066a7e1e263",
+    "status": "COMPLETED",
+    "persona_count": 2,
+    "segment_count": 3,
+    "sessions": [
+      {
+        "session_id": "session_cfd6ab285f7947608456ed570aeee19d",
+        "persona_id": "p1",
+        "outcome": "completed",
+        "stop_reason": null,
+        "cursor": 3,
+        "events": [
+          {
+            "event_id": "event_cbbb5dd4d32f4acfa59adeb71d239dcd",
+            "seq": 0,
+            "call_id": "audience_3fd922530f3b42c8923167a41b3820f5",
+            "event": {
+              "segment_id": "cover_v_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "action": "continue",
+              "understanding": "Mock：当前看到的内容片段是「轻便相机的取舍\n从通勤经验看便携性的选择」。",
+              "question": null,
+              "reaction": "Mock机械继续示例，不代表真实观众意见。",
+              "interactions": [],
+              "comment_text": null
+            }
+          },
+          {
+            "event_id": "event_5d1fb6496b134acdb2384c3ea1de1def",
+            "seq": 1,
+            "call_id": "audience_ecacb9097c7b4cb8b942f6c6e566f930",
+            "event": {
+              "segment_id": "s1",
+              "action": "continue",
+              "understanding": "Mock：当前看到的内容片段是「作者通勤时愿意携带轻便的相机，这是个人经验。」。",
+              "question": null,
+              "reaction": "Mock机械继续示例，不代表真实观众意见。",
+              "interactions": [],
+              "comment_text": null
+            }
+          },
+          {
+            "event_id": "event_f9f6f7b089b043b9b29f0d9bd81b4ab8",
+            "seq": 2,
+            "call_id": "audience_bad988de38ba447aa6c4fbf2a53c4f30",
+            "event": {
+              "segment_id": "s2",
+              "action": "continue",
+              "understanding": "Mock：当前看到的内容片段是「请列出自己的通勤需求，再确认预算。」。",
+              "question": null,
+              "reaction": "Mock机械继续示例，不代表真实观众意见。",
+              "interactions": [],
+              "comment_text": null
+            }
+          }
+        ]
+      },
+      {
+        "session_id": "session_e72220af3486419fad3397b4a5cd644d",
+        "persona_id": "p2",
+        "outcome": "completed",
+        "stop_reason": null,
+        "cursor": 3,
+        "events": [
+          {
+            "event_id": "event_9b26acc05686475195b717d689a37c09",
+            "seq": 0,
+            "call_id": "audience_d458415a8c284cd2a3288049782f3e93",
+            "event": {
+              "segment_id": "cover_v_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "action": "continue",
+              "understanding": "Mock：当前看到的内容片段是「轻便相机的取舍\n从通勤经验看便携性的选择」。",
+              "question": null,
+              "reaction": "Mock机械继续示例，不代表真实观众意见。",
+              "interactions": [],
+              "comment_text": null
+            }
+          },
+          {
+            "event_id": "event_981aed37c0894fe18926265aab6b3bc4",
+            "seq": 1,
+            "call_id": "audience_06850051f9f64eba8fcb5319ad67a7e2",
+            "event": {
+              "segment_id": "s1",
+              "action": "continue",
+              "understanding": "Mock：当前看到的内容片段是「作者通勤时愿意携带轻便的相机，这是个人经验。」。",
+              "question": null,
+              "reaction": "Mock机械继续示例，不代表真实观众意见。",
+              "interactions": [],
+              "comment_text": null
+            }
+          },
+          {
+            "event_id": "event_08f463a587734406ad6853c06d9db33c",
+            "seq": 2,
+            "call_id": "audience_b11d1a20d1b34945b4cf540bb2794c2d",
+            "event": {
+              "segment_id": "s2",
+              "action": "continue",
+              "understanding": "Mock：当前看到的内容片段是「请列出自己的通勤需求，再确认预算。」。",
+              "question": null,
+              "reaction": "Mock机械继续示例，不代表真实观众意见。",
+              "interactions": [],
+              "comment_text": null
+            }
+          }
+        ]
+      }
+    ],
+    "calls": [
+      {
+        "session_id": "session_cfd6ab285f7947608456ed570aeee19d",
+        "persona_id": "p1",
+        "ordinal": 0,
+        "mode": "mock",
+        "call_id": "audience_3fd922530f3b42c8923167a41b3820f5",
+        "input_hash": "87d0eaf8a5cc6c2da5dbe5eafe793afefc6dbe7061f6127a14f87d4802b76d2b",
+        "status": "received",
+        "event": {
+          "segment_id": "cover_v_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "action": "continue",
+          "understanding": "Mock：当前看到的内容片段是「轻便相机的取舍\n从通勤经验看便携性的选择」。",
+          "question": null,
+          "reaction": "Mock机械继续示例，不代表真实观众意见。",
+          "interactions": [],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_cfd6ab285f7947608456ed570aeee19d",
+        "persona_id": "p1",
+        "ordinal": 1,
+        "mode": "mock",
+        "call_id": "audience_ecacb9097c7b4cb8b942f6c6e566f930",
+        "input_hash": "bd61b7f64ff9f75bcfdc482abebf0f40180abede3f0366a8e7cca8352bcd905c",
+        "status": "received",
+        "event": {
+          "segment_id": "s1",
+          "action": "continue",
+          "understanding": "Mock：当前看到的内容片段是「作者通勤时愿意携带轻便的相机，这是个人经验。」。",
+          "question": null,
+          "reaction": "Mock机械继续示例，不代表真实观众意见。",
+          "interactions": [],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_cfd6ab285f7947608456ed570aeee19d",
+        "persona_id": "p1",
+        "ordinal": 2,
+        "mode": "mock",
+        "call_id": "audience_bad988de38ba447aa6c4fbf2a53c4f30",
+        "input_hash": "f3ef9ac08cd58fa5c86e35f53c3328abb754ea7521899a67714e5b46a756c79f",
+        "status": "received",
+        "event": {
+          "segment_id": "s2",
+          "action": "continue",
+          "understanding": "Mock：当前看到的内容片段是「请列出自己的通勤需求，再确认预算。」。",
+          "question": null,
+          "reaction": "Mock机械继续示例，不代表真实观众意见。",
+          "interactions": [],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_e72220af3486419fad3397b4a5cd644d",
+        "persona_id": "p2",
+        "ordinal": 0,
+        "mode": "mock",
+        "call_id": "audience_d458415a8c284cd2a3288049782f3e93",
+        "input_hash": "28d03ba44210a4fc00198529b9048995ce77118b98109679a60f48c5762b4eef",
+        "status": "received",
+        "event": {
+          "segment_id": "cover_v_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "action": "continue",
+          "understanding": "Mock：当前看到的内容片段是「轻便相机的取舍\n从通勤经验看便携性的选择」。",
+          "question": null,
+          "reaction": "Mock机械继续示例，不代表真实观众意见。",
+          "interactions": [],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_e72220af3486419fad3397b4a5cd644d",
+        "persona_id": "p2",
+        "ordinal": 1,
+        "mode": "mock",
+        "call_id": "audience_06850051f9f64eba8fcb5319ad67a7e2",
+        "input_hash": "4b64a190227e753e39cbb28b7ac1f497a189678c02e2a9476510b2b0af4cb63d",
+        "status": "received",
+        "event": {
+          "segment_id": "s1",
+          "action": "continue",
+          "understanding": "Mock：当前看到的内容片段是「作者通勤时愿意携带轻便的相机，这是个人经验。」。",
+          "question": null,
+          "reaction": "Mock机械继续示例，不代表真实观众意见。",
+          "interactions": [],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_e72220af3486419fad3397b4a5cd644d",
+        "persona_id": "p2",
+        "ordinal": 2,
+        "mode": "mock",
+        "call_id": "audience_b11d1a20d1b34945b4cf540bb2794c2d",
+        "input_hash": "4b581975cf64c12164a2a2f8712f0f3049d75c46c225b8c68fa7143f797c4d13",
+        "status": "received",
+        "event": {
+          "segment_id": "s2",
+          "action": "continue",
+          "understanding": "Mock：当前看到的内容片段是「请列出自己的通勤需求，再确认预算。」。",
+          "question": null,
+          "reaction": "Mock机械继续示例，不代表真实观众意见。",
+          "interactions": [],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      }
+    ],
+    "calls_attempted": 6,
+    "call_budget": 6,
+    "time_budget_seconds": 1200,
+    "usage": {
+      "known_total_tokens": null,
+      "usage_not_reported_calls": 6,
+      "remote_outcome_unknown_calls": 0
+    },
+    "mock_fixture_exit_ordinal": null,
+    "is_simulation": true,
+    "predicts_real_traffic": false,
+    "automatic_resume": false,
+    "explicit_new_request_required": true
+  },
+  "allow_descriptive_comparison": true
+}

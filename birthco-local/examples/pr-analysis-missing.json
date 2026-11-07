@@ -1,0 +1,26 @@
+{
+  "analysis_requested": true,
+  "account_id": "demo_brand_account",
+  "client_brief": {
+    "label": "虚构客户简报，仅演示",
+    "text": "【虚构演示资料，非真实商品】品牌名：示例包。产品为收纳包。客户提供描述：设有多个分区。价格、尺寸、材质、测试数据、交付日期均未提供。这些是客户提供的信息，不代表独立事实核验。",
+    "authorized": true
+  },
+  "intake": {
+    "brand": "示例包",
+    "product": "收纳包",
+    "objective": null,
+    "audience": null,
+    "platform": "小红书",
+    "style": "清楚克制，明确为合作内容，不编造体验",
+    "budget": null,
+    "deadline": null,
+    "approver": null
+  },
+  "requirements": [],
+  "materials": [],
+  "length_rule": {
+    "minimum": null,
+    "maximum": 1200
+  }
+}

@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "birthco-local"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["pydantic==2.14.1", "httpx==0.28.1", "Flask==3.1.2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers"

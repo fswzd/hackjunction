@@ -1,0 +1,2137 @@
+{
+ "Question": {
+  "additionalProperties": false,
+  "properties": {
+   "id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Id",
+    "type": "string"
+   },
+   "question": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Question",
+    "type": "string"
+   },
+   "reason": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Reason",
+    "type": "string"
+   }
+  },
+  "required": [
+   "id",
+   "question",
+   "reason"
+  ],
+  "title": "Question",
+  "type": "object"
+ },
+ "Issue": {
+  "additionalProperties": false,
+  "properties": {
+   "id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Id",
+    "type": "string"
+   },
+   "severity": {
+    "enum": [
+     "blocking",
+     "advisory"
+    ],
+    "title": "Severity",
+    "type": "string"
+   },
+   "location": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Location",
+    "type": "string"
+   },
+   "reason": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Reason",
+    "type": "string"
+   },
+   "requested_change": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Requested Change",
+    "type": "string"
+   }
+  },
+  "required": [
+   "id",
+   "severity",
+   "location",
+   "reason",
+   "requested_change"
+  ],
+  "title": "Issue",
+  "type": "object"
+ },
+ "Brief": {
+  "$defs": {
+   "EditScope": {
+    "additionalProperties": false,
+    "properties": {
+     "target_segment_ids": {
+      "items": {
+       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+       "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Target Segment Ids",
+      "type": "array"
+     },
+     "preserve_segment_ids": {
+      "items": {
+       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+       "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Preserve Segment Ids",
+      "type": "array"
+     },
+     "allow_title_change": {
+      "title": "Allow Title Change",
+      "type": "boolean"
+     },
+     "allow_cover_change": {
+      "title": "Allow Cover Change",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "target_segment_ids",
+     "preserve_segment_ids",
+     "allow_title_change",
+     "allow_cover_change"
+    ],
+    "title": "EditScope",
+    "type": "object"
+   },
+   "LengthRule": {
+    "additionalProperties": false,
+    "properties": {
+     "minimum": {
+      "anyOf": [
+       {
+        "maximum": 20000,
+        "minimum": 0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Minimum"
+     },
+     "maximum": {
+      "anyOf": [
+       {
+        "maximum": 20000,
+        "minimum": 1,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Maximum"
+     }
+    },
+    "title": "LengthRule",
+    "type": "object"
+   },
+   "Question": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+     },
+     "question": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+     },
+     "reason": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "question",
+     "reason"
+    ],
+    "title": "Question",
+    "type": "object"
+   },
+   "Requirement": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+     },
+     "text": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Text",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "text"
+    ],
+    "title": "Requirement",
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "input_mode": {
+    "enum": [
+     "idea",
+     "existing_draft"
+    ],
+    "title": "Input Mode",
+    "type": "string"
+   },
+   "objective": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Objective",
+    "type": "string"
+   },
+   "audience": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Audience",
+    "type": "string"
+   },
+   "platform": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Platform",
+    "type": "string"
+   },
+   "format": {
+    "const": "text",
+    "title": "Format",
+    "type": "string"
+   },
+   "core_promise": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Core Promise",
+    "type": "string"
+   },
+   "requirements": {
+    "items": {
+     "$ref": "#/$defs/Requirement"
+    },
+    "maxItems": 30,
+    "minItems": 1,
+    "title": "Requirements",
+    "type": "array"
+   },
+   "material_ids": {
+    "items": {
+     "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+     "type": "string"
+    },
+    "maxItems": 20,
+    "title": "Material Ids",
+    "type": "array"
+   },
+   "open_questions": {
+    "items": {
+     "$ref": "#/$defs/Question"
+    },
+    "maxItems": 20,
+    "title": "Open Questions",
+    "type": "array"
+   },
+   "route": {
+    "items": {
+     "enum": [
+      "research",
+      "draft",
+      "review",
+      "preview",
+      "revise",
+      "export"
+     ],
+     "type": "string"
+    },
+    "maxItems": 6,
+    "title": "Route",
+    "type": "array"
+   },
+   "length_rule": {
+    "$ref": "#/$defs/LengthRule"
+   },
+   "edit_scope": {
+    "anyOf": [
+     {
+      "$ref": "#/$defs/EditScope"
+     },
+     {
+      "type": "null"
+     }
+    ]
+   }
+  },
+  "required": [
+   "input_mode",
+   "objective",
+   "audience",
+   "platform",
+   "format",
+   "core_promise",
+   "requirements",
+   "material_ids",
+   "open_questions",
+   "route",
+   "length_rule",
+   "edit_scope"
+  ],
+  "title": "Brief",
+  "type": "object"
+ },
+ "ContentCandidate": {
+  "$defs": {
+   "Segment": {
+    "additionalProperties": false,
+    "properties": {
+     "segment_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Segment Id",
+      "type": "string"
+     },
+     "kind": {
+      "enum": [
+       "hook",
+       "body",
+       "closing"
+      ],
+      "title": "Kind",
+      "type": "string"
+     },
+     "text": {
+      "maxLength": 20000,
+      "title": "Text",
+      "type": "string"
+     },
+     "source_refs": {
+      "items": {
+       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+       "type": "string"
+      },
+      "maxItems": 20,
+      "title": "Source Refs",
+      "type": "array"
+     }
+    },
+    "required": [
+     "segment_id",
+     "kind",
+     "text",
+     "source_refs"
+    ],
+    "title": "Segment",
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "titles": {
+    "items": {
+     "type": "string"
+    },
+    "maxItems": 10,
+    "title": "Titles",
+    "type": "array"
+   },
+   "cover_copy": {
+    "anyOf": [
+     {
+      "maxLength": 1000,
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null,
+    "title": "Cover Copy"
+   },
+   "segments": {
+    "items": {
+     "$ref": "#/$defs/Segment"
+    },
+    "maxItems": 32,
+    "title": "Segments",
+    "type": "array"
+   }
+  },
+  "required": [
+   "titles",
+   "segments"
+  ],
+  "title": "ContentCandidate",
+  "type": "object"
+ },
+ "Revision": {
+  "$defs": {
+   "Change": {
+    "additionalProperties": false,
+    "properties": {
+     "finding_id": {
+      "anyOf": [
+       {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Finding Id"
+     },
+     "issue_id": {
+      "anyOf": [
+       {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Issue Id"
+     },
+     "old_segment_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Old Segment Id",
+      "type": "string"
+     },
+     "new_segment_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "New Segment Id",
+      "type": "string"
+     },
+     "change": {
+      "enum": [
+       "replace",
+       "delete",
+       "insert_after",
+       "move",
+       "metadata_update"
+      ],
+      "title": "Change",
+      "type": "string"
+     },
+     "reason": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+     }
+    },
+    "required": [
+     "finding_id",
+     "issue_id",
+     "old_segment_id",
+     "new_segment_id",
+     "change",
+     "reason"
+    ],
+    "title": "Change",
+    "type": "object"
+   },
+   "Segment": {
+    "additionalProperties": false,
+    "properties": {
+     "segment_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Segment Id",
+      "type": "string"
+     },
+     "kind": {
+      "enum": [
+       "hook",
+       "body",
+       "closing"
+      ],
+      "title": "Kind",
+      "type": "string"
+     },
+     "text": {
+      "maxLength": 20000,
+      "title": "Text",
+      "type": "string"
+     },
+     "source_refs": {
+      "items": {
+       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+       "type": "string"
+      },
+      "maxItems": 20,
+      "title": "Source Refs",
+      "type": "array"
+     }
+    },
+    "required": [
+     "segment_id",
+     "kind",
+     "text",
+     "source_refs"
+    ],
+    "title": "Segment",
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "titles": {
+    "items": {
+     "type": "string"
+    },
+    "maxItems": 10,
+    "title": "Titles",
+    "type": "array"
+   },
+   "cover_copy": {
+    "anyOf": [
+     {
+      "maxLength": 1000,
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null,
+    "title": "Cover Copy"
+   },
+   "segments": {
+    "items": {
+     "$ref": "#/$defs/Segment"
+    },
+    "maxItems": 32,
+    "title": "Segments",
+    "type": "array"
+   },
+   "change_log": {
+    "items": {
+     "$ref": "#/$defs/Change"
+    },
+    "maxItems": 32,
+    "minItems": 1,
+    "title": "Change Log",
+    "type": "array"
+   }
+  },
+  "required": [
+   "titles",
+   "segments",
+   "change_log"
+  ],
+  "title": "Revision",
+  "type": "object"
+ },
+ "EditorialReview": {
+  "$defs": {
+   "ClaimCheck": {
+    "additionalProperties": false,
+    "properties": {
+     "claim": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Claim",
+      "type": "string"
+     },
+     "location": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Location",
+      "type": "string"
+     },
+     "source_ref": {
+      "anyOf": [
+       {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Source Ref"
+     },
+     "assessment": {
+      "enum": [
+       "supported",
+       "unsupported",
+       "uncertain",
+       "personal_experience"
+      ],
+      "title": "Assessment",
+      "type": "string"
+     }
+    },
+    "required": [
+     "claim",
+     "location",
+     "source_ref",
+     "assessment"
+    ],
+    "title": "ClaimCheck",
+    "type": "object"
+   },
+   "Issue": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+     },
+     "severity": {
+      "enum": [
+       "blocking",
+       "advisory"
+      ],
+      "title": "Severity",
+      "type": "string"
+     },
+     "location": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Location",
+      "type": "string"
+     },
+     "reason": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+     },
+     "requested_change": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Requested Change",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "severity",
+     "location",
+     "reason",
+     "requested_change"
+    ],
+    "title": "Issue",
+    "type": "object"
+   },
+   "RequirementCheck": {
+    "additionalProperties": false,
+    "properties": {
+     "requirement_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Requirement Id",
+      "type": "string"
+     },
+     "result": {
+      "enum": [
+       "met",
+       "unmet",
+       "unknown"
+      ],
+      "title": "Result",
+      "type": "string"
+     },
+     "evidence_refs": {
+      "items": {
+       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+       "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Evidence Refs",
+      "type": "array"
+     }
+    },
+    "required": [
+     "requirement_id",
+     "result",
+     "evidence_refs"
+    ],
+    "title": "RequirementCheck",
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "issues": {
+    "items": {
+     "$ref": "#/$defs/Issue"
+    },
+    "maxItems": 30,
+    "title": "Issues",
+    "type": "array"
+   },
+   "requirement_checks": {
+    "items": {
+     "$ref": "#/$defs/RequirementCheck"
+    },
+    "maxItems": 30,
+    "title": "Requirement Checks",
+    "type": "array"
+   },
+   "claim_checks": {
+    "items": {
+     "$ref": "#/$defs/ClaimCheck"
+    },
+    "maxItems": 50,
+    "title": "Claim Checks",
+    "type": "array"
+   },
+   "overall": {
+    "enum": [
+     "pass",
+     "revise",
+     "needs_input"
+    ],
+    "title": "Overall",
+    "type": "string"
+   }
+  },
+  "required": [
+   "issues",
+   "requirement_checks",
+   "claim_checks",
+   "overall"
+  ],
+  "title": "EditorialReview",
+  "type": "object"
+ },
+ "OpportunitySet": {
+  "$defs": {
+   "Opportunity": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+     },
+     "angle": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Angle",
+      "type": "string"
+     },
+     "audience_problem": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Audience Problem",
+      "type": "string"
+     },
+     "account_fit": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Account Fit",
+      "type": "string"
+     },
+     "source_refs": {
+      "items": {
+       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+       "type": "string"
+      },
+      "maxItems": 20,
+      "title": "Source Refs",
+      "type": "array"
+     },
+     "evidence_date": {
+      "anyOf": [
+       {
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence Date"
+     },
+     "hypothesis": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Hypothesis",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "angle",
+     "audience_problem",
+     "account_fit",
+     "source_refs",
+     "evidence_date",
+     "hypothesis"
+    ],
+    "title": "Opportunity",
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "opportunities": {
+    "items": {
+     "$ref": "#/$defs/Opportunity"
+    },
+    "maxItems": 3,
+    "title": "Opportunities",
+    "type": "array"
+   }
+  },
+  "required": [
+   "opportunities"
+  ],
+  "title": "OpportunitySet",
+  "type": "object"
+ },
+ "Analysis": {
+  "$defs": {
+   "ComparisonConclusion": {
+    "additionalProperties": false,
+    "properties": {
+     "conditions_match": {
+      "title": "Conditions Match",
+      "type": "boolean"
+     },
+     "reason": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+     },
+     "summary": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+     }
+    },
+    "required": [
+     "conditions_match",
+     "reason",
+     "summary"
+    ],
+    "title": "ComparisonConclusion",
+    "type": "object"
+   },
+   "Finding": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+     },
+     "segment_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Segment Id",
+      "type": "string"
+     },
+     "observation_refs": {
+      "items": {
+       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+       "type": "string"
+      },
+      "maxItems": 50,
+      "minItems": 1,
+      "title": "Observation Refs",
+      "type": "array"
+     },
+     "interpretation": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Interpretation",
+      "type": "string"
+     },
+     "alternative_explanation": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Alternative Explanation",
+      "type": "string"
+     },
+     "suggested_edit": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Suggested Edit",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "segment_id",
+     "observation_refs",
+     "interpretation",
+     "alternative_explanation",
+     "suggested_edit"
+    ],
+    "title": "Finding",
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "findings": {
+    "items": {
+     "$ref": "#/$defs/Finding"
+    },
+    "maxItems": 10,
+    "title": "Findings",
+    "type": "array"
+   },
+   "comparison": {
+    "$ref": "#/$defs/ComparisonConclusion"
+   },
+   "next_experiment": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Next Experiment",
+    "type": "string"
+   }
+  },
+  "required": [
+   "findings",
+   "comparison",
+   "next_experiment"
+  ],
+  "title": "Analysis",
+  "type": "object"
+ },
+ "AudienceEvent": {
+  "additionalProperties": false,
+  "properties": {
+   "segment_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Segment Id",
+    "type": "string"
+   },
+   "action": {
+    "enum": [
+     "continue",
+     "exit"
+    ],
+    "title": "Action",
+    "type": "string"
+   },
+   "understanding": {
+    "maxLength": 1000,
+    "title": "Understanding",
+    "type": "string"
+   },
+   "question": {
+    "anyOf": [
+     {
+      "maxLength": 1000,
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "title": "Question"
+   },
+   "reaction": {
+    "maxLength": 1000,
+    "title": "Reaction",
+    "type": "string"
+   },
+   "interactions": {
+    "items": {
+     "enum": [
+      "like",
+      "comment",
+      "save"
+     ],
+     "type": "string"
+    },
+    "maxItems": 3,
+    "title": "Interactions",
+    "type": "array"
+   },
+   "comment_text": {
+    "anyOf": [
+     {
+      "maxLength": 1000,
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "title": "Comment Text"
+   }
+  },
+  "required": [
+   "segment_id",
+   "action",
+   "understanding",
+   "question",
+   "reaction",
+   "interactions",
+   "comment_text"
+  ],
+  "title": "AudienceEvent",
+  "type": "object"
+ },
+ "AudienceInput": {
+  "$defs": {
+   "AudienceEvent": {
+    "additionalProperties": false,
+    "properties": {
+     "segment_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Segment Id",
+      "type": "string"
+     },
+     "action": {
+      "enum": [
+       "continue",
+       "exit"
+      ],
+      "title": "Action",
+      "type": "string"
+     },
+     "understanding": {
+      "maxLength": 1000,
+      "title": "Understanding",
+      "type": "string"
+     },
+     "question": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Question"
+     },
+     "reaction": {
+      "maxLength": 1000,
+      "title": "Reaction",
+      "type": "string"
+     },
+     "interactions": {
+      "items": {
+       "enum": [
+        "like",
+        "comment",
+        "save"
+       ],
+       "type": "string"
+      },
+      "maxItems": 3,
+      "title": "Interactions",
+      "type": "array"
+     },
+     "comment_text": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Comment Text"
+     }
+    },
+    "required": [
+     "segment_id",
+     "action",
+     "understanding",
+     "question",
+     "reaction",
+     "interactions",
+     "comment_text"
+    ],
+    "title": "AudienceEvent",
+    "type": "object"
+   },
+   "Persona": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+     },
+     "goal": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Goal",
+      "type": "string"
+     },
+     "knowledge": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Knowledge",
+      "type": "string"
+     },
+     "preferences": {
+      "items": {
+       "maxLength": 1000,
+       "minLength": 1,
+       "type": "string"
+      },
+      "maxItems": 10,
+      "title": "Preferences",
+      "type": "array"
+     }
+    },
+    "required": [
+     "id",
+     "goal",
+     "knowledge",
+     "preferences"
+    ],
+    "title": "Persona",
+    "type": "object"
+   },
+   "VisibleSegment": {
+    "additionalProperties": false,
+    "properties": {
+     "segment_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Segment Id",
+      "type": "string"
+     },
+     "kind": {
+      "enum": [
+       "cover",
+       "hook",
+       "body",
+       "closing"
+      ],
+      "title": "Kind",
+      "type": "string"
+     },
+     "text": {
+      "maxLength": 20000,
+      "minLength": 1,
+      "title": "Text",
+      "type": "string"
+     }
+    },
+    "required": [
+     "segment_id",
+     "kind",
+     "text"
+    ],
+    "title": "VisibleSegment",
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "persona": {
+    "$ref": "#/$defs/Persona"
+   },
+   "current_segment": {
+    "$ref": "#/$defs/VisibleSegment"
+   },
+   "visible_history": {
+    "items": {
+     "$ref": "#/$defs/VisibleSegment"
+    },
+    "maxItems": 7,
+    "title": "Visible History",
+    "type": "array"
+   },
+   "own_previous_reactions": {
+    "items": {
+     "$ref": "#/$defs/AudienceEvent"
+    },
+    "maxItems": 7,
+    "title": "Own Previous Reactions",
+    "type": "array"
+   }
+  },
+  "required": [
+   "persona",
+   "current_segment",
+   "visible_history",
+   "own_previous_reactions"
+  ],
+  "title": "AudienceInput",
+  "type": "object"
+ },
+ "RuleResult": {
+  "additionalProperties": false,
+  "properties": {
+   "rule_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Rule Id",
+    "type": "string"
+   },
+   "passed": {
+    "title": "Passed",
+    "type": "boolean"
+   },
+   "reason": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Reason",
+    "type": "string"
+   },
+   "segment_id": {
+    "anyOf": [
+     {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "title": "Segment Id"
+   }
+  },
+  "required": [
+   "rule_id",
+   "passed",
+   "reason",
+   "segment_id"
+  ],
+  "title": "RuleResult",
+  "type": "object"
+ },
+ "RuleReport": {
+  "$defs": {
+   "RuleResult": {
+    "additionalProperties": false,
+    "properties": {
+     "rule_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Rule Id",
+      "type": "string"
+     },
+     "passed": {
+      "title": "Passed",
+      "type": "boolean"
+     },
+     "reason": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+     },
+     "segment_id": {
+      "anyOf": [
+       {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Segment Id"
+     }
+    },
+    "required": [
+     "rule_id",
+     "passed",
+     "reason",
+     "segment_id"
+    ],
+    "title": "RuleResult",
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "version_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Version Id",
+    "type": "string"
+   },
+   "content_hash": {
+    "pattern": "^[a-f0-9]{64}$",
+    "title": "Content Hash",
+    "type": "string"
+   },
+   "rule_version": {
+    "const": "content-rules-v1",
+    "title": "Rule Version",
+    "type": "string"
+   },
+   "passed": {
+    "title": "Passed",
+    "type": "boolean"
+   },
+   "body_characters": {
+    "minimum": 0,
+    "title": "Body Characters",
+    "type": "integer"
+   },
+   "checks": {
+    "items": {
+     "$ref": "#/$defs/RuleResult"
+    },
+    "title": "Checks",
+    "type": "array"
+   }
+  },
+  "required": [
+   "version_id",
+   "content_hash",
+   "rule_version",
+   "passed",
+   "body_characters",
+   "checks"
+  ],
+  "title": "RuleReport",
+  "type": "object"
+ },
+ "RevisionRequest": {
+  "additionalProperties": false,
+  "properties": {
+   "expected_head_version_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Expected Head Version Id",
+    "type": "string"
+   },
+   "base_version_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Base Version Id",
+    "type": "string"
+   },
+   "base_content_hash": {
+    "pattern": "^[a-f0-9]{64}$",
+    "title": "Base Content Hash",
+    "type": "string"
+   },
+   "analysis_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Analysis Id",
+    "type": "string"
+   },
+   "finding_ids": {
+    "items": {
+     "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+     "type": "string"
+    },
+    "maxItems": 10,
+    "minItems": 1,
+    "title": "Finding Ids",
+    "type": "array"
+   },
+   "instructions": {
+    "anyOf": [
+     {
+      "maxLength": 1000,
+      "minLength": 1,
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "title": "Instructions"
+   },
+   "allow_title_change": {
+    "title": "Allow Title Change",
+    "type": "boolean"
+   },
+   "allow_cover_change": {
+    "title": "Allow Cover Change",
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "expected_head_version_id",
+   "base_version_id",
+   "base_content_hash",
+   "analysis_id",
+   "finding_ids",
+   "instructions",
+   "allow_title_change",
+   "allow_cover_change"
+  ],
+  "title": "RevisionRequest",
+  "type": "object"
+ },
+ "Metrics": {
+  "$defs": {
+   "SegmentMetric": {
+    "additionalProperties": false,
+    "properties": {
+     "segment_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Segment Id",
+      "type": "string"
+     },
+     "exposures": {
+      "minimum": 0,
+      "title": "Exposures",
+      "type": "integer"
+     },
+     "exits": {
+      "minimum": 0,
+      "title": "Exits",
+      "type": "integer"
+     },
+     "exit_rate": {
+      "anyOf": [
+       {
+        "maximum": 1,
+        "minimum": 0,
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Exit Rate"
+     }
+    },
+    "required": [
+     "segment_id",
+     "exposures",
+     "exits",
+     "exit_rate"
+    ],
+    "title": "SegmentMetric",
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "selected_sessions": {
+    "minimum": 0,
+    "title": "Selected Sessions",
+    "type": "integer"
+   },
+   "started": {
+    "minimum": 0,
+    "title": "Started",
+    "type": "integer"
+   },
+   "completed": {
+    "minimum": 0,
+    "title": "Completed",
+    "type": "integer"
+   },
+   "exited": {
+    "minimum": 0,
+    "title": "Exited",
+    "type": "integer"
+   },
+   "incomplete": {
+    "minimum": 0,
+    "title": "Incomplete",
+    "type": "integer"
+   },
+   "no_event_sessions": {
+    "minimum": 0,
+    "title": "No Event Sessions",
+    "type": "integer"
+   },
+   "coverage_ratio": {
+    "anyOf": [
+     {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "title": "Coverage Ratio"
+   },
+   "completion_ratio": {
+    "anyOf": [
+     {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "title": "Completion Ratio"
+   },
+   "interaction_sessions": {
+    "additionalProperties": {
+     "type": "integer"
+    },
+    "propertyNames": {
+     "enum": [
+      "like",
+      "comment",
+      "save"
+     ]
+    },
+    "title": "Interaction Sessions",
+    "type": "object"
+   },
+   "interaction_ratios": {
+    "additionalProperties": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "propertyNames": {
+     "enum": [
+      "like",
+      "comment",
+      "save"
+     ]
+    },
+    "title": "Interaction Ratios",
+    "type": "object"
+   },
+   "segments": {
+    "items": {
+     "$ref": "#/$defs/SegmentMetric"
+    },
+    "title": "Segments",
+    "type": "array"
+   }
+  },
+  "required": [
+   "selected_sessions",
+   "started",
+   "completed",
+   "exited",
+   "incomplete",
+   "no_event_sessions",
+   "coverage_ratio",
+   "completion_ratio",
+   "interaction_sessions",
+   "interaction_ratios",
+   "segments"
+  ],
+  "title": "Metrics",
+  "type": "object"
+ },
+ "SegmentMetric": {
+  "additionalProperties": false,
+  "properties": {
+   "segment_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Segment Id",
+    "type": "string"
+   },
+   "exposures": {
+    "minimum": 0,
+    "title": "Exposures",
+    "type": "integer"
+   },
+   "exits": {
+    "minimum": 0,
+    "title": "Exits",
+    "type": "integer"
+   },
+   "exit_rate": {
+    "anyOf": [
+     {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "title": "Exit Rate"
+   }
+  },
+  "required": [
+   "segment_id",
+   "exposures",
+   "exits",
+   "exit_rate"
+  ],
+  "title": "SegmentMetric",
+  "type": "object"
+ },
+ "Scenario": {
+  "$defs": {
+   "Persona": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+     },
+     "goal": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Goal",
+      "type": "string"
+     },
+     "knowledge": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Knowledge",
+      "type": "string"
+     },
+     "preferences": {
+      "items": {
+       "maxLength": 1000,
+       "minLength": 1,
+       "type": "string"
+      },
+      "maxItems": 10,
+      "title": "Preferences",
+      "type": "array"
+     }
+    },
+    "required": [
+     "id",
+     "goal",
+     "knowledge",
+     "preferences"
+    ],
+    "title": "Persona",
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "medium": {
+    "const": "text",
+    "title": "Medium",
+    "type": "string"
+   },
+   "segmenter_version": {
+    "const": "paragraph-v1",
+    "title": "Segmenter Version",
+    "type": "string"
+   },
+   "personas": {
+    "items": {
+     "$ref": "#/$defs/Persona"
+    },
+    "maxItems": 6,
+    "minItems": 1,
+    "title": "Personas",
+    "type": "array"
+   },
+   "max_segments": {
+    "maximum": 8,
+    "minimum": 2,
+    "title": "Max Segments",
+    "type": "integer"
+   },
+   "requested_seed": {
+    "anyOf": [
+     {
+      "type": "integer"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "title": "Requested Seed"
+   }
+  },
+  "required": [
+   "medium",
+   "segmenter_version",
+   "personas",
+   "max_segments",
+   "requested_seed"
+  ],
+  "title": "Scenario",
+  "type": "object"
+ },
+ "PreviewSpec": {
+  "$defs": {
+   "Persona": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+     },
+     "goal": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Goal",
+      "type": "string"
+     },
+     "knowledge": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Knowledge",
+      "type": "string"
+     },
+     "preferences": {
+      "items": {
+       "maxLength": 1000,
+       "minLength": 1,
+       "type": "string"
+      },
+      "maxItems": 10,
+      "title": "Preferences",
+      "type": "array"
+     }
+    },
+    "required": [
+     "id",
+     "goal",
+     "knowledge",
+     "preferences"
+    ],
+    "title": "Persona",
+    "type": "object"
+   },
+   "Scenario": {
+    "additionalProperties": false,
+    "properties": {
+     "medium": {
+      "const": "text",
+      "title": "Medium",
+      "type": "string"
+     },
+     "segmenter_version": {
+      "const": "paragraph-v1",
+      "title": "Segmenter Version",
+      "type": "string"
+     },
+     "personas": {
+      "items": {
+       "$ref": "#/$defs/Persona"
+      },
+      "maxItems": 6,
+      "minItems": 1,
+      "title": "Personas",
+      "type": "array"
+     },
+     "max_segments": {
+      "maximum": 8,
+      "minimum": 2,
+      "title": "Max Segments",
+      "type": "integer"
+     },
+     "requested_seed": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Requested Seed"
+     }
+    },
+    "required": [
+     "medium",
+     "segmenter_version",
+     "personas",
+     "max_segments",
+     "requested_seed"
+    ],
+    "title": "Scenario",
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "version_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Version Id",
+    "type": "string"
+   },
+   "content_hash": {
+    "pattern": "^[a-f0-9]{64}$",
+    "title": "Content Hash",
+    "type": "string"
+   },
+   "scenario": {
+    "$ref": "#/$defs/Scenario"
+   }
+  },
+  "required": [
+   "version_id",
+   "content_hash",
+   "scenario"
+  ],
+  "title": "PreviewSpec",
+  "type": "object"
+ },
+ "EditScope": {
+  "additionalProperties": false,
+  "properties": {
+   "target_segment_ids": {
+    "items": {
+     "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+     "type": "string"
+    },
+    "maxItems": 32,
+    "title": "Target Segment Ids",
+    "type": "array"
+   },
+   "preserve_segment_ids": {
+    "items": {
+     "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+     "type": "string"
+    },
+    "maxItems": 32,
+    "title": "Preserve Segment Ids",
+    "type": "array"
+   },
+   "allow_title_change": {
+    "title": "Allow Title Change",
+    "type": "boolean"
+   },
+   "allow_cover_change": {
+    "title": "Allow Cover Change",
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "target_segment_ids",
+   "preserve_segment_ids",
+   "allow_title_change",
+   "allow_cover_change"
+  ],
+  "title": "EditScope",
+  "type": "object"
+ },
+ "Segment": {
+  "additionalProperties": false,
+  "properties": {
+   "segment_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Segment Id",
+    "type": "string"
+   },
+   "kind": {
+    "enum": [
+     "hook",
+     "body",
+     "closing"
+    ],
+    "title": "Kind",
+    "type": "string"
+   },
+   "text": {
+    "maxLength": 20000,
+    "title": "Text",
+    "type": "string"
+   },
+   "source_refs": {
+    "items": {
+     "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+     "type": "string"
+    },
+    "maxItems": 20,
+    "title": "Source Refs",
+    "type": "array"
+   }
+  },
+  "required": [
+   "segment_id",
+   "kind",
+   "text",
+   "source_refs"
+  ],
+  "title": "Segment",
+  "type": "object"
+ },
+ "Persona": {
+  "additionalProperties": false,
+  "properties": {
+   "id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Id",
+    "type": "string"
+   },
+   "goal": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Goal",
+    "type": "string"
+   },
+   "knowledge": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Knowledge",
+    "type": "string"
+   },
+   "preferences": {
+    "items": {
+     "maxLength": 1000,
+     "minLength": 1,
+     "type": "string"
+    },
+    "maxItems": 10,
+    "title": "Preferences",
+    "type": "array"
+   }
+  },
+  "required": [
+   "id",
+   "goal",
+   "knowledge",
+   "preferences"
+  ],
+  "title": "Persona",
+  "type": "object"
+ },
+ "VisibleSegment": {
+  "additionalProperties": false,
+  "properties": {
+   "segment_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Segment Id",
+    "type": "string"
+   },
+   "kind": {
+    "enum": [
+     "cover",
+     "hook",
+     "body",
+     "closing"
+    ],
+    "title": "Kind",
+    "type": "string"
+   },
+   "text": {
+    "maxLength": 20000,
+    "minLength": 1,
+    "title": "Text",
+    "type": "string"
+   }
+  },
+  "required": [
+   "segment_id",
+   "kind",
+   "text"
+  ],
+  "title": "VisibleSegment",
+  "type": "object"
+ },
+ "Change": {
+  "additionalProperties": false,
+  "properties": {
+   "finding_id": {
+    "anyOf": [
+     {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "title": "Finding Id"
+   },
+   "issue_id": {
+    "anyOf": [
+     {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "title": "Issue Id"
+   },
+   "old_segment_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Old Segment Id",
+    "type": "string"
+   },
+   "new_segment_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "New Segment Id",
+    "type": "string"
+   },
+   "change": {
+    "enum": [
+     "replace",
+     "delete",
+     "insert_after",
+     "move",
+     "metadata_update"
+    ],
+    "title": "Change",
+    "type": "string"
+   },
+   "reason": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Reason",
+    "type": "string"
+   }
+  },
+  "required": [
+   "finding_id",
+   "issue_id",
+   "old_segment_id",
+   "new_segment_id",
+   "change",
+   "reason"
+  ],
+  "title": "Change",
+  "type": "object"
+ },
+ "Opportunity": {
+  "additionalProperties": false,
+  "properties": {
+   "id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Id",
+    "type": "string"
+   },
+   "angle": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Angle",
+    "type": "string"
+   },
+   "audience_problem": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Audience Problem",
+    "type": "string"
+   },
+   "account_fit": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Account Fit",
+    "type": "string"
+   },
+   "source_refs": {
+    "items": {
+     "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+     "type": "string"
+    },
+    "maxItems": 20,
+    "title": "Source Refs",
+    "type": "array"
+   },
+   "evidence_date": {
+    "anyOf": [
+     {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "title": "Evidence Date"
+   },
+   "hypothesis": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Hypothesis",
+    "type": "string"
+   }
+  },
+  "required": [
+   "id",
+   "angle",
+   "audience_problem",
+   "account_fit",
+   "source_refs",
+   "evidence_date",
+   "hypothesis"
+  ],
+  "title": "Opportunity",
+  "type": "object"
+ },
+ "Finding": {
+  "additionalProperties": false,
+  "properties": {
+   "id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Id",
+    "type": "string"
+   },
+   "segment_id": {
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+    "title": "Segment Id",
+    "type": "string"
+   },
+   "observation_refs": {
+    "items": {
+     "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+     "type": "string"
+    },
+    "maxItems": 50,
+    "minItems": 1,
+    "title": "Observation Refs",
+    "type": "array"
+   },
+   "interpretation": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Interpretation",
+    "type": "string"
+   },
+   "alternative_explanation": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Alternative Explanation",
+    "type": "string"
+   },
+   "suggested_edit": {
+    "maxLength": 1000,
+    "minLength": 1,
+    "title": "Suggested Edit",
+    "type": "string"
+   }
+  },
+  "required": [
+   "id",
+   "segment_id",
+   "observation_refs",
+   "interpretation",
+   "alternative_explanation",
+   "suggested_edit"
+  ],
+  "title": "Finding",
+  "type": "object"
+ }
+}

@@ -1,0 +1,23 @@
+# Local environments, caches and generated data
+.venv/
+venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+*.egg-info/
+node_modules/
+data/
+results/
+*.db
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+# Credentials and private local archives
+.env
+.env.*
+!.env.example
+*.key
+archive/private/
+.restructure/

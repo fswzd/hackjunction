@@ -1,0 +1,188 @@
+{
+  "contract_version": "seven-agent.v0.1",
+  "status": "seven_roles_interface_design_no_owner_implementation_verified",
+  "roles": {
+    "pr_analyst": "商单需求分析员",
+    "content_creator": "内容主创",
+    "operations_officer": "运营官",
+    "editorial_reviewer": "审稿员",
+    "traffic_scout": "流量捕捉者",
+    "data_analyst": "数据分析师",
+    "simulated_audience": "模拟观众"
+  },
+  "call": {
+    "required_fields": [
+      "contract_version",
+      "request_id",
+      "agent_id",
+      "action",
+      "context",
+      "input"
+    ],
+    "extra_fields": "forbid",
+    "context_fields": [
+      "account_id",
+      "task_id",
+      "run_id",
+      "step_key",
+      "attempt",
+      "input_hash"
+    ],
+    "context_authority": "server_created; never copy model identity; never include context object in model prompt",
+    "attempt": "integer >=1; boolean rejected",
+    "input_hash": "sha256 canonical JSON of the frozen visible input and schema/prompt version; recomputed by Gateway"
+  },
+  "result": {
+    "required_fields": [
+      "contract_version",
+      "request_id",
+      "agent_id",
+      "action",
+      "status",
+      "data",
+      "questions",
+      "issues",
+      "usage"
+    ],
+    "extra_fields": "forbid",
+    "status": [
+      "ok",
+      "needs_input",
+      "error"
+    ],
+    "ok": "nonnull data matching action output DTO; questions empty; does not mean content passed rules",
+    "needs_input": "at least one Question; data nullable or typed partial result; pause before downstream calls",
+    "error": "at least one Issue; data null; no successful domain commit",
+    "correlation": "request_id,agent_id,action,contract_version exactly match outstanding call before consuming",
+    "usage": {
+      "fields": [
+        "status",
+        "total_tokens"
+      ],
+      "known": "status=known,total_tokens=nonnegative integer excluding boolean",
+      "unknown": "status=unknown,total_tokens=null; no zero substitution",
+      "detail": "Adapter maps full provider counters into the existing central usage ledger; this small boundary view is not a second ledger"
+    }
+  },
+  "input_types": {
+    "prepare_brief": {
+      "user_input": "text",
+      "input_mode": "idea|existing_draft",
+      "material_refs": "Ref[]",
+      "selected_opportunity_ref": "Ref|null"
+    },
+    "assess_content": {
+      "brief_ref": "BriefRef",
+      "version_ref": "Ref",
+      "rule_report_ref": "Ref",
+      "material_refs": "Ref[]"
+    },
+    "draft": {
+      "brief_ref": "BriefRef",
+      "material_refs": "Ref[]"
+    },
+    "revise": {
+      "brief_ref": "BriefRef",
+      "base_version_ref": "Ref",
+      "revision_request_ref": "Ref"
+    },
+    "capture_opportunities": {
+      "goal": "text",
+      "material_refs": "Ref[]"
+    },
+    "diagnose_preview": {
+      "preview_ref": "Ref",
+      "version_ref": "Ref",
+      "metrics_ref": "Ref"
+    },
+    "read_segment": "domain:AudienceInput",
+    "analyze_request": {
+      "request_text": "text",
+      "material_refs": "Ref[]"
+    }
+  },
+  "ref_types": {
+    "Ref": {
+      "id": "Id",
+      "sha256": "Hash"
+    },
+    "BriefRef": {
+      "task_id": "Id",
+      "brief_version": "integer>=1 excluding boolean",
+      "brief_hash": "Hash"
+    },
+    "scope": "Repository revalidates account/task/run and frozen hash for every resolved reference; syntactic validation grants no access"
+  },
+  "actions": {
+    "analyze_request": {
+      "agent_id": "pr_analyst",
+      "output_schema": "RequestAnalysis"
+    },
+    "prepare_brief": {
+      "agent_id": "operations_officer",
+      "output_schema": "Brief"
+    },
+    "draft": {
+      "agent_id": "content_creator",
+      "output_schema": "ContentCandidate"
+    },
+    "revise": {
+      "agent_id": "content_creator",
+      "output_schema": "Revision"
+    },
+    "assess_content": {
+      "agent_id": "editorial_reviewer",
+      "output_schema": "EditorialReview"
+    },
+    "capture_opportunities": {
+      "agent_id": "traffic_scout",
+      "output_schema": "OpportunitySet"
+    },
+    "diagnose_preview": {
+      "agent_id": "data_analyst",
+      "output_schema": "Analysis"
+    },
+    "read_segment": {
+      "agent_id": "simulated_audience",
+      "output_schema": "AudienceEvent"
+    }
+  },
+  "domain_schema_source": "docs/agent-system/implementation-design/contracts/schemas.json",
+  "node_ownership": {
+    "pr_analysis": "pr_analyst.analyze_request",
+    "traffic": "traffic_scout.capture_opportunities",
+    "brief": "operations_officer.prepare_brief",
+    "draft": "content_creator.draft",
+    "audit": "editorial_reviewer.assess_content",
+    "repair": "content_creator.revise",
+    "audience_step": "simulated_audience.read_segment",
+    "analysis": "data_analyst.diagnose_preview",
+    "route_validate_persist_metrics_present_export_confirm": "program_or_user_no_additional_agent"
+  },
+  "legacy_mapping": {
+    "Operator": "operations_officer.prepare_brief",
+    "EditorialReviewer": "editorial_reviewer.assess_content",
+    "Director": "content_creator.draft|revise",
+    "Scout": "traffic_scout.capture_opportunities",
+    "Analyst": "data_analyst.diagnose_preview",
+    "Audience": "simulated_audience.read_segment",
+    "PRAnalyst": "pr_analyst.analyze_request"
+  },
+  "gate_authority": "authenticated user decision bound to exact object/version/hash/budget, verified by API/Repository",
+  "agent_direct_calls_allowed": false,
+  "global_running_limit": 1,
+  "real_mode_mock_fallback_allowed": false,
+  "not_verified": [
+    "seven owner entry points",
+    "seven-agent graph execution",
+    "actual adapter calls",
+    "persistent restart",
+    "live models",
+    "real user feedback"
+  ],
+  "derived_from": {
+    "contract_version": "five-agent.v0.2",
+    "snapshot": "agent-interface.json (upstream extract, unchanged)",
+    "delta": "add pr_analyst.analyze_request; split operations_officer into operations_officer.prepare_brief + editorial_reviewer.assess_content"
+  }
+}

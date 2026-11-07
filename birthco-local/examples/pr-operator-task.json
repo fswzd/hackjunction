@@ -1,0 +1,43 @@
+{
+  "task": {
+    "account_id": "demo_brand_account",
+    "input_mode": "idea",
+    "objective": "根据虚构品牌提供的资料写一篇产品介绍图文草稿，供客户人工审核",
+    "audience": "需要随身携带收纳包的通勤者",
+    "platform": "小红书",
+    "format": "text",
+    "style": "清楚克制，明确为合作内容，不编造体验",
+    "requirements": [
+      {
+        "id": "pr1",
+        "text": "明确写出这是品牌合作内容。"
+      },
+      {
+        "id": "pr2",
+        "text": "准确使用虚构品牌名“示例包”，仅引用素材中已经提供的描述。"
+      },
+      {
+        "id": "pr3",
+        "text": "结尾引导读者先核对尺寸和自己的使用需求，不承诺购买效果。"
+      },
+      {
+        "id": "pr4",
+        "text": "不得编造价格、折扣、销量、检测结果或作者亲身使用经历。"
+      }
+    ],
+    "materials": [
+      {
+        "kind": "source_text",
+        "label": "虚构客户资料，仅用于演示",
+        "text": "【虚构演示资料，非真实商品】品牌名：示例包。产品为收纳包。客户提供描述：设有多个分区。价格、尺寸、材质、测试数据、交付日期均未提供。这些是客户提供的信息，不代表独立事实核验。",
+        "source_url": null,
+        "authorized": true
+      }
+    ],
+    "preview_requested": false,
+    "length_rule": {
+      "minimum": null,
+      "maximum": 1200
+    }
+  }
+}

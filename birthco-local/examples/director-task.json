@@ -1,0 +1,51 @@
+{
+  "confirmed": true,
+  "brief": {
+    "input_mode": "idea",
+    "objective": "为新手介绍相机",
+    "audience": "新手",
+    "platform": "generic",
+    "format": "text",
+    "core_promise": "说明便携性取舍",
+    "requirements": [
+      {
+        "id": "r1",
+        "text": "基于作者通勤经验说明便携性"
+      }
+    ],
+    "material_ids": [
+      "m1"
+    ],
+    "open_questions": [],
+    "route": [
+      "draft",
+      "review",
+      "export"
+    ],
+    "length_rule": {
+      "minimum": null,
+      "maximum": 2000
+    },
+    "edit_scope": null
+  },
+  "brief_hash": "38f94360cc4edc7d4cfc2e6c70bff89d78914f9596925157cf177b92549adbc3",
+  "frozen_rules": {
+    "rule_version": "content-rules-v1",
+    "title_count": 3,
+    "max_body_characters": 20000
+  },
+  "style": "清楚、克制",
+  "materials": [
+    {
+      "material_id": "m1",
+      "kind": "user_supplied_experience",
+      "label": "作者经验",
+      "text": "我喜欢通勤时携带轻便的相机。"
+    }
+  ],
+  "reserved_segment_ids": [
+    "new1",
+    "new2",
+    "new3"
+  ]
+}

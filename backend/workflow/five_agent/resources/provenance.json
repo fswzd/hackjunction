@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-11-06T16:42:44.575421+00:00",
+  "source": {
+    "agent-interface.json": {
+      "path": "C:\\Users\\23974\\Documents\\ChatGPT\\hackjunction_11.6\\output\\handoff\\creator-agent-team-five-agent-v0.2\\creator-agent-team\\docs\\agent-system\\implementation-design\\langgraph\\five-agent\\agent-interface.json",
+      "sha256": "3cbd396d35c51d845c620fb22c56ba54fca5cd7fc114dc5980cbc68e6c29bbab"
+    },
+    "schemas.json": {
+      "path": "C:\\Users\\23974\\Documents\\ChatGPT\\hackjunction_11.6\\output\\handoff\\creator-agent-team-five-agent-v0.2\\creator-agent-team\\docs\\agent-system\\implementation-design\\contracts\\schemas.json",
+      "sha256": "4c94afa2504b3cf185934de15a8c8da0373957156afdcc73d0c043075b29a5c2"
+    }
+  },
+  "extracted_dtos": [
+    "Analysis",
+    "AudienceEvent",
+    "AudienceInput",
+    "Brief",
+    "Change",
+    "ContentCandidate",
+    "EditScope",
+    "EditorialReview",
+    "Finding",
+    "Issue",
+    "Metrics",
+    "Opportunity",
+    "OpportunitySet",
+    "Persona",
+    "PreviewSpec",
+    "Question",
+    "Revision",
+    "RevisionRequest",
+    "RuleReport",
+    "RuleResult",
+    "Scenario",
+    "Segment",
+    "SegmentMetric",
+    "VisibleSegment"
+  ],
+  "missing_dtos": []
+}

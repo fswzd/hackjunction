@@ -1,0 +1,59 @@
+{
+  "confirmed": true,
+  "version_id": "v_test",
+  "content_hash": "b0220b6341f118a3046d1727b9eab0cb37d1b2aba53a937ee4d3fdbedc815f35",
+  "brief": {
+    "input_mode": "idea",
+    "objective": "选择相机",
+    "audience": "新手",
+    "platform": "generic",
+    "format": "text",
+    "core_promise": "解释预算和用途",
+    "requirements": [
+      {
+        "id": "r1",
+        "text": "说明适用场景"
+      }
+    ],
+    "material_ids": [
+      "m1"
+    ],
+    "open_questions": [],
+    "route": [
+      "draft",
+      "review",
+      "export"
+    ],
+    "length_rule": {
+      "minimum": null,
+      "maximum": 1200
+    },
+    "edit_scope": null
+  },
+  "content": {
+    "titles": [
+      "选择相机",
+      "先看用途",
+      "轻装入门"
+    ],
+    "cover_copy": "根据预算和用途选择",
+    "segments": [
+      {
+        "segment_id": "s1",
+        "kind": "body",
+        "text": "我通勤时喜欢轻便的相机，这是个人经验。",
+        "source_refs": [
+          "m1"
+        ]
+      }
+    ]
+  },
+  "materials": [
+    {
+      "material_id": "m1",
+      "kind": "user_supplied_experience",
+      "label": "作者经验",
+      "text": "我通勤时喜欢轻便相机。"
+    }
+  ]
+}

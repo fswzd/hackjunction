@@ -1,0 +1,313 @@
+{
+  "contract_version": "five-agent.v0.2",
+  "evidence_kind": "offline_interface_schema_fixtures",
+  "fixture_kind": "synthetic",
+  "mode": "no_agent_no_model_no_graph_execution",
+  "observed_at": "2026-11-06T16:41:41.314047+00:00",
+  "command": "python docs/agent-system/implementation-design/langgraph/five-agent/tools/verify_interfaces.py",
+  "cwd": "C:\\Users\\23974\\Documents\\ChatGPT\\hackjunction_11.6\\output\\handoff\\creator-agent-team-five-agent-v0.2\\creator-agent-team",
+  "status": "pass",
+  "exit_code": 0,
+  "roles": 5,
+  "actions": 7,
+  "checks": [
+    {
+      "name": "valid_call_draft",
+      "status": "pass"
+    },
+    {
+      "name": "valid_call_revise",
+      "status": "pass"
+    },
+    {
+      "name": "valid_call_prepare_brief",
+      "status": "pass"
+    },
+    {
+      "name": "valid_call_assess_content",
+      "status": "pass"
+    },
+    {
+      "name": "valid_call_capture_opportunities",
+      "status": "pass"
+    },
+    {
+      "name": "valid_call_diagnose_preview",
+      "status": "pass"
+    },
+    {
+      "name": "valid_call_read_segment",
+      "status": "pass"
+    },
+    {
+      "name": "wrong_agent_for_action",
+      "status": "pass",
+      "expected": "rejected"
+    },
+    {
+      "name": "sixth_legacy_role_rejected",
+      "status": "pass",
+      "expected": "rejected"
+    },
+    {
+      "name": "audience_future_field_rejected",
+      "status": "pass",
+      "expected": "rejected"
+    },
+    {
+      "name": "brief_task_reference_mismatch",
+      "status": "pass",
+      "expected": "rejected"
+    },
+    {
+      "name": "parseable_incomplete_candidate_is_valid_protocol_not_ready",
+      "status": "pass"
+    },
+    {
+      "name": "wrong_domain_output_type",
+      "status": "pass",
+      "expected": "rejected"
+    },
+    {
+      "name": "ok_with_null_data",
+      "status": "pass",
+      "expected": "rejected"
+    },
+    {
+      "name": "different_request_result",
+      "status": "pass",
+      "expected": "rejected"
+    },
+    {
+      "name": "unknown_usage_is_not_zero",
+      "status": "pass",
+      "expected": "rejected"
+    },
+    {
+      "name": "needs_input_question_accepted_for_pause",
+      "status": "pass"
+    }
+  ],
+  "input_manifest": [
+    {
+      "path": "docs\\agent-system\\implementation-design\\langgraph\\five-agent\\agent-interface.json",
+      "sha256": "3cbd396d35c51d845c620fb22c56ba54fca5cd7fc114dc5980cbc68e6c29bbab"
+    },
+    {
+      "path": "docs\\agent-system\\implementation-design\\contracts\\schemas.json",
+      "sha256": "4c94afa2504b3cf185934de15a8c8da0373957156afdcc73d0c043075b29a5c2"
+    },
+    {
+      "path": "docs\\agent-system\\implementation-design\\langgraph\\five-agent\\tools\\verify_interfaces.py",
+      "sha256": "9f898e9ae2e87917fedcf3c6ab1d92aae451b1eec60f7ef541b2f5a67425a721"
+    }
+  ],
+  "sample_calls": {
+    "draft": {
+      "contract_version": "five-agent.v0.2",
+      "request_id": "req_draft",
+      "agent_id": "content_creator",
+      "action": "draft",
+      "context": {
+        "account_id": "account1",
+        "task_id": "task1",
+        "run_id": "run1",
+        "step_key": "step1",
+        "attempt": 1,
+        "input_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "input": {
+        "brief_ref": {
+          "task_id": "task1",
+          "brief_version": 1,
+          "brief_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "material_refs": [
+          {
+            "id": "version1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ]
+      }
+    },
+    "revise": {
+      "contract_version": "five-agent.v0.2",
+      "request_id": "req_revise",
+      "agent_id": "content_creator",
+      "action": "revise",
+      "context": {
+        "account_id": "account1",
+        "task_id": "task1",
+        "run_id": "run1",
+        "step_key": "step1",
+        "attempt": 1,
+        "input_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "input": {
+        "brief_ref": {
+          "task_id": "task1",
+          "brief_version": 1,
+          "brief_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "base_version_ref": {
+          "id": "version1",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "revision_request_ref": {
+          "id": "version1",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    },
+    "prepare_brief": {
+      "contract_version": "five-agent.v0.2",
+      "request_id": "req_prepare_brief",
+      "agent_id": "operations_officer",
+      "action": "prepare_brief",
+      "context": {
+        "account_id": "account1",
+        "task_id": "task1",
+        "run_id": "run1",
+        "step_key": "step1",
+        "attempt": 1,
+        "input_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "input": {
+        "user_input": "把授权经验写成新手图文",
+        "input_mode": "idea",
+        "material_refs": [
+          {
+            "id": "version1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "selected_opportunity_ref": null
+      }
+    },
+    "assess_content": {
+      "contract_version": "five-agent.v0.2",
+      "request_id": "req_assess_content",
+      "agent_id": "operations_officer",
+      "action": "assess_content",
+      "context": {
+        "account_id": "account1",
+        "task_id": "task1",
+        "run_id": "run1",
+        "step_key": "step1",
+        "attempt": 1,
+        "input_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "input": {
+        "brief_ref": {
+          "task_id": "task1",
+          "brief_version": 1,
+          "brief_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "version_ref": {
+          "id": "version1",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "rule_report_ref": {
+          "id": "version1",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "material_refs": [
+          {
+            "id": "version1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ]
+      }
+    },
+    "capture_opportunities": {
+      "contract_version": "five-agent.v0.2",
+      "request_id": "req_capture_opportunities",
+      "agent_id": "traffic_scout",
+      "action": "capture_opportunities",
+      "context": {
+        "account_id": "account1",
+        "task_id": "task1",
+        "run_id": "run1",
+        "step_key": "step1",
+        "attempt": 1,
+        "input_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "input": {
+        "goal": "寻找新手可操作的角度",
+        "material_refs": [
+          {
+            "id": "version1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ]
+      }
+    },
+    "diagnose_preview": {
+      "contract_version": "five-agent.v0.2",
+      "request_id": "req_diagnose_preview",
+      "agent_id": "data_analyst",
+      "action": "diagnose_preview",
+      "context": {
+        "account_id": "account1",
+        "task_id": "task1",
+        "run_id": "run1",
+        "step_key": "step1",
+        "attempt": 1,
+        "input_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "input": {
+        "preview_ref": {
+          "id": "version1",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "version_ref": {
+          "id": "version1",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "metrics_ref": {
+          "id": "version1",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    },
+    "read_segment": {
+      "contract_version": "five-agent.v0.2",
+      "request_id": "req_read_segment",
+      "agent_id": "simulated_audience",
+      "action": "read_segment",
+      "context": {
+        "account_id": "account1",
+        "task_id": "task1",
+        "run_id": "run1",
+        "step_key": "step1",
+        "attempt": 1,
+        "input_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "input": {
+        "persona": {
+          "id": "persona1",
+          "goal": "学会拍照",
+          "knowledge": "新手",
+          "preferences": []
+        },
+        "current_segment": {
+          "segment_id": "cover_v1",
+          "kind": "cover",
+          "text": "封面"
+        },
+        "visible_history": [],
+        "own_previous_reactions": []
+      }
+    }
+  },
+  "not_tested": [
+    "five owner entry points",
+    "five-agent graph execution",
+    "actual adapter calls",
+    "persistent restart",
+    "live models",
+    "real user feedback",
+    "scope permissions at real Repository entry",
+    "full system/user prompt isolation"
+  ]
+}

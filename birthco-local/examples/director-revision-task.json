@@ -1,0 +1,97 @@
+{
+  "confirmed": true,
+  "brief": {
+    "input_mode": "existing_draft",
+    "objective": "为新手介绍相机",
+    "audience": "新手",
+    "platform": "generic",
+    "format": "text",
+    "core_promise": "说明便携性取舍",
+    "requirements": [
+      {
+        "id": "r1",
+        "text": "基于作者通勤经验说明便携性"
+      }
+    ],
+    "material_ids": [
+      "m1"
+    ],
+    "open_questions": [],
+    "route": [
+      "draft",
+      "review",
+      "export"
+    ],
+    "length_rule": {
+      "minimum": null,
+      "maximum": 2000
+    },
+    "edit_scope": {
+      "target_segment_ids": [
+        "old1"
+      ],
+      "preserve_segment_ids": [
+        "old2"
+      ],
+      "allow_title_change": false,
+      "allow_cover_change": false
+    }
+  },
+  "brief_hash": "3b1b0a6ec5a6d9b116260d979f3e600197e85a63a59a9762c1b6207b7a5f436c",
+  "frozen_rules": {
+    "rule_version": "content-rules-v1",
+    "title_count": 3,
+    "max_body_characters": 20000
+  },
+  "style": "清楚、克制",
+  "materials": [
+    {
+      "material_id": "m1",
+      "kind": "existing_draft",
+      "label": "作者经验",
+      "text": " 原段一\n\n原段二\n"
+    }
+  ],
+  "reserved_segment_ids": [
+    "new1",
+    "new2",
+    "new3"
+  ],
+  "base_version_id": "v_base",
+  "base_content_hash": "daa94e51823ded5c5252c071a45bbbe31ab32702861e70eea8c27b344f8ece0a",
+  "base_content": {
+    "titles": [
+      "标题一",
+      "标题二",
+      "标题三"
+    ],
+    "cover_copy": "原封面",
+    "segments": [
+      {
+        "segment_id": "old1",
+        "kind": "body",
+        "text": " 原段一",
+        "source_refs": [
+          "m1"
+        ]
+      },
+      {
+        "segment_id": "old2",
+        "kind": "closing",
+        "text": "原段二\n",
+        "source_refs": [
+          "m1"
+        ]
+      }
+    ]
+  },
+  "edit_requests": [
+    {
+      "id": "fix1",
+      "severity": "advisory",
+      "location": "old1",
+      "reason": "开头较长",
+      "requested_change": "缩短第一段"
+    }
+  ]
+}

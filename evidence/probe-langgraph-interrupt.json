@@ -1,0 +1,31 @@
+{
+  "probe": "langgraph-interrupt-command-conditional",
+  "langgraph_version": "1.1.10",
+  "checks": [
+    {
+      "name": "first_invoke_interrupts",
+      "status": "pass"
+    },
+    {
+      "name": "interrupt_payload_gate_a",
+      "status": "pass"
+    },
+    {
+      "name": "second_invoke_interrupts_at_b",
+      "status": "pass"
+    },
+    {
+      "name": "final_log",
+      "status": "pass"
+    },
+    {
+      "name": "reaches_end",
+      "status": "pass"
+    },
+    {
+      "name": "snapshot_next_is_gate_a_or_work",
+      "status": "pass"
+    }
+  ],
+  "status": "pass"
+}

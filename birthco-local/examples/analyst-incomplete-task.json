@@ -1,0 +1,449 @@
+{
+  "analysis_requested": true,
+  "source": {
+    "confirmed": true,
+    "version_id": "v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "content_hash": "ebd464a6f35774954347912b3cc00160f54745f85e71fe6acf841091aab2d9b4",
+    "content": {
+      "titles": [
+        "便携相机的选择",
+        "先看通勤场景",
+        "用经验解释取舍"
+      ],
+      "cover_copy": "讨论使用场景，不承诺效果",
+      "segments": [
+        {
+          "segment_id": "s1",
+          "kind": "body",
+          "text": "通勤时，作者更愿意携带轻便的相机，这是个人经验。",
+          "source_refs": []
+        },
+        {
+          "segment_id": "s2",
+          "kind": "closing",
+          "text": "请先确认自己的使用场景。",
+          "source_refs": []
+        }
+      ]
+    },
+    "personas": [
+      {
+        "id": "p1",
+        "goal": "理解相机的取舍",
+        "knowledge": "摄影新手",
+        "preferences": [
+          "例子"
+        ]
+      },
+      {
+        "id": "p2",
+        "goal": "理解相机的取舍",
+        "knowledge": "摄影新手",
+        "preferences": [
+          "例子"
+        ]
+      },
+      {
+        "id": "p3",
+        "goal": "理解相机的取舍",
+        "knowledge": "摄影新手",
+        "preferences": [
+          "例子"
+        ]
+      },
+      {
+        "id": "p4",
+        "goal": "理解相机的取舍",
+        "knowledge": "摄影新手",
+        "preferences": [
+          "例子"
+        ]
+      }
+    ],
+    "max_calls": 12,
+    "max_segments": 8,
+    "max_active_seconds": 1200
+  },
+  "simulation": {
+    "mode": "mock",
+    "medium": "text",
+    "version_id": "v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "content_hash": "ebd464a6f35774954347912b3cc00160f54745f85e71fe6acf841091aab2d9b4",
+    "input_hash": "ae1496f56764ddf593f3259dd6df00cd69cb8979f4d3ac67d32798425cbfc70d",
+    "status": "INCOMPLETE",
+    "persona_count": 4,
+    "segment_count": 3,
+    "sessions": [
+      {
+        "session_id": "session_fe4f7cdea4a4491a9bfdb1313c0e6bb3",
+        "persona_id": "p1",
+        "outcome": "completed",
+        "stop_reason": null,
+        "cursor": 3,
+        "events": [
+          {
+            "event_id": "event_a2429808b29c4947932230d93a576fab",
+            "seq": 0,
+            "call_id": "audience_42089b577149494abc8ad7872938e594",
+            "event": {
+              "segment_id": "cover_v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "action": "continue",
+              "understanding": "Mock测试反应",
+              "question": null,
+              "reaction": "Mock，不代表真实读者",
+              "interactions": [
+                "like",
+                "comment"
+              ],
+              "comment_text": "Mock测试评论"
+            }
+          },
+          {
+            "event_id": "event_dac6d86ac21f40379698532f2ce71130",
+            "seq": 1,
+            "call_id": "audience_a20c43d4cfa746aea76ee17f5005bea0",
+            "event": {
+              "segment_id": "s1",
+              "action": "continue",
+              "understanding": "Mock测试反应",
+              "question": null,
+              "reaction": "Mock，不代表真实读者",
+              "interactions": [
+                "like",
+                "comment"
+              ],
+              "comment_text": "Mock测试评论"
+            }
+          },
+          {
+            "event_id": "event_9e6f773d63f44bb886d81e061cad7532",
+            "seq": 2,
+            "call_id": "audience_34dddb391f7e41e2803a489d6645ff16",
+            "event": {
+              "segment_id": "s2",
+              "action": "continue",
+              "understanding": "Mock测试反应",
+              "question": null,
+              "reaction": "Mock，不代表真实读者",
+              "interactions": [
+                "like",
+                "comment"
+              ],
+              "comment_text": "Mock测试评论"
+            }
+          }
+        ]
+      },
+      {
+        "session_id": "session_6cd32a34791247209285099c1dd7a037",
+        "persona_id": "p2",
+        "outcome": "exited",
+        "stop_reason": "viewer_exit",
+        "cursor": 2,
+        "events": [
+          {
+            "event_id": "event_118b3220096341fa827aa7e935f7ae7a",
+            "seq": 0,
+            "call_id": "audience_aee4b9f8fb704e56898a5f74c2c2bae4",
+            "event": {
+              "segment_id": "cover_v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "action": "continue",
+              "understanding": "Mock测试反应",
+              "question": null,
+              "reaction": "Mock，不代表真实读者",
+              "interactions": [
+                "like",
+                "save"
+              ],
+              "comment_text": null
+            }
+          },
+          {
+            "event_id": "event_b040fbdba2de4a7db711a1d1c15fecbb",
+            "seq": 1,
+            "call_id": "audience_df032406f1c340c5a3503881fa35ea02",
+            "event": {
+              "segment_id": "s1",
+              "action": "exit",
+              "understanding": "Mock测试反应",
+              "question": "需要更多例子？",
+              "reaction": "Mock，不代表真实读者",
+              "interactions": [
+                "like",
+                "save"
+              ],
+              "comment_text": null
+            }
+          }
+        ]
+      },
+      {
+        "session_id": "session_291221fd53f14e969a3c119002ba6453",
+        "persona_id": "p3",
+        "outcome": "incomplete",
+        "stop_reason": "invalid_or_failed_response",
+        "cursor": 1,
+        "events": [
+          {
+            "event_id": "event_c2a57d94fea1456fad866ccbd1d46a71",
+            "seq": 0,
+            "call_id": "audience_a92ac193f52446ffa60b2373ac3d5d75",
+            "event": {
+              "segment_id": "cover_v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "action": "continue",
+              "understanding": "Mock测试反应",
+              "question": null,
+              "reaction": "Mock，不代表真实读者",
+              "interactions": [],
+              "comment_text": null
+            }
+          }
+        ]
+      },
+      {
+        "session_id": "session_4d569fe734784cac9761d7d7e931a0a7",
+        "persona_id": "p4",
+        "outcome": "incomplete",
+        "stop_reason": "invalid_or_failed_response",
+        "cursor": 0,
+        "events": []
+      }
+    ],
+    "calls": [
+      {
+        "session_id": "session_fe4f7cdea4a4491a9bfdb1313c0e6bb3",
+        "persona_id": "p1",
+        "ordinal": 0,
+        "mode": "mock",
+        "call_id": "audience_42089b577149494abc8ad7872938e594",
+        "input_hash": "8a928e024900d2fa9b9c116c7ceb2af31dc2e28908396bfe833a7c04f2d2e764",
+        "status": "received",
+        "event": {
+          "segment_id": "cover_v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "action": "continue",
+          "understanding": "Mock测试反应",
+          "question": null,
+          "reaction": "Mock，不代表真实读者",
+          "interactions": [
+            "like",
+            "comment"
+          ],
+          "comment_text": "Mock测试评论"
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_fe4f7cdea4a4491a9bfdb1313c0e6bb3",
+        "persona_id": "p1",
+        "ordinal": 1,
+        "mode": "mock",
+        "call_id": "audience_a20c43d4cfa746aea76ee17f5005bea0",
+        "input_hash": "e064570143b4da6c4c58922895e978facd2705deb84cc58641b818eb7b6f887f",
+        "status": "received",
+        "event": {
+          "segment_id": "s1",
+          "action": "continue",
+          "understanding": "Mock测试反应",
+          "question": null,
+          "reaction": "Mock，不代表真实读者",
+          "interactions": [
+            "like",
+            "comment"
+          ],
+          "comment_text": "Mock测试评论"
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_fe4f7cdea4a4491a9bfdb1313c0e6bb3",
+        "persona_id": "p1",
+        "ordinal": 2,
+        "mode": "mock",
+        "call_id": "audience_34dddb391f7e41e2803a489d6645ff16",
+        "input_hash": "c5d5b0e20fc3aa07999dc75aa56a4d76a2c7175623f209491c063366b613a1ae",
+        "status": "received",
+        "event": {
+          "segment_id": "s2",
+          "action": "continue",
+          "understanding": "Mock测试反应",
+          "question": null,
+          "reaction": "Mock，不代表真实读者",
+          "interactions": [
+            "like",
+            "comment"
+          ],
+          "comment_text": "Mock测试评论"
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_6cd32a34791247209285099c1dd7a037",
+        "persona_id": "p2",
+        "ordinal": 0,
+        "mode": "mock",
+        "call_id": "audience_aee4b9f8fb704e56898a5f74c2c2bae4",
+        "input_hash": "9a1866df6612746adadd30496bc11c2758dd5591ef16dddbc35458a665ef8ecb",
+        "status": "received",
+        "event": {
+          "segment_id": "cover_v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "action": "continue",
+          "understanding": "Mock测试反应",
+          "question": null,
+          "reaction": "Mock，不代表真实读者",
+          "interactions": [
+            "like",
+            "save"
+          ],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_6cd32a34791247209285099c1dd7a037",
+        "persona_id": "p2",
+        "ordinal": 1,
+        "mode": "mock",
+        "call_id": "audience_df032406f1c340c5a3503881fa35ea02",
+        "input_hash": "5ebfe190998bc72174e6cb2931f54fb75beeb71cbc1969935de65a033f32c274",
+        "status": "received",
+        "event": {
+          "segment_id": "s1",
+          "action": "exit",
+          "understanding": "Mock测试反应",
+          "question": "需要更多例子？",
+          "reaction": "Mock，不代表真实读者",
+          "interactions": [
+            "like",
+            "save"
+          ],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_291221fd53f14e969a3c119002ba6453",
+        "persona_id": "p3",
+        "ordinal": 0,
+        "mode": "mock",
+        "call_id": "audience_a92ac193f52446ffa60b2373ac3d5d75",
+        "input_hash": "5b588d6d6405c01a2510072761da0b3f7e9cba3a688ecd0a203b7be59eabf157",
+        "status": "received",
+        "event": {
+          "segment_id": "cover_v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "action": "continue",
+          "understanding": "Mock测试反应",
+          "question": null,
+          "reaction": "Mock，不代表真实读者",
+          "interactions": [],
+          "comment_text": null
+        },
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": null
+      },
+      {
+        "session_id": "session_291221fd53f14e969a3c119002ba6453",
+        "persona_id": "p3",
+        "ordinal": 1,
+        "mode": "mock",
+        "call_id": "audience_c8aae56dac5b461c8c6b87c6d68d7d28",
+        "input_hash": "502fdab92a9f4be29e0679463b3393f8df8954293ed95c449b60643ffcdda20b",
+        "status": "failed",
+        "event": null,
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": {
+          "code": "MODEL_UNAVAILABLE",
+          "retryable": false,
+          "cause_hint": "Viewer model failed",
+          "next_action": "Stop this session; inspect the saved result before another explicit request",
+          "field_errors": [],
+          "current_row_version": null
+        }
+      },
+      {
+        "session_id": "session_4d569fe734784cac9761d7d7e931a0a7",
+        "persona_id": "p4",
+        "ordinal": 0,
+        "mode": "mock",
+        "call_id": "audience_c413961a976c4934990d722745fb16e1",
+        "input_hash": "3c1f0b4935eec7a9c94debf09abee9a91c2e530ccf722fa22f0176b72ae77bdf",
+        "status": "failed",
+        "event": null,
+        "usage": {
+          "input": null,
+          "output": null,
+          "total": null,
+          "cached": null,
+          "reasoning": null
+        },
+        "error": {
+          "code": "MODEL_UNAVAILABLE",
+          "retryable": false,
+          "cause_hint": "Viewer model failed",
+          "next_action": "Stop this session; inspect the saved result before another explicit request",
+          "field_errors": [],
+          "current_row_version": null
+        }
+      }
+    ],
+    "calls_attempted": 8,
+    "call_budget": 12,
+    "time_budget_seconds": 1200,
+    "usage": {
+      "known_total_tokens": null,
+      "usage_not_reported_calls": 8,
+      "remote_outcome_unknown_calls": 0
+    },
+    "mock_fixture_exit_ordinal": null,
+    "is_simulation": true,
+    "predicts_real_traffic": false,
+    "automatic_resume": false,
+    "explicit_new_request_required": true
+  }
+}

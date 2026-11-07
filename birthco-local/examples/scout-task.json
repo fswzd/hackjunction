@@ -1,0 +1,57 @@
+{
+  "research_requested": true,
+  "account": {
+    "account_id": "account_camera",
+    "positioning": "分享摄影入门经验",
+    "audience": "摄影新手",
+    "style": "清楚、克制"
+  },
+  "brief": {
+    "input_mode": "idea",
+    "objective": "研究新手选相机的选题切口",
+    "audience": "预算有限的摄影新手",
+    "platform": "generic",
+    "format": "text",
+    "core_promise": "根据材料提出可兑现的选题",
+    "requirements": [
+      {
+        "id": "r1",
+        "text": "不编造销售数据或热点"
+      }
+    ],
+    "material_ids": [
+      "m1"
+    ],
+    "open_questions": [],
+    "route": [
+      "research",
+      "draft",
+      "review",
+      "export"
+    ],
+    "length_rule": {
+      "minimum": null,
+      "maximum": 1200
+    },
+    "edit_scope": null
+  },
+  "materials": [
+    {
+      "material_id": "m1",
+      "kind": "user_supplied_experience",
+      "label": "通勤携带经验",
+      "text": "我通勤时更愿意携带轻便的相机。",
+      "authorized": true,
+      "source_url": null
+    },
+    {
+      "material_id": "m2",
+      "kind": "source_text",
+      "label": "读者预算问题",
+      "text": "一位读者问：预算有限时，应先买镜头还是机身？这是一条用户提供的问题记录。",
+      "authorized": true,
+      "source_url": null
+    }
+  ],
+  "max_opportunities": 3
+}

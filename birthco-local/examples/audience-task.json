@@ -1,0 +1,49 @@
+{
+  "confirmed": true,
+  "version_id": "v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "content_hash": "aabb8b517da91769ea0252334be80036d80dc995b2740029ce9fbec16d171e73",
+  "content": {
+    "titles": [
+      "轻便相机的取舍",
+      "带出门才有机会拍",
+      "先考虑使用场景"
+    ],
+    "cover_copy": "从通勤经验看便携性的选择",
+    "segments": [
+      {
+        "segment_id": "s1",
+        "kind": "body",
+        "text": "作者通勤时愿意携带轻便的相机，这是个人经验。",
+        "source_refs": []
+      },
+      {
+        "segment_id": "s2",
+        "kind": "closing",
+        "text": "请先确认使用场景，再比较预算与重量。",
+        "source_refs": []
+      }
+    ]
+  },
+  "personas": [
+    {
+      "id": "p1",
+      "goal": "选一台方便通勤携带的相机",
+      "knowledge": "摄影初学者",
+      "preferences": [
+        "具体例子",
+        "短句"
+      ]
+    },
+    {
+      "id": "p2",
+      "goal": "理解轻便与功能的取舍",
+      "knowledge": "有少量拍摄经验",
+      "preferences": [
+        "说清前提"
+      ]
+    }
+  ],
+  "max_segments": 8,
+  "max_calls": 6,
+  "max_active_seconds": 1200
+}
