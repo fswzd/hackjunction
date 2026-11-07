@@ -19,8 +19,8 @@ def main():
     snapshot=ScoutInput.model_validate_json(args.input.read_text(encoding="utf-8"))
     if args.live:
         from backend.adapters.model.factory import create_live_adapter, live_model_id
-        with create_live_adapter() as adapter:
-            result=ScoutAgent(adapter,mode="live",model_id=live_model_id()).run(snapshot)
+        with create_live_adapter("scout") as adapter:
+            result=ScoutAgent(adapter,mode="live",model_id=live_model_id("scout")).run(snapshot)
     else:result=ScoutAgent().run(snapshot)
     text=json.dumps(result.as_dict(),ensure_ascii=False,indent=2)+"\n"
     if args.output:args.output.write_text(text,encoding="utf-8")

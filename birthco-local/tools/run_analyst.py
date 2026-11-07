@@ -13,8 +13,8 @@ def run_live(snapshot):
     """Resolve the MiMo provider first; any configuration gap keeps valid statistics."""
     from backend.adapters.model.factory import create_live_adapter,live_model_id
     try:
-        adapter=create_live_adapter()
-        model_id=live_model_id()
+        adapter=create_live_adapter("analyst")
+        model_id=live_model_id("analyst")
         if not model_id or not model_id.strip():raise ValueError("live model id is missing")
     except (ValueError,OSError):
         return configuration_failure(snapshot)

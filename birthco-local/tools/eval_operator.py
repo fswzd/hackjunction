@@ -24,9 +24,9 @@ def main():
     dataset = load_dataset(args.dataset)
     if args.live:
         from backend.adapters.model.factory import create_live_adapter, live_model_id
-        with create_live_adapter() as adapter:
+        with create_live_adapter("operator") as adapter:
             report = repeat_dataset(dataset, repeats=args.repeat, mode="live",
-                                    model_adapter=adapter, model_id=live_model_id(),
+                                    model_adapter=adapter, model_id=live_model_id("operator"),
                                     max_calls=args.max_calls)
     else:
         report = repeat_dataset(dataset, repeats=args.repeat, mode="mock")

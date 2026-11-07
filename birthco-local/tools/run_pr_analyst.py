@@ -29,8 +29,8 @@ def main():
     source = PRAnalysisInput.model_validate_json(args.input.read_text(encoding="utf-8"))
     if args.live:
         from backend.adapters.model.factory import create_live_adapter, live_model_id
-        with create_live_adapter() as adapter:
-            result = PRAnalystAgent(adapter, mode="live", model_id=live_model_id()).run(source)
+        with create_live_adapter("pr_analyst") as adapter:
+            result = PRAnalystAgent(adapter, mode="live", model_id=live_model_id("pr_analyst")).run(source)
     else:
         result = PRAnalystAgent().run(source)
     # Exclusive creation protects old runs; missing-input/error never creates handoff.

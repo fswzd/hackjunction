@@ -231,7 +231,7 @@ def test_run_live_configuration_failure_keeps_statistics_without_an_analysis_cal
     from backend.adapters.model import factory
     spec=importlib.util.spec_from_file_location("run_analyst_cli",pathlib.Path(__file__).resolve().parents[2]/"tools"/"run_analyst.py")
     cli=importlib.util.module_from_spec(spec);spec.loader.exec_module(cli)
-    def unavailable(**kwargs):raise ValueError("MIMO_API_KEY is required")
+    def unavailable(*args,**kwargs):raise ValueError("MIMO_API_KEY is required")
     monkeypatch.setattr(factory,"create_live_adapter",unavailable)
     result=cli.run_live(AnalystInput.model_validate(task_data()))
     assert result.analysis_status=="failed" and result.call_id is None
@@ -247,8 +247,8 @@ def test_run_live_blank_model_id_keeps_statistics(monkeypatch):
     class Noop:
         def __enter__(self):return self
         def __exit__(self,*args):return False
-    monkeypatch.setattr(factory,"create_live_adapter",lambda **kwargs:Noop())
-    monkeypatch.setattr(factory,"live_model_id",lambda :"  ")
+    monkeypatch.setattr(factory,"create_live_adapter",lambda *args,**kwargs:Noop())
+    monkeypatch.setattr(factory,"live_model_id",lambda agent_id=None:"  ")
     result=cli.run_live(AnalystInput.model_validate(task_data()))
     assert result.analysis_status=="failed" and result.call_id is None and result.metrics["N"]==4
 
