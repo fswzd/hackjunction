@@ -79,3 +79,23 @@ def test_api_register_import_xiaohongshu(tmp_path):
     videos = client.get(f"/api/v1/accounts/external/{created['external_account_id']}/videos",
                         base_url=BASE).get_json()["data"]
     assert len(videos) == 3 and videos[0]["top_comments"] is not None
+
+
+def test_extract_notes_handles_shapes():
+    from backend.integrations.xiaohongshu.fetch import FetchError, _extract_notes
+    assert _extract_notes({"data": {"notes": [{"id": "n1"}]}}) == [{"id": "n1"}]
+    assert _extract_notes({"data": [{"id": "n2"}]}) == [{"id": "n2"}]
+    assert _extract_notes({"data": '[{"id": "n3"}]'}) == [{"id": "n3"}], "二次编码 JSON 也能解"
+    with pytest.raises(FetchError):
+        _extract_notes({"success": False, "msg": "登录已过期"}), "失败响应应报出平台 msg"
+    with pytest.raises(FetchError):
+        _extract_notes({"data": "d0daeb8f6c8316845713a0c06f31d3c9"}), "字符串 data 应可操作报错"
+    with pytest.raises(FetchError):
+        _extract_notes(["not-a-dict-shape"])
+
+
+def test_extract_notes_failure_message_mentions_platform_msg():
+    from backend.integrations.xiaohongshu.fetch import FetchError, _extract_notes
+    with pytest.raises(FetchError) as exc:
+        _extract_notes({"code": -1, "success": False, "msg": "登录已过期", "data": "abc"})
+    assert "登录已过期" in str(exc.value)

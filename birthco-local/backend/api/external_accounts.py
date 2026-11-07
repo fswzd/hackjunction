@@ -82,7 +82,10 @@ def import_history(external_account_id: str):
     except ValueError as exc:
         return success({"error": {"code": "SCHEMA_INVALID", "detail": str(exc)}}, 400)
     except Exception as exc:  # adapter 抓取失败等：保留可操作提示，不产生半截数据
-        storage.mark_pending_adapter(current_app.config["DB_PATH"], external_account_id)
+        try:
+            storage.mark_pending_adapter(current_app.config["DB_PATH"], external_account_id)
+        except Exception:
+            pass  # 状态回写失败不得掩盖真实抓取错误
         return success({"error": {"code": "MODEL_UNAVAILABLE",
                                   "detail": f"import failed: {exc}; manual 通道仍可用"}}, 502)
     return success({"external_account_id": external_account_id, **result}, 201)

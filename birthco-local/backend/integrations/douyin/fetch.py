@@ -78,7 +78,7 @@ def fetch_recent_works(external_account_id: str, *, count: int = 10,
     works: list[PerfVideo] = []
     try:
         with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=True)
+            browser = pw.chromium.launch(headless=True, channel="chromium")
             context = browser.new_context(storage_state=str(douyin_session.session_paths(external_account_id)))
             page = context.new_page()
             page.goto("https://creator.douyin.com/creator-micro/content/manage",
