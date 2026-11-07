@@ -6113,11 +6113,6 @@
         "title": "Name",
         "type": "string"
       },
-      "row_version": {
-        "minimum": 0,
-        "title": "Row Version",
-        "type": "integer"
-      },
       "creator_stage": {
         "enum": [
           "starting",
@@ -6126,6 +6121,11 @@
         ],
         "title": "Creator Stage",
         "type": "string"
+      },
+      "row_version": {
+        "minimum": 0,
+        "title": "Row Version",
+        "type": "integer"
       }
     },
     "required": [
@@ -20218,6 +20218,585 @@
       "simulation"
     ],
     "title": "AnalystInput",
+    "type": "object"
+  },
+  "PreviewObservation": {
+    "$defs": {
+      "AudienceEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "segment_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Segment Id",
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "continue",
+              "exit"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "understanding": {
+            "maxLength": 1000,
+            "title": "Understanding",
+            "type": "string"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "reaction": {
+            "maxLength": 1000,
+            "title": "Reaction",
+            "type": "string"
+          },
+          "interactions": {
+            "items": {
+              "enum": [
+                "like",
+                "comment",
+                "save"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Interactions",
+            "type": "array"
+          },
+          "comment_text": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment Text"
+          }
+        },
+        "required": [
+          "segment_id",
+          "action",
+          "understanding",
+          "question",
+          "reaction",
+          "interactions",
+          "comment_text"
+        ],
+        "title": "AudienceEvent",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "event_id": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+        "title": "Event Id",
+        "type": "string"
+      },
+      "event": {
+        "$ref": "#/$defs/AudienceEvent"
+      }
+    },
+    "required": [
+      "event_id",
+      "event"
+    ],
+    "title": "PreviewObservation",
+    "type": "object"
+  },
+  "PreviewSession": {
+    "$defs": {
+      "AudienceEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "segment_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Segment Id",
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "continue",
+              "exit"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "understanding": {
+            "maxLength": 1000,
+            "title": "Understanding",
+            "type": "string"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "reaction": {
+            "maxLength": 1000,
+            "title": "Reaction",
+            "type": "string"
+          },
+          "interactions": {
+            "items": {
+              "enum": [
+                "like",
+                "comment",
+                "save"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Interactions",
+            "type": "array"
+          },
+          "comment_text": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment Text"
+          }
+        },
+        "required": [
+          "segment_id",
+          "action",
+          "understanding",
+          "question",
+          "reaction",
+          "interactions",
+          "comment_text"
+        ],
+        "title": "AudienceEvent",
+        "type": "object"
+      },
+      "PreviewObservation": {
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event": {
+            "$ref": "#/$defs/AudienceEvent"
+          }
+        },
+        "required": [
+          "event_id",
+          "event"
+        ],
+        "title": "PreviewObservation",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "session_id": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "persona_id": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+        "title": "Persona Id",
+        "type": "string"
+      },
+      "outcome": {
+        "enum": [
+          "completed",
+          "exited",
+          "incomplete"
+        ],
+        "title": "Outcome",
+        "type": "string"
+      },
+      "events": {
+        "items": {
+          "$ref": "#/$defs/PreviewObservation"
+        },
+        "maxItems": 8,
+        "title": "Events",
+        "type": "array"
+      }
+    },
+    "required": [
+      "session_id",
+      "persona_id",
+      "outcome",
+      "events"
+    ],
+    "title": "PreviewSession",
+    "type": "object"
+  },
+  "PreviewAnalysisInput": {
+    "$defs": {
+      "AudienceEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "segment_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Segment Id",
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "continue",
+              "exit"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "understanding": {
+            "maxLength": 1000,
+            "title": "Understanding",
+            "type": "string"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "reaction": {
+            "maxLength": 1000,
+            "title": "Reaction",
+            "type": "string"
+          },
+          "interactions": {
+            "items": {
+              "enum": [
+                "like",
+                "comment",
+                "save"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Interactions",
+            "type": "array"
+          },
+          "comment_text": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment Text"
+          }
+        },
+        "required": [
+          "segment_id",
+          "action",
+          "understanding",
+          "question",
+          "reaction",
+          "interactions",
+          "comment_text"
+        ],
+        "title": "AudienceEvent",
+        "type": "object"
+      },
+      "ContentDelivery": {
+        "additionalProperties": false,
+        "properties": {
+          "titles": {
+            "items": {
+              "maxLength": 1000,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Titles",
+            "type": "array"
+          },
+          "cover_copy": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Cover Copy",
+            "type": "string"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/$defs/Segment"
+            },
+            "maxItems": 32,
+            "minItems": 1,
+            "title": "Segments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "titles",
+          "cover_copy",
+          "segments"
+        ],
+        "title": "ContentDelivery",
+        "type": "object"
+      },
+      "Persona": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "goal": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Goal",
+            "type": "string"
+          },
+          "knowledge": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Knowledge",
+            "type": "string"
+          },
+          "preferences": {
+            "items": {
+              "maxLength": 1000,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Preferences",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "goal",
+          "knowledge",
+          "preferences"
+        ],
+        "title": "Persona",
+        "type": "object"
+      },
+      "PreviewObservation": {
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event": {
+            "$ref": "#/$defs/AudienceEvent"
+          }
+        },
+        "required": [
+          "event_id",
+          "event"
+        ],
+        "title": "PreviewObservation",
+        "type": "object"
+      },
+      "PreviewSession": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "persona_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Persona Id",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "completed",
+              "exited",
+              "incomplete"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/$defs/PreviewObservation"
+            },
+            "maxItems": 8,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "session_id",
+          "persona_id",
+          "outcome",
+          "events"
+        ],
+        "title": "PreviewSession",
+        "type": "object"
+      },
+      "Segment": {
+        "additionalProperties": false,
+        "properties": {
+          "segment_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Segment Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "hook",
+              "body",
+              "closing"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 20000,
+            "title": "Text",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Source Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "segment_id",
+          "kind",
+          "text",
+          "source_refs"
+        ],
+        "title": "Segment",
+        "type": "object"
+      },
+      "VisibleSegment": {
+        "additionalProperties": false,
+        "properties": {
+          "segment_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Segment Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "cover",
+              "hook",
+              "body",
+              "closing"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "segment_id",
+          "kind",
+          "text"
+        ],
+        "title": "VisibleSegment",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "The workflow persists validated events, not the standalone transport trace.",
+    "properties": {
+      "version_id": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+        "title": "Version Id",
+        "type": "string"
+      },
+      "content_hash": {
+        "pattern": "^[a-f0-9]{64}$",
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "content": {
+        "$ref": "#/$defs/ContentDelivery"
+      },
+      "personas": {
+        "items": {
+          "$ref": "#/$defs/Persona"
+        },
+        "maxItems": 6,
+        "minItems": 1,
+        "title": "Personas",
+        "type": "array"
+      },
+      "segments": {
+        "items": {
+          "$ref": "#/$defs/VisibleSegment"
+        },
+        "maxItems": 8,
+        "minItems": 1,
+        "title": "Segments",
+        "type": "array"
+      },
+      "sessions": {
+        "items": {
+          "$ref": "#/$defs/PreviewSession"
+        },
+        "maxItems": 6,
+        "minItems": 1,
+        "title": "Sessions",
+        "type": "array"
+      }
+    },
+    "required": [
+      "version_id",
+      "content_hash",
+      "content",
+      "personas",
+      "segments",
+      "sessions"
+    ],
+    "title": "PreviewAnalysisInput",
     "type": "object"
   }
 }

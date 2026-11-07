@@ -11,9 +11,17 @@ validated results and repository facts only.
 from __future__ import annotations
 
 from langgraph.types import interrupt
+from backend.agents.analyst import SYSTEM as ANALYSIS_SYSTEM, validate_analysis
+from backend.agents.output_contract import prompt_schema_fingerprint
+from backend.domain.errors import DomainError as ComponentError
+from backend.domain.schemas import Analysis, Envelope, Persona
+from backend.memory.material_retrieval import rank_materials
+from backend.simulation.analysis_data import single_version_context
+from pydantic import ValidationError
 
 from . import projection as proj
 from . import program
+from .experiment_ledger import record as record_experiment
 from .contracts import frozen_input_hash
 from .gateway import (AgentUnavailable, BudgetExceeded, CancelledError, GatewayError,
                       InterruptedUnknown)
@@ -99,6 +107,35 @@ def _questions_of(outcome) -> list:
     return list(outcome.result.questions or []) if outcome.result else []
 
 
+def _pending_questions(state, svc, questions, source):
+    payload = {"questions": questions, "source": source, "round": state.get("input_round", 0)}
+    digest = object_hash(payload)
+    key = "pending_" + object_hash({"run": state["run_id"], "payload": digest})[:24]
+    svc.repo.save_artifact(key, state["task_id"], state["run_id"], "pending_questions", payload)
+    return {"id": key, "sha256": digest}
+
+
+def _confirmed_brief(state, svc):
+    ref = state.get("brief_ref")
+    if ref:
+        if ref["task_id"] != state["task_id"]:
+            raise DomainError("foreign brief", "SCOPE_DENIED")
+        brief = svc.repo.get_brief(ref["task_id"], ref["brief_version"])
+        if brief["brief_hash"] != ref["brief_hash"]:
+            raise DomainError("brief fingerprint changed", "CONDITIONS_MISMATCH")
+    else:
+        brief = svc.repo.latest_brief(state["task_id"])
+    if not brief or not brief["confirmed_at"]:
+        raise DomainError("a confirmed brief is required", "ORIGIN_DENIED")
+    return brief
+
+
+def _can_repair(state, svc):
+    profile = BUDGETS[state["run_kind"]]
+    return (state.get("repair_count", 0) < profile.max_business_repairs
+            and svc.gateway.budget.remaining_normal(state["run_id"], state["run_kind"]) >= 2)
+
+
 def _issues_of(outcome) -> list:
     return list(outcome.result.issues or []) if outcome.result else []
 
@@ -133,6 +170,20 @@ def _save_diagnostics(svc: Services, state: FiveAgentState, source: str,
 def _materials_fp(material_refs: list[dict]) -> list[dict]:
     """指纹输入：素材的内容承诺 = id + 内容 sha256，缺一不可（id 相同正文不同必须换指纹）。"""
     return [{"id": r["id"], "sha256": r["sha256"]} for r in material_refs]
+
+
+def _ranked_brief_materials(state, svc, brief, phase):
+    payload = brief["payload"]
+    refs = _material_refs(svc, state["task_id"], payload["material_ids"])
+    allowed = {r["id"]: r for r in refs}
+    rows = [row for row in svc.repo.list_materials(state["task_id"]) if row["id"] in allowed]
+    query = " ".join([payload["objective"], *(r["text"] for r in payload["requirements"])])
+    ranked, trace = rank_materials(query, rows)
+    ordered = [allowed[row["id"]] for row in ranked]
+    retrieval = {"phase": phase, "brief_hash": brief["brief_hash"], "rounds": trace, "material_refs": ordered}
+    key = "retrieval_" + object_hash({"run": state["run_id"], "retrieval": retrieval})[:24]
+    svc.repo.save_artifact(key, state["task_id"], state["run_id"], "material_retrieval", retrieval)
+    return ordered
 
 
 # ----------------------------------------------------------------- content: route
@@ -227,21 +278,17 @@ def node_pr_analysis(state: FiveAgentState, svc: Services) -> dict:
             return validate_state_patch({"route_decision": "brief",
                                          "artifact_batch_ref": {"id": art_id, "sha256": object_hash(analysis)},
                                          "resume_step": "pr_analysis"})
-        svc.repo.save_artifact(f"pending_questions_{state['run_id']}", state["task_id"],
-                               state["run_id"], "pending_questions",
-                               {"questions": analysis["open_questions"], "source": "pr_analysis"})
-        return validate_state_patch({"route_decision": "wait_input", "resume_step": "pr_analysis"})
+        questions_ref = _pending_questions(state, svc, analysis["open_questions"], "pr_analysis")
+        return validate_state_patch({"route_decision": "wait_input", "resume_step": "pr_analysis", "questions_ref": questions_ref})
 
     if outcome.status == "needs_input":
         questions = _questions_of(outcome)
         _finish_sub_run(svc, pr_run_id, state["run_id"], "needs_input")
-        svc.repo.save_artifact(f"pending_questions_{state['run_id']}", state["task_id"],
-                               state["run_id"], "pending_questions",
-                               {"questions": questions, "source": "pr_analysis"})
+        questions_ref = _pending_questions(state, svc, questions, "pr_analysis")
         if state["run_kind"] == "pr_intake":
             return validate_state_patch({"route_decision": "stop", "terminal": SUB_RUN_TERMINAL["needs_input"],
                                          "resume_step": "pr_analysis"})
-        return validate_state_patch({"route_decision": "wait_input", "resume_step": "pr_analysis"})
+        return validate_state_patch({"route_decision": "wait_input", "resume_step": "pr_analysis", "questions_ref": questions_ref})
     # error: 商单分析不交接，人工处理
     _finish_sub_run(svc, pr_run_id, state["run_id"], "error")
     diag = _save_diagnostics(svc, state, "pr_analysis", issues=_issues_of(outcome))
@@ -255,8 +302,8 @@ def node_pr_analysis(state: FiveAgentState, svc: Services) -> dict:
 def node_traffic(state: FiveAgentState, svc: Services) -> dict:
     task = svc.repo.get_task(state["task_id"])
     goal = task["payload"].get("goal") or task["payload"].get("user_input") or "发现选题"
-    material_refs = [{"id": m["id"], "sha256": object_hash({"text": m["text"]})}
-                     for m in svc.repo.list_materials(state["task_id"])]
+    materials, retrieval = rank_materials(goal, svc.repo.list_materials(state["task_id"]))
+    material_refs = [{"id": m["id"], "sha256": object_hash({"text": m["text"]})} for m in materials]
     if state["run_kind"] == "scout":
         scout_run_id = state["run_id"]
     else:
@@ -269,6 +316,9 @@ def node_traffic(state: FiveAgentState, svc: Services) -> dict:
     svc.router.bind_task(state["task_id"])
     input_payload = proj.build_capture_input(goal, material_refs)
     step_key = step_key_scout(_fp({"goal": goal, "materials": _materials_fp(material_refs)})[:16])
+    trace = {"rounds": retrieval, "material_refs": material_refs}
+    svc.repo.save_artifact("retrieval_" + object_hash({"run": scout_run_id, "input": trace})[:24],
+                           state["task_id"], scout_run_id, "material_retrieval", trace)
     discovery = task["payload"].get("purpose") == "discover_topics"
     try:
         outcome = _call(state, svc, step_key, "capture_opportunities", input_payload,
@@ -342,7 +392,7 @@ def node_wait_opportunity(state: FiveAgentState, svc: Services) -> dict:
             raise DomainError("selected opportunity not in offered set", "SCOPE_DENIED")
         # normalize to a repository-backed Ref (the opportunity itself becomes an artifact)
         opp_payload = known[selected["id"]]
-        opp_art_id = "oppsel_" + object_hash({"opp": opp_payload})[:24]
+        opp_art_id = "oppsel_" + object_hash({"run": state["run_id"], "opp": opp_payload})[:24]
         svc.repo.save_artifact(opp_art_id, state["task_id"], state["run_id"],
                                "opportunity", opp_payload)
         svc.repo.save_artifact(f"sel_{state['run_id']}", state["task_id"], state["run_id"],
@@ -405,53 +455,59 @@ def node_brief(state: FiveAgentState, svc: Services) -> dict:
         brief_ref = {"task_id": saved["task_id"], "brief_version": saved["brief_version"],
                      "brief_hash": saved["brief_hash"]}
         if open_questions:
-            svc.repo.save_artifact(f"pending_questions_{state['run_id']}", state["task_id"],
-                                   state["run_id"], "pending_questions", {"questions": open_questions})
-            return validate_state_patch({"brief_ref": brief_ref, "route_decision": "wait_input",
+            questions_ref = _pending_questions(state, svc, open_questions, "brief")
+            return validate_state_patch({"brief_ref": brief_ref, "route_decision": "wait_input", "questions_ref": questions_ref,
                                          "resume_step": "brief"})
         return validate_state_patch({"brief_ref": brief_ref, "route_decision": "wait_brief_confirm",
                                      "resume_step": "brief"})
     if outcome.status == "needs_input":
         questions = _questions_of(outcome)
-        svc.repo.save_artifact(f"pending_questions_{state['run_id']}", state["task_id"],
-                               state["run_id"], "pending_questions", {"questions": questions})
-        return validate_state_patch({"route_decision": "wait_input", "resume_step": "brief"})
+        questions_ref = _pending_questions(state, svc, questions, "brief")
+        return validate_state_patch({"route_decision": "wait_input", "questions_ref": questions_ref, "resume_step": "brief"})
     return validate_state_patch({"route_decision": "needs_review", "terminal": "NEEDS_REVIEW",
                                  "error_ref": {"id": state["run_id"]}, "resume_step": "brief"})
 
 
 def node_wait_input(state: FiveAgentState, svc: Services) -> dict:
-    pending = None
-    try:
-        pending = svc.repo.get_artifact(f"pending_questions_{state['run_id']}")["payload"]
-    except DomainError:
-        pending = {"questions": []}
-    subject = {"questions": pending.get("questions", [])}
+    current_round = state.get("input_round", 0)
+    limit = svc.max_input_rounds
+    if limit is not None and current_round >= limit:
+        diag = _save_diagnostics(svc, state, "supply_input", error_code="BUDGET_EXCEEDED")
+        return validate_state_patch({"route_decision": "stop", "terminal": "NEEDS_REVIEW",
+                                     "error_ref": diag, "resume_step": "wait_input"})
+    ref = state.get("questions_ref")
+    if ref:
+        pending = svc.repo.get_artifact(ref["id"])["payload"]
+    else:
+        rows = svc.repo.find_artifacts(state["task_id"], "pending_questions")
+        pending = next((r["payload"] for r in reversed(rows) if r["run_id"] == state["run_id"]), {})
+    profile = BUDGETS[state["run_kind"]]
+    usage = svc.repo.get_usage(state["run_id"])
+    call_run_id = state["run_id"] + "_pr" if pending.get("source") == "pr_analysis" else state["run_id"]
+    call_kind = "pr_intake" if pending.get("source") == "pr_analysis" else state["run_kind"]
+    remaining = svc.gateway.budget.remaining_normal(call_run_id, call_kind)
+    if remaining == 0:
+        diag = _save_diagnostics(svc, state, "supply_input", error_code="BUDGET_EXCEEDED")
+        return validate_state_patch({"route_decision": "stop", "terminal": "NEEDS_REVIEW",
+                                     "error_ref": diag, "resume_step": "wait_input"})
+    subject = {"questions": pending.get("questions", []), "round": current_round + 1,
+               "rounds_remaining": None if limit is None else limit - current_round,
+               "normal_calls_remaining": remaining,
+               "calls_remaining": max(0, profile.max_total_calls - usage["calls_reserved"])}
     gate_row = _gate(state, svc, "supply_input", subject)
     resume = _decide(svc, gate_row)
     decision = _consume_decision(svc, gate_row, resume)
     if not decision.get("approved"):
         return validate_state_patch({"route_decision": "stop", "terminal": "WAITING_INPUT",
                                      "resume_step": "wait_input"})
-    payload = decision.get("payload") or {}
-    for material in payload.get("materials", []):
-        svc.repo.add_material(state["task_id"], material["id"], material["text"])
-    answers = payload.get("answers", [])
-    if answers or payload.get("user_input_append"):
-        task = svc.repo.get_task(state["task_id"])
-        task["payload"].setdefault("answers", []).extend(answers)
-        if payload.get("user_input_append"):
-            task["payload"]["user_input"] = task["payload"].get("user_input", "") + "\n" + payload["user_input_append"]
-        svc.repo.save_task_payload(state["task_id"], task["payload"])
-    svc.repo.log_event(state["task_id"], state["run_id"], "input_supplied",
-                       {"answers": answers, "materials": [m["id"] for m in payload.get("materials", [])]})
+    svc.repo.apply_supplement(state["task_id"], state["run_id"], gate_row["id"], decision.get("payload") or {})
     # 商单链：需求分析未就绪时回到 pr_analysis 重规划，就绪后才进运营官
     task = svc.repo.get_task(state["task_id"])
     commercial = task["payload"].get("purpose") == "commercial_order" or bool(task["payload"].get("client_brief"))
     pr = _find_pr_analysis(state, svc)
     route = "pr_analysis" if (commercial and not (pr and pr["payload"].get("ready_for_operator"))) else "brief"
     return validate_state_patch({"route_decision": route, "gate_ref": {"id": gate_row["id"]},
-                                 "resume_step": "wait_input"})
+                                 "input_round": current_round + 1, "resume_step": "wait_input"})
 
 
 def node_wait_brief_confirm(state: FiveAgentState, svc: Services) -> dict:
@@ -496,9 +552,9 @@ def node_draft(state: FiveAgentState, svc: Services) -> dict:
     brief = svc.repo.get_brief(brief_ref["task_id"], brief_ref["brief_version"])
     if not brief["confirmed_at"]:
         raise DomainError("unconfirmed brief: zero creator calls allowed", "ORIGIN_DENIED")
-    material_refs = _material_refs(svc, state["task_id"], brief["payload"]["material_ids"])
-    step_key = step_key_draft(_fp({"brief_ref": brief_ref})[:16])
+    material_refs = _ranked_brief_materials(state, svc, brief, "draft")
     input_payload = proj.build_draft_input(brief_ref, material_refs)
+    step_key = step_key_draft(_fp(input_payload)[:16])
     try:
         outcome = _call(state, svc, step_key, "draft", input_payload)
     except (BudgetExceeded, AgentUnavailable, CancelledError, InterruptedUnknown):
@@ -523,15 +579,24 @@ def node_draft(state: FiveAgentState, svc: Services) -> dict:
 def _save_candidate(state: FiveAgentState, svc: Services, data: dict,
                     base_version_id: str | None, step_key: str) -> dict:
     version_id = "ver_" + object_hash({"run": state["run_id"], "step": step_key})[:24]
-    return svc.repo.save_version(version_id, state["task_id"], state["run_id"],
-                                 base_version_id, data, status="candidate")
+    version = svc.repo.save_version(version_id, state["task_id"], state["run_id"],
+                                    base_version_id, data, status="candidate")
+    brief = _confirmed_brief(state, svc)
+    ref = {key: brief[key] for key in ("task_id", "brief_version", "brief_hash")}
+    svc.repo.save_artifact("binding_" + version_id, state["task_id"], state["run_id"],
+                           "version_brief", {"version_id": version_id, "brief_ref": ref})
+    if base_version_id and state.get("revision_ref"):
+        record_experiment(svc.repo, state["task_id"], state["run_id"], "revision_candidate",
+                          {"request_id": state["revision_ref"]["id"], "base_version_id": base_version_id,
+                           "version_id": version_id})
+    return version
 
 
 def _scoped_revise(state: FiveAgentState, svc: Services) -> dict:
     """revision run entry: content_creator.revise inside the frozen finding scope."""
     base = svc.repo.get_version(state["version_ref"]["id"])
     request = svc.repo.get_artifact(state["revision_ref"]["id"])["payload"]
-    brief = svc.repo.latest_brief(state["task_id"])
+    brief = _confirmed_brief(state, svc)
     brief_ref = {"task_id": state["task_id"], "brief_version": brief["brief_version"],
                  "brief_hash": brief["brief_hash"]}
     base_version_ref = {"id": base["id"], "sha256": base["content_hash"]}
@@ -572,13 +637,13 @@ def _scoped_revise(state: FiveAgentState, svc: Services) -> dict:
 
 def node_rules(state: FiveAgentState, svc: Services) -> dict:
     version = svc.repo.get_version(state["version_ref"]["id"])
-    report = program.run_rules(version["id"], version["payload"])
+    brief = _confirmed_brief(state, svc)
+    report = program.run_rules(version["id"], version["payload"], brief["payload"]["length_rule"])
     rule_id = f"rule_{version['id']}"
     svc.repo.save_artifact(rule_id, state["task_id"], state["run_id"], "rule_report", report)
-    repair_count = int(state.get("repair_count", 0))
     if report["passed"]:
         decision = "review"
-    elif repair_count < BUDGETS[state["run_kind"]].max_business_repairs:
+    elif _can_repair(state, svc):
         decision = "repair"  # rule failure skips the first review
     else:
         decision = "needs_review"
@@ -590,18 +655,12 @@ def node_rules(state: FiveAgentState, svc: Services) -> dict:
 
 
 def node_review(state: FiveAgentState, svc: Services) -> dict:
-    brief = svc.repo.latest_brief(state["task_id"])
+    brief = _confirmed_brief(state, svc)
     brief_ref = {"task_id": state["task_id"], "brief_version": brief["brief_version"],
                  "brief_hash": brief["brief_hash"]}
     version = svc.repo.get_version(state["version_ref"]["id"])
     rule_report = svc.repo.get_artifact(state["rule_ref"]["id"])["payload"]
-    # F-01: 素材指纹必须承诺素材正文内容（与 traffic/brief 同一公式），正文变更即换指纹。
-    materials = {m["id"]: m for m in svc.repo.list_materials(state["task_id"])}
-    material_refs = []
-    for mid in brief["payload"].get("material_ids", []):
-        if mid not in materials:
-            raise DomainError("brief references unknown material", "INPUT_MISSING")
-        material_refs.append({"id": mid, "sha256": object_hash({"text": materials[mid]["text"]})})
+    material_refs = _ranked_brief_materials(state, svc, brief, "review")
     step_key = step_key_review(version["id"])
     input_payload = proj.build_assess_input(
         brief_ref, {"id": version["id"], "sha256": version["content_hash"]},
@@ -627,12 +686,11 @@ def node_review(state: FiveAgentState, svc: Services) -> dict:
     review_id = f"review_{version['id']}"
     svc.repo.save_artifact(review_id, state["task_id"], state["run_id"], "editorial_review", review)
     patch = {"review_ref": {"id": review_id, "sha256": object_hash(review)}, "resume_step": "review"}
-    repair_count = int(state.get("repair_count", 0))
     if review["overall"] == "pass":
         patch["route_decision"] = "export"
     elif review["overall"] == "needs_input":
         patch.update({"route_decision": "stop", "terminal": "WAITING_INPUT"})
-    elif repair_count < BUDGETS[state["run_kind"]].max_business_repairs:
+    elif _can_repair(state, svc):
         patch["route_decision"] = "repair"
     else:
         patch.update({"route_decision": "needs_review", "terminal": "NEEDS_REVIEW"})
@@ -645,10 +703,11 @@ def node_review(state: FiveAgentState, svc: Services) -> dict:
 def node_repair(state: FiveAgentState, svc: Services) -> dict:
     """One business repair: content_creator.revise targeting rule/review issues."""
     base = svc.repo.get_version(state["version_ref"]["id"])
-    brief = svc.repo.latest_brief(state["task_id"])
+    brief = _confirmed_brief(state, svc)
     brief_ref = {"task_id": state["task_id"], "brief_version": brief["brief_version"],
                  "brief_hash": brief["brief_hash"]}
     issue_locations: dict[str, str] = {}
+    issue_details: dict[str, str] = {}
     issue_ids: list[str] = []
     allow_title = allow_cover = False
     report = None
@@ -656,18 +715,22 @@ def node_repair(state: FiveAgentState, svc: Services) -> dict:
         report = svc.repo.get_artifact(state["rule_ref"]["id"])["payload"]
         for check in program.failed_checks(report):
             issue_ids.append(check["rule_id"])
+            issue_details[check["rule_id"]] = check["reason"]
             if check.get("segment_id"):
                 issue_locations[check["rule_id"]] = check["segment_id"]
-            if check["rule_id"].startswith("title"):
+            if check.get("segment_id") == "titles":
                 allow_title = True
-            if check["rule_id"].startswith("cover"):
+            if check.get("segment_id") == "cover":
                 allow_cover = True
     if state.get("review_ref"):
         review = svc.repo.get_artifact(state["review_ref"]["id"])["payload"]
         for issue in review.get("issues", []):
             issue_ids.append(issue["id"])
+            issue_details[issue["id"]] = issue["requested_change"]
             if issue.get("location"):
                 issue_locations[issue["id"]] = issue["location"]
+            allow_title |= issue.get("location") == "titles"
+            allow_cover |= issue.get("location") == "cover"
     if not issue_ids:
         issue_ids = ["iss_generic_1"]
         issue_locations["iss_generic_1"] = base["payload"]["segments"][0]["segment_id"] \
@@ -679,6 +742,7 @@ def node_repair(state: FiveAgentState, svc: Services) -> dict:
         "base_content_hash": base["content_hash"],
         "issue_ids": issue_ids,
         "issue_locations": issue_locations,
+        "issue_details": issue_details,
         "instructions": "只修复列出的问题，未提及的片段保持原样",
         "allow_title_change": allow_title,
         "allow_cover_change": allow_cover,
@@ -791,10 +855,25 @@ def node_wait_conditions(state: FiveAgentState, svc: Services) -> dict:
         return validate_state_patch({"route_decision": "stop", "terminal": "CANCELLED",
                                      "resume_step": "wait_conditions"})
     scenario = (decision.get("payload") or {}).get("scenario") or {}
+    if type(scenario.get("blind", False)) is not bool:
+        raise DomainError("blind must be boolean", "SCHEMA_INVALID")
+    if scenario.get("retest_of"):
+        prior = svc.repo.get_artifact(scenario["retest_of"])
+        if prior["task_id"] != state["task_id"] or prior["kind"] != "preview":
+            raise DomainError("retest must refer to a preview in this task", "SCOPE_DENIED")
+        if prior["payload"]["version_id"] not in (version["id"], version["base_version_id"]):
+            raise DomainError("retest version is not linked to prior preview", "CONDITIONS_MISMATCH")
     personas = scenario.get("personas") or []
     if not personas or len(personas) > LIMITS["personas"]:
         raise DomainError("scenario personas invalid", "CONDITIONS_MISMATCH")
-    preview_id = "preview_" + object_hash({"version": version["id"]})[:24]
+    try:
+        personas = [Persona.model_validate(p).model_dump(mode="json") for p in personas]
+    except ValidationError:
+        raise DomainError("scenario persona fields invalid", "SCHEMA_INVALID") from None
+    if len({p["id"] for p in personas}) != len(personas):
+        raise DomainError("scenario persona IDs must be unique", "CONDITIONS_MISMATCH")
+    scenario = {**scenario, "personas": personas}
+    preview_id = "preview_" + object_hash({"version": version["id"], "run": state["run_id"]})[:24]
     preview_payload = {"version_id": version["id"], "content_hash": version["content_hash"],
                        "scenario": scenario, "segmenter_version": SEGMENTER_VERSION}
     svc.repo.save_artifact(preview_id, state["task_id"], state["run_id"], "preview", preview_payload)
@@ -917,6 +996,11 @@ def node_metrics(state: FiveAgentState, svc: Services) -> dict:
     metrics = program.compute_metrics(sessions, events, [s["segment_id"] for s in segments])
     metrics_id = f"metrics_{preview_id}"
     svc.repo.save_artifact(metrics_id, state["task_id"], state["run_id"], "metrics", metrics)
+    preview = svc.repo.get_artifact(preview_id)["payload"]
+    if preview["scenario"].get("retest_of"):
+        record_experiment(svc.repo, state["task_id"], state["run_id"], "retest",
+                          {"preview_id": preview_id, "retest_of": preview["scenario"]["retest_of"],
+                           "version_id": preview["version_id"], "metrics_id": metrics_id})
     svc.repo.log_event(state["task_id"], state["run_id"], "metrics_computed",
                        {"metrics_id": metrics_id, "started": metrics["started"],
                         "completed": metrics["completed"], "exited": metrics["exited"],
@@ -932,21 +1016,24 @@ def node_analysis(state: FiveAgentState, svc: Services) -> dict:
     input_payload = proj.build_diagnose_input(
         state["preview_ref"], {"id": version["id"], "sha256": version["content_hash"]},
         {"id": f"metrics_{state['preview_ref']['id']}", "sha256": object_hash(metrics_art)})
-    step_key = step_key_analysis(state["preview_ref"]["id"], version["id"], object_hash(metrics_art)[:16])
+    fingerprint = object_hash({"metrics": metrics_art, "events": svc.repo.preview_events(state["preview_ref"]["id"]),
+                               "prompt": prompt_schema_fingerprint(ANALYSIS_SYSTEM, Envelope[Analysis])})
+    step_key = step_key_analysis(state["preview_ref"]["id"], version["id"], fingerprint)
     svc.router.bind_task(state["task_id"])
     try:
         outcome = _call(state, svc, step_key, "diagnose_preview", input_payload,
                         max_attempts=3, unknown_policy="run_interrupt")
-    except InterruptedUnknown:
+    except (CancelledError, InterruptedUnknown):
         raise
-    except (BudgetExceeded, AgentUnavailable, CancelledError, InterruptedUnknown):
-        raise
-    except GatewayError:
+    except (GatewayError, BudgetExceeded, AgentUnavailable):
         outcome = None  # soft-degrade below
     analysis_id = f"analysis_{state['preview_ref']['id']}"
     if outcome is not None and outcome.status == "ok":
         if _analysis_refs_valid(state, svc, outcome.data):
             svc.repo.save_artifact(analysis_id, state["task_id"], state["run_id"], "analysis", outcome.data)
+            record_experiment(svc.repo, state["task_id"], state["run_id"], "hypotheses",
+                              {"preview_id": state["preview_ref"]["id"], "analysis_id": analysis_id,
+                               "version_id": version["id"], "finding_ids": [f["id"] for f in outcome.data["findings"]]})
             return validate_state_patch({"route_decision": "show", "resume_step": "analysis",
                                          "review_ref": {"id": analysis_id, "sha256": object_hash(outcome.data)}})
         svc.repo.log_event(state["task_id"], state["run_id"], "analysis_rejected",
@@ -959,15 +1046,16 @@ def node_analysis(state: FiveAgentState, svc: Services) -> dict:
 
 def _analysis_refs_valid(state: FiveAgentState, svc: Services, analysis: dict) -> bool:
     preview_id = state["preview_ref"]["id"]
-    event_ids = {e["id"] for e in svc.repo.preview_events(preview_id)}
-    segments_ids = {s["segment_id"] for s in _segments_of(state, svc)}
-    for finding in analysis.get("findings", []):
-        if finding["segment_id"] not in segments_ids:
-            return False
-        for ref in finding["observation_refs"]:
-            if ref not in event_ids:
-                return False
-    return True
+    observations = {e["id"]: e["payload"]["segment_id"] for e in svc.repo.preview_events(preview_id)}
+    try:
+        data = Analysis.model_validate(analysis)
+        envelope = Envelope[Analysis](schema_version="creator-agent.v1", status="ok",
+            summary="工作流试映分析", data=data, questions=[], issues=[],
+            evidence_refs=sorted({ref for finding in data.findings for ref in finding.observation_refs}))
+        validate_analysis(envelope, observations, single_version_context())
+        return True
+    except (ValidationError, ComponentError):
+        return False
 
 
 def node_show_suggestions(state: FiveAgentState, svc: Services) -> dict:
@@ -1021,14 +1109,18 @@ def node_wait_suggestions(state: FiveAgentState, svc: Services) -> dict:
         "base_version_id": base["id"],
         "base_content_hash": base["content_hash"],
         "analysis_id": analysis_id,
+        "analysis_sha256": object_hash(analysis),
         "finding_ids": finding_ids,
         "finding_segment": finding_segment,
         "instructions": payload.get("instructions"),
         "allow_title_change": bool(payload.get("allow_title_change")),
         "allow_cover_change": bool(payload.get("allow_cover_change")),
     }
-    req_id = "revreq_" + object_hash({"base": base["id"], "findings": sorted(finding_ids)})[:24]
+    req_id = "revreq_" + object_hash({"run": state["run_id"], "request": request})[:24]
     svc.repo.save_artifact(req_id, state["task_id"], state["run_id"], "revision_request", request)
+    record_experiment(svc.repo, state["task_id"], state["run_id"], "selected",
+                      {"preview_id": state["preview_ref"]["id"], "analysis_id": analysis_id,
+                       "version_id": base["id"], "request_id": req_id, "finding_ids": finding_ids})
     return validate_state_patch({"revision_ref": {"id": req_id, "sha256": object_hash(request)},
                                  "gate_ref": {"id": gate_row["id"]},
                                  "route_decision": "stop", "terminal": "READY",

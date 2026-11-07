@@ -46,8 +46,19 @@ python tools/run_douyin_intake.py status
 |---|---|---|
 | POST | `/api/v1/accounts/external` | 注册已有账号（platform=handle 唯一，重复注册返回同一登记） |
 | GET | `/api/v1/accounts/external` | 列出接入账号与会话状态 |
+| POST | `/api/v1/accounts/external/{id}/login` | 启动扫码登录（后台线程弹出浏览器窗口），成功后自动抓取实绩写入经验库 |
+| GET | `/api/v1/accounts/external/{id}/status` | 登录/导入状态与可操作错误（前端轮询用） |
+| GET | `/api/v1/accounts/external/{id}/experience` | 经验库聚合：实绩汇总、baseline、热评与最近作品 |
 | POST | `/api/v1/accounts/external/{id}/import` | 导入历史：`{source:"manual", videos:[...]}` 或 `{source:"adapter", count:10}` |
 | GET | `/api/v1/accounts/external/{id}/videos` | 已导入作品实绩（含 top 评论） |
+
+## 前端登录入口
+
+- 引导页（Onboarding）第 1 步选择「已在做账号 / 已是成熟账号」后出现「平台账号 · 经验库」面板
+- 设置页 →「平台账号 · 经验库」：抖音 / 小红书 二选一 → 填账号标识 →「登录并导入实绩」
+  （弹出浏览器窗口扫码，成功自动抓最近作品实绩入库）；也可「手动导入 JSON」补录
+- 登录后可在面板查看经验库聚合（总播放/点赞/评论/转发/收藏、热评、最近作品），
+  供后续选题、审稿与数据分析引用
 
 ## 行为约定（与 cheat-on-content 对齐）
 
@@ -55,7 +66,7 @@ python tools/run_douyin_intake.py status
 - **不伪造数据**：抓不到的字段为 null；top 评论抓取失败不阻断作品数据
 - **幂等导入**：同（账号, 平台作品 ID）不重复入库；`baseline_plays` = 全部已导入作品播放中位数
 - **凭据安全**：storage_state 只落受限目录；API 不传输、数据库不存 cookie 内容
-- **会话状态机**：`none → pending_adapter_setup → logged_in`（失效置 `expired` 重登即可）
+- **会话状态机**：`none → logging_in → logged_in`（抓取失败置 `pending_adapter_setup`，失效置 `expired` 重登即可）
 
 ## 诚实边界
 

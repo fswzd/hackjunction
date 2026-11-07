@@ -49,7 +49,11 @@ def _playwright():
 
 
 def login_interactive(external_account_id: str, *, headless: bool = False) -> Path:
-    """打开小红书创作服务平台登录页，扫码登录成功后保存 storage_state。"""
+    """打开小红书创作服务平台登录页，扫码登录成功后保存 storage_state。
+
+    判定标准是平台接口真正认可会话（posted 接口 success=true），
+    而不是"页面上有 cookie"——避免在扫码生效前提前保存半截会话。
+    """
     sync_playwright = _playwright()
     target = session_paths(external_account_id)
     with sync_playwright() as pw:
@@ -57,9 +61,17 @@ def login_interactive(external_account_id: str, *, headless: bool = False) -> Pa
         context = browser.new_context(accept_downloads=False)
         page = context.new_page()
         page.goto(CREATOR_URL, wait_until="domcontentloaded")
-        # 登录成功后进入创作服务平台工作区（路径随平台版本可能变化，等待主页稳定即可）
         page.wait_for_function(
-            "() => !location.pathname.includes('login') && document.cookie.length > 0",
+            """async () => {
+                try {
+                    const response = await fetch(
+                        '/api/galaxy/user/posted?page=1&page_size=1&sort=created_desc');
+                    const payload = await response.json();
+                    return Boolean(payload && payload.success === true);
+                } catch (err) {
+                    return false;
+                }
+            }""",
             timeout=LOGIN_WAIT_SECONDS * 1000)
         context.storage_state(path=str(target))
         browser.close()
@@ -74,7 +86,7 @@ def verify_session(external_account_id: str) -> bool:
         return False
     sync_playwright = _playwright()
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
+        browser = pw.chromium.launch(headless=True, channel="chromium")
         context = browser.new_context(storage_state=str(path))
         page = context.new_page()
         try:

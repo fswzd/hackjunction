@@ -17,7 +17,7 @@ GRAPH_STATE_SCHEMA = "seven-agent.v0.1.state"
 PROMPT_SCHEMA_VERSION = "seven-agent.v0.1.prompt"
 RULE_VERSION = "content-rules-v1"
 RULE_SCHEMA_HASH = "a" * 64  # content-rules-v1 is deterministic program code
-REVIEW_PROMPT_SCHEMA_HASH = "658c498f36362de652ef314f1c241e33a04015676447032b657283ba0f0e4b0e"
+REVIEW_PROMPT_SCHEMA_HASH = "f8103bb44bfa701680eac17e54ee2b8af89b3c3820413166000d986146ecdf23"
 # ^ owner 冻结（2026-11-07）：sha256(canonical_json({system, output_schema}))，
 #   system = birthco-local backend/agents/editorial_reviewer.py SYSTEM，
 #   output_schema = Envelope[EditorialReview].model_json_schema()。

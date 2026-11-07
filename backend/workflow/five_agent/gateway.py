@@ -85,6 +85,17 @@ class BudgetGate:
     """
     repo: Repository
 
+    def remaining_normal(self, run_id: str, kind: str) -> int:
+        profile = BUDGETS[kind]
+        usage = self.repo.get_usage(run_id)
+        extra = 0
+        if kind == "content":
+            task_id = self.repo.get_run(run_id)["task_id"]
+            extra = sum(e["run_id"] == run_id for e in self.repo.list_events(task_id, "input_supplied"))
+        # Approved supplements may use otherwise unused call slots. The total cap stays fixed.
+        return max(0, min(profile.max_normal_calls + extra - usage["normal_calls"],
+                          profile.max_total_calls - usage["calls_reserved"]))
+
     def check_and_reserve(self, run_id: str, kind: str, attempt: int, action: str) -> None:
         profile: BudgetProfile = BUDGETS[kind]
         usage = self.repo.get_usage(run_id)
@@ -93,7 +104,7 @@ class BudgetGate:
             if usage["tech_retries"] + 1 > profile.max_tech_retries:
                 raise BudgetExceeded(f"tech retry pool exhausted for run {run_id}")
         else:
-            if usage["normal_calls"] + 1 > profile.max_normal_calls:
+            if self.remaining_normal(run_id, kind) < 1:
                 raise BudgetExceeded(f"normal call budget exhausted for run {run_id}")
         if usage["calls_reserved"] + 1 > profile.max_total_calls:
             raise BudgetExceeded(f"total call budget exhausted for run {run_id}")
@@ -136,6 +147,9 @@ class AgentGateway:
           leaves run running; caller marks the audience session incomplete.
         """
         with self._run_lock(run_id):
+            run = self._guard_run(run_id)
+            if run["task_id"] != task_id or self.repo.get_task(task_id)["account_id"] != account_id:
+                raise GatewayError("run is outside the current task or account", code="SCOPE_DENIED")
             self.repo.reconcile_orphan_calls(run_id)
             return self._invoke_inner(run_id, step_key, action, input_payload,
                                       account_id, task_id, prompt_schema_version,
@@ -146,6 +160,17 @@ class AgentGateway:
                       max_attempts: int, unknown_policy: str) -> StepOutcome:
         run = self._guard_run(run_id)
         agent_id = self.validators.contract["actions"][action]["agent_id"]
+        adapter = self._router(action)
+        if getattr(adapter, "mode", "mock") == "live":
+            signature = getattr(adapter, "prompt_fingerprint", None)
+            binding = getattr(adapter, "replay_binding", None)
+            prompt_schema_version += "+live"
+            if binding is not None:
+                prompt_schema_version += ":" + binding(action, task_id, agent_id)
+            elif signature is not None:
+                prompt_schema_version += ":" + signature(action)
+        if getattr(adapter, "single_attempt", False):
+            max_attempts = 1
 
         input_hash = frozen_input_hash(input_payload, prompt_schema_version)
         # 1) idempotent replay from a committed receipt produced from IDENTICAL
@@ -171,7 +196,6 @@ class AgentGateway:
             self.validators.validate_call(call)
             self.repo.reserve_call(call_id, run_id, step_key, attempt, agent_id, action,
                                    request_id, input_hash)
-            adapter = self._router(action)
             self.repo.mark_send_intent(call_id)
 
             try:

@@ -75,7 +75,7 @@ def verify_session(external_account_id: str) -> bool:
         return False
     sync_playwright = _playwright()
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
+        browser = pw.chromium.launch(headless=True, channel="chromium")
         context = browser.new_context(storage_state=str(path))
         page = context.new_page()
         try:

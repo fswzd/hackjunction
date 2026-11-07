@@ -4,8 +4,12 @@ from typing import Literal
 from pydantic import Field,model_validator
 
 from backend.agents.audience import validate_event
-from backend.domain.hashing import sha256_json
-from backend.domain.schemas import Model,Id,Hash,Confirmed,AudienceEvent,AudienceInput,ErrorDetail
+from backend.domain.errors import DomainError
+from backend.domain.hashing import content_hash, sha256_json
+from backend.domain.schemas import (
+    Model, Id, Hash, Confirmed, AudienceEvent, AudienceInput, ErrorDetail,
+    ContentDelivery, Persona, VisibleSegment,
+)
 from backend.simulation.audience_session import AudienceSimulationInput,segment_content
 
 
@@ -180,32 +184,116 @@ class AnalystInput(Model):
         return self
 
 
+class PreviewObservation(Model):
+    event_id: Id
+    event: AudienceEvent
+
+
+class PreviewSession(Model):
+    session_id: Id
+    persona_id: Id
+    outcome: Literal["completed", "exited", "incomplete"]
+    events: list[PreviewObservation] = Field(max_length=8)
+
+
+class PreviewAnalysisInput(Model):
+    """The workflow persists validated events, not the standalone transport trace."""
+
+    version_id: Id
+    content_hash: Hash
+    content: ContentDelivery
+    personas: list[Persona] = Field(min_length=1, max_length=6)
+    segments: list[VisibleSegment] = Field(min_length=1, max_length=8)
+    sessions: list[PreviewSession] = Field(min_length=1, max_length=6)
+
+    @model_validator(mode="after")
+    def bind_trace(self):
+        if content_hash(self.content) != self.content_hash:
+            raise ValueError("preview content fingerprint differs")
+        if self.segments[0].kind != "cover" or self.segments[0].text != self.content.cover_copy:
+            raise ValueError("preview cover differs from the frozen content")
+        if [s.model_dump() for s in self.segments[1:]] != [
+                s.model_dump(exclude={"source_refs"}) for s in self.content.segments[:7]]:
+            raise ValueError("preview segments differ from the frozen prefix")
+        segment_ids = [s.segment_id for s in self.segments]
+        if len(set(segment_ids)) != len(segment_ids):
+            raise ValueError("preview segment IDs must be distinct")
+        personas = [p.id for p in self.personas]
+        if len(set(personas)) != len(personas) or [s.persona_id for s in self.sessions] != personas:
+            raise ValueError("preview sessions must match the frozen personas")
+        if len({s.session_id for s in self.sessions}) != len(self.sessions):
+            raise ValueError("duplicate preview session ID")
+        observed = set()
+        for session in self.sessions:
+            ids = [r.event.segment_id for r in session.events]
+            if ids != segment_ids[:len(ids)]:
+                raise ValueError("preview session is not a continuous prefix")
+            for ordinal, observation in enumerate(session.events):
+                if observation.event_id in observed:
+                    raise ValueError("duplicate preview event ID")
+                observed.add(observation.event_id)
+                try:
+                    validate_event(observation.event, ids[ordinal])
+                except DomainError:
+                    raise ValueError("invalid audience event") from None
+                if observation.event.action == "exit" and ordinal != len(ids) - 1:
+                    raise ValueError("preview has events after an exit")
+            exited = bool(session.events and session.events[-1].event.action == "exit")
+            expected = "exited" if exited else "completed" if len(ids) == len(segment_ids) else "incomplete"
+            if session.outcome != expected:
+                raise ValueError("preview session outcome disagrees with its events")
+        return self
+
+
 def ratio(numerator,denominator):
     return {"numerator":numerator,"denominator":denominator,"value":numerator/denominator if denominator else None}
 
 
-def summarize(source:AudienceSimulationInput,report:SimulationReport):
-    sessions=report.sessions;started=sum(bool(s.events) for s in sessions);completed=sum(s.outcome=="completed" for s in sessions)
-    per_segment=[]
-    for segment in segment_content(source):
-        events=[r for s in sessions for r in s.events if r.event.segment_id==segment.segment_id]
-        exits=sum(r.event.action=="exit" for r in events)
-        per_segment.append({"segment_id":segment.segment_id,"seen_sessions":len(events),"exit_sessions":exits,"exit_rate":ratio(exits,len(events))})
-    intentions={}
-    for name in ("like","comment","save"):
-        count=sum(any(name in r.event.interactions for r in s.events) for s in sessions)
-        intentions[name]=ratio(count,started)
-    return {"scope":"simulated_sessions_not_humans","N":len(sessions),"S":started,"C":completed,
-        "U":sum(s.outcome=="incomplete" for s in sessions),"Z":sum(not s.events for s in sessions),"exited":sum(s.outcome=="exited" for s in sessions),
-        "coverage_ratio":ratio(started,len(sessions)),"completion_ratio":ratio(completed,started),"segments":per_segment,"interaction_intentions":intentions,
-        "comments":[{"event_id":r.event_id,"segment_id":r.event.segment_id,"text":r.event.comment_text} for s in sessions for r in s.events if r.event.comment_text is not None],
-        "viewer_calls":report.calls_attempted,"failed_calls":sum(c.status=="failed" for c in report.calls),"unknown_outcome_calls":sum(c.status=="unknown" for c in report.calls),
-        "viewer_usage":report.usage.model_dump(),"viewer_mode":report.mode,"mock_fixture_exit_ordinal":report.mock_fixture_exit_ordinal}
+def summarize_sessions(sessions: list[dict], segment_ids: list[str]) -> dict:
+    """Authoritative metric definitions for normalized, validated simulation events."""
+    started = sum(bool(session["events"]) for session in sessions)
+    completed = sum(session["outcome"] == "completed" for session in sessions)
+    observations = [record for session in sessions for record in session["events"]]
+    per_segment = []
+    for segment_id in segment_ids:
+        events = [r["event"] for r in observations if r["event"]["segment_id"] == segment_id]
+        exits = sum(event["action"] == "exit" for event in events)
+        per_segment.append({"segment_id": segment_id, "seen_sessions": len(events),
+                            "exit_sessions": exits, "exit_rate": ratio(exits, len(events))})
+    intentions = {}
+    for name in ("like", "comment", "save"):
+        count = sum(any(name in r["event"].get("interactions", []) for r in session["events"])
+                    for session in sessions)
+        intentions[name] = ratio(count, started)
+    return {"scope": "simulated_sessions_not_humans", "N": len(sessions), "S": started,
+            "C": completed, "U": sum(s["outcome"] == "incomplete" for s in sessions),
+            "Z": sum(not s["events"] for s in sessions),
+            "exited": sum(s["outcome"] == "exited" for s in sessions),
+            "coverage_ratio": ratio(started, len(sessions)), "completion_ratio": ratio(completed, started),
+            "segments": per_segment, "interaction_intentions": intentions,
+            "comments": [{"event_id": r["event_id"], "segment_id": r["event"]["segment_id"],
+                          "text": r["event"]["comment_text"]} for r in observations
+                         if r["event"].get("comment_text") is not None]}
+
+
+def summarize(source: AudienceSimulationInput, report: SimulationReport):
+    metrics = summarize_sessions([s.model_dump(mode="json") for s in report.sessions],
+                                 [segment.segment_id for segment in segment_content(source)])
+    return {**metrics, "viewer_calls": report.calls_attempted,
+            "failed_calls": sum(c.status == "failed" for c in report.calls),
+            "unknown_outcome_calls": sum(c.status == "unknown" for c in report.calls),
+            "viewer_usage": report.usage.model_dump(), "viewer_mode": report.mode,
+            "mock_fixture_exit_ordinal": report.mock_fixture_exit_ordinal}
+
+
+def single_version_context() -> dict:
+    return {"conditions_match": False, "reason": "单版本分析：没有可比较的第二版。",
+            "descriptive_only": True, "alignment_verified": False, "differences": ["no_second_version"]}
 
 
 def comparison_context(snapshot:AnalystInput):
     if snapshot.comparison_source is None:
-        return {"conditions_match":False,"reason":"单版本分析：没有可比较的第二版。","descriptive_only":True,"alignment_verified":False,"differences":["no_second_version"]}
+        return single_version_context()
     left,right=snapshot.source,snapshot.comparison_source;a,b=snapshot.simulation,snapshot.comparison_simulation
     differences=["model_and_prompt_conditions_not_recorded_or_verified","no_verified_segment_lineage"]
     if left.personas!=right.personas:differences.append("persona_definition_or_order")

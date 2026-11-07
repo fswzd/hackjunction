@@ -1,4 +1,4 @@
-"""Per-agent .env resolution tests for the unified live model factory.
+"""Per-agent environment resolution tests for the unified live model factory.
 
 No network, no real credentials: environment is monkeypatched.
 """
@@ -14,11 +14,7 @@ from backend.adapters.model.mimo import DEFAULT_MODEL_ID
 
 @pytest.fixture()
 def clean_env(monkeypatch):
-    import backend.adapters.model.factory as factory_mod
-    import backend.adapters.model.mimo as mimo_mod
-    # 禁用 .env 文件加载：本组测试只验证解析顺序，不受仓库根真实 .env 污染
-    monkeypatch.setattr(factory_mod, "_load_env_file", lambda: None)
-    monkeypatch.setattr(mimo_mod, "_load_env_file", lambda: None)
+    # 只验证进程环境变量的解析顺序（代码不读取任何 .env 文件）
     for key in list(__import__("os").environ):
         if key.startswith(("MIMO_", "PR_ANALYST_", "OPERATOR_", "DIRECTOR_",
                            "REVIEWER_", "SCOUT_", "ANALYST_", "AUDIENCE_")):

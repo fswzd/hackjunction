@@ -1,6 +1,5 @@
 """Generate JSON Schema, OpenAPI and TypeScript from the application models."""
 import argparse
-import importlib.util
 import inspect
 import json
 from pathlib import Path
@@ -10,29 +9,20 @@ from pydantic import BaseModel
 ROOT = Path(__file__).resolve().parents[1]
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(ROOT))
-
-
-def _load_module(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[name] = mod
-    spec.loader.exec_module(mod)
-    return mod
-
-
-m = _load_module("application_models", ROOT / "backend/domain/schemas.py")
-_sim_session = _load_module("sim_audience_session", ROOT / "backend/simulation/audience_session.py")
-_sim_analysis = _load_module("sim_analysis_data", ROOT / "backend/simulation/analysis_data.py")
+from backend.domain import schemas as m
+from backend.simulation import analysis_data, audience_session
 
 
 def outputs():
     models = {n: c for n, c in vars(m).items() if inspect.isclass(c) and issubclass(c, BaseModel) and c.__module__ == m.__name__ and n not in {"Model", "Envelope", "ApiSuccess", "ToolResult"}}
     models.update({"Role_" + role.replace("-", "_"): cls for role, cls in m.ROLE_MODELS.items()})
     models.update({"Tool_" + tool: cls for tool, cls in m.TOOL_MODELS.items()})
-    for mod in (_sim_session, _sim_analysis):
-        for n, c in vars(mod).items():
-            if inspect.isclass(c) and issubclass(c, BaseModel) and c.__module__ == mod.__name__ and n not in {"Model", "Envelope"}:
-                models[n] = c
+    # These file-based contracts are defined at the simulation boundary, alongside
+    # the trace validators. They do not add Flask routes.
+    for module in (audience_session, analysis_data):
+        models.update({name: cls for name, cls in vars(module).items()
+                       if inspect.isclass(cls) and issubclass(cls, BaseModel)
+                       and cls.__module__ == module.__name__})
     # method,path,input type,output type,success code,owner
     routes = [
         ("get", "/api/v1/session", None, m.SessionRead, 200, "A02c"),

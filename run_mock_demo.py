@@ -8,6 +8,7 @@ Writes evidence/mock-flow-evidence.json and prints a summary.
 from __future__ import annotations
 
 import hashlib
+import argparse
 import json
 import sys
 from datetime import datetime, timezone
@@ -26,6 +27,10 @@ def file_sha(path: Path) -> str:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Run the offline workflow and save its evidence")
+    parser.add_argument("--include-scout", action="store_true", help="Exercise topic selection before the Brief")
+    parser.add_argument("--output", type=Path, default=ROOT / "evidence" / "mock-flow-evidence.json")
+    args = parser.parse_args()
     repo = Repository(":memory:")
     router = AdapterRouter(repo, mode="mock")
     driver = OrchestrationDriver(repo, router=router, mode="mock")
@@ -44,11 +49,19 @@ def main() -> int:
     driver.create_task("demo_task", {
         "goal": "写一篇新手拍照入门图文", "user_input": "写一篇新手拍照入门图文",
         "input_mode": "idea", "purpose": "content",
-        "flags": {"traffic_enabled": False, "goal_clear": True}})
+        "flags": {"traffic_enabled": args.include_scout, "goal_clear": not args.include_scout}})
     driver.add_material("demo_task", "mat1", "拍照入门：先学会构图三分法，再练光线。")
 
     snap = driver.start_content_run("demo_task", user_input="写一篇新手拍照入门图文")
     step("start_content_run", snap)
+    if args.include_scout:
+        gate = snap["pending_gates"][0]
+        assert gate["kind"] == "select_opportunity"
+        choices = repo.get_artifact(snap["state"]["artifact_batch_ref"]["id"])["payload"]["opportunities"]
+        selected = choices[0]
+        snap = driver.decide(snap["run_id"], gate["id"], approved=True,
+            payload={"selected_opportunity_ref": {"id": selected["id"]}})
+        step("select_opportunity", snap)
     gate = snap["pending_gates"][0]
     brief_ref = snap["state"]["brief_ref"]
     snap = driver.decide(snap["run_id"], gate["id"], approved=True,
@@ -109,7 +122,7 @@ def main() -> int:
         "evidence_kind": "mock_flow_end_to_end",
         "mode": "mock_dev_no_live_model_no_teammate_code_no_real_user",
         "observed_at": datetime.now(timezone.utc).isoformat(),
-        "command": "python run_mock_demo.py",
+        "command": "python run_mock_demo.py" + (" --include-scout" if args.include_scout else ""),
         "cwd": str(ROOT),
         "exit_code": 0,
         "trace": trace,
@@ -138,13 +151,13 @@ def main() -> int:
             for agent_id in router.mocks
         },
         "not_tested_here": [
-            "five owner real entry points (awaiting_owner_handoff)",
+            "production adapters (covered separately by offline transport integration tests)",
             "live models / real token cost",
             "real user confirmations via Flask/React UI",
             "langgraph-checkpoint-sqlite persistence (plugin not installed)",
         ],
     }
-    out = ROOT / "evidence" / "mock-flow-evidence.json"
+    out = args.output
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print("MOCK FLOW PASS")

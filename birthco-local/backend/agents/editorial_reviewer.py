@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass
 from uuid import uuid4
 
 from pydantic import Field, model_validator, ValidationError
+from backend.agents.output_contract import ENVELOPE_RULES
 
 from backend.adapters.model.protocol import ModelAdapter, ModelMessage, ModelRequest, ModelUsage
 from backend.domain.errors import DomainError
@@ -55,7 +56,8 @@ SYSTEM="""你是众幕 AI 的独立审稿员。只检查当前冻结版本，不
 每个关键主张标记 supported/unsupported/uncertain/personal_experience。supported 必须引用真实 material_id；个人经验必须来自 user_supplied_experience 素材。
 通过需要所有要求 met、无 blocking 问题且无 unsupported/uncertain 主张。无法核实就明确 unknown 或 needs_input，不能编来源。
 需要补充事实时 envelope.status=needs_input，data.overall=needs_input 并提出具体问题；可改稿解决时 overall=revise。
-只输出符合给定 schema 的 JSON，不推断真实流量、付款或真实用户反馈。"""
+revise 必须含具体修改问题。问题 ID 唯一，顶层 evidence_refs 只能引用本版段落、标题封面或本次材料。
+只输出符合给定 schema 的 JSON，不推断真实流量、付款或真实用户反馈。""" + "\n" + ENVELOPE_RULES
 
 
 @dataclass(frozen=True)

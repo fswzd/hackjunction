@@ -1,0 +1,485 @@
+{
+  "evidence_kind": "mock_flow_end_to_end",
+  "mode": "mock_dev_no_live_model_no_teammate_code_no_real_user",
+  "observed_at": "2026-11-07T10:20:26.679634+00:00",
+  "command": "python run_mock_demo.py --include-scout",
+  "cwd": "E:\\hackjunction\\hackjunction",
+  "exit_code": 0,
+  "trace": [
+    {
+      "step": "start_content_run",
+      "run_id": "run_demo_task_content_d661ba67",
+      "status": "WAITING",
+      "terminal": null,
+      "pending_gates": [
+        "select_opportunity"
+      ],
+      "usage": {
+        "normal_calls": 0,
+        "tech_retries": 0,
+        "calls_completed": 0,
+        "tokens_known": 0,
+        "unknown_usage_calls": 0
+      }
+    },
+    {
+      "step": "select_opportunity",
+      "run_id": "run_demo_task_content_d661ba67",
+      "status": "WAITING",
+      "terminal": null,
+      "pending_gates": [
+        "confirm_brief"
+      ],
+      "usage": {
+        "normal_calls": 1,
+        "tech_retries": 0,
+        "calls_completed": 1,
+        "tokens_known": 264,
+        "unknown_usage_calls": 0
+      }
+    },
+    {
+      "step": "confirm_brief",
+      "run_id": "run_demo_task_content_d661ba67",
+      "status": "WAITING",
+      "terminal": null,
+      "pending_gates": [
+        "accept_delivery"
+      ],
+      "usage": {
+        "normal_calls": 3,
+        "tech_retries": 0,
+        "calls_completed": 3,
+        "tokens_known": 788,
+        "unknown_usage_calls": 0
+      }
+    },
+    {
+      "step": "accept_delivery",
+      "run_id": "run_demo_task_content_d661ba67",
+      "status": "READY",
+      "terminal": "READY",
+      "pending_gates": [],
+      "usage": {
+        "normal_calls": 3,
+        "tech_retries": 0,
+        "calls_completed": 3,
+        "tokens_known": 788,
+        "unknown_usage_calls": 0
+      }
+    },
+    {
+      "step": "start_preview_run",
+      "run_id": "run_demo_task_preview_67e9e069",
+      "status": "WAITING",
+      "terminal": null,
+      "pending_gates": [
+        "preview_conditions"
+      ],
+      "usage": {
+        "normal_calls": 0,
+        "tech_retries": 0,
+        "calls_completed": 0,
+        "tokens_known": 0,
+        "unknown_usage_calls": 0
+      }
+    },
+    {
+      "step": "preview_run",
+      "run_id": "run_demo_task_preview_67e9e069",
+      "status": "WAITING",
+      "terminal": null,
+      "pending_gates": [
+        "select_findings"
+      ],
+      "usage": {
+        "normal_calls": 8,
+        "tech_retries": 0,
+        "calls_completed": 7,
+        "tokens_known": 1499,
+        "unknown_usage_calls": 1
+      }
+    },
+    {
+      "step": "select_findings",
+      "run_id": "run_demo_task_preview_67e9e069",
+      "status": "READY",
+      "terminal": "READY",
+      "pending_gates": [],
+      "usage": {
+        "normal_calls": 8,
+        "tech_retries": 0,
+        "calls_completed": 7,
+        "tokens_known": 1499,
+        "unknown_usage_calls": 1
+      }
+    },
+    {
+      "step": "start_revision_run",
+      "run_id": "run_demo_task_revision_ddddd0f4",
+      "status": "WAITING",
+      "terminal": null,
+      "pending_gates": [
+        "accept_delivery"
+      ],
+      "usage": {
+        "normal_calls": 2,
+        "tech_retries": 0,
+        "calls_completed": 2,
+        "tokens_known": 594,
+        "unknown_usage_calls": 0
+      }
+    },
+    {
+      "step": "accept_revision",
+      "run_id": "run_demo_task_revision_ddddd0f4",
+      "status": "READY",
+      "terminal": "READY",
+      "pending_gates": [],
+      "usage": {
+        "normal_calls": 2,
+        "tech_retries": 0,
+        "calls_completed": 2,
+        "tokens_known": 594,
+        "unknown_usage_calls": 0
+      }
+    }
+  ],
+  "runs": {
+    "run_demo_task_content_d661ba67": {
+      "kind": "content",
+      "status": "READY",
+      "calls": [
+        {
+          "action": "prepare_brief",
+          "attempt": 1,
+          "status": "received",
+          "usage_tokens": 264
+        },
+        {
+          "action": "draft",
+          "attempt": 1,
+          "status": "received",
+          "usage_tokens": 309
+        },
+        {
+          "action": "assess_content",
+          "attempt": 1,
+          "status": "received",
+          "usage_tokens": 215
+        }
+      ],
+      "usage": {
+        "run_id": "run_demo_task_content_d661ba67",
+        "calls_reserved": 3,
+        "normal_calls": 3,
+        "tech_retries": 0,
+        "calls_completed": 3,
+        "tokens_known": 788,
+        "unknown_usage_calls": 0
+      }
+    },
+    "run_demo_task_preview_67e9e069": {
+      "kind": "preview",
+      "status": "READY",
+      "calls": [
+        {
+          "action": "read_segment",
+          "attempt": 1,
+          "status": "received",
+          "usage_tokens": 172
+        },
+        {
+          "action": "read_segment",
+          "attempt": 1,
+          "status": "received",
+          "usage_tokens": 168
+        },
+        {
+          "action": "read_segment",
+          "attempt": 1,
+          "status": "received",
+          "usage_tokens": 171
+        },
+        {
+          "action": "read_segment",
+          "attempt": 1,
+          "status": "received",
+          "usage_tokens": 169
+        },
+        {
+          "action": "read_segment",
+          "attempt": 1,
+          "status": "received",
+          "usage_tokens": 171
+        },
+        {
+          "action": "read_segment",
+          "attempt": 1,
+          "status": "received",
+          "usage_tokens": 170
+        },
+        {
+          "action": "read_segment",
+          "attempt": 1,
+          "status": "interrupted",
+          "usage_tokens": null
+        },
+        {
+          "action": "diagnose_preview",
+          "attempt": 1,
+          "status": "received",
+          "usage_tokens": 478
+        }
+      ],
+      "usage": {
+        "run_id": "run_demo_task_preview_67e9e069",
+        "calls_reserved": 8,
+        "normal_calls": 8,
+        "tech_retries": 0,
+        "calls_completed": 7,
+        "tokens_known": 1499,
+        "unknown_usage_calls": 1
+      }
+    },
+    "run_demo_task_revision_ddddd0f4": {
+      "kind": "revision",
+      "status": "READY",
+      "calls": [
+        {
+          "action": "revise",
+          "attempt": 1,
+          "status": "received",
+          "usage_tokens": 367
+        },
+        {
+          "action": "assess_content",
+          "attempt": 1,
+          "status": "received",
+          "usage_tokens": 227
+        }
+      ],
+      "usage": {
+        "run_id": "run_demo_task_revision_ddddd0f4",
+        "calls_reserved": 2,
+        "normal_calls": 2,
+        "tech_retries": 0,
+        "calls_completed": 2,
+        "tokens_known": 594,
+        "unknown_usage_calls": 0
+      }
+    }
+  },
+  "versions": {
+    "v1": {
+      "id": "ver_630f0b4fd74eefbe39d78a9d",
+      "status": "accepted",
+      "content_hash": "095438b64a7a9b0a31c975a82cc94caab27113ed8308acddb00703ea12872ed5",
+      "titles": [
+        "写一篇新手拍照入门图文 的切入角度 1｜要点一",
+        "写一篇新手拍照入门图文 的切入角度 1｜要点二",
+        "写一篇新手拍照入门图文 的切入角度 1｜要点三"
+      ],
+      "export_files": [
+        "article.md",
+        "article.txt"
+      ]
+    },
+    "v2": {
+      "id": "ver_ca89020b448249f4b05c2d8f",
+      "status": "accepted",
+      "base_version_id": "ver_630f0b4fd74eefbe39d78a9d",
+      "content_hash": "2d6eb1cc5eebcbd66a626fe1b3c8085525fc34b7d6c1a1b349c2fc27f9dc6a6a",
+      "change_log": [
+        {
+          "finding_id": "find_2",
+          "issue_id": null,
+          "old_segment_id": "seg_hook_1",
+          "new_segment_id": "seg_hook_1_r1",
+          "change": "replace",
+          "reason": "采纳建议，降低理解成本"
+        }
+      ]
+    },
+    "v1_preserved": true
+  },
+  "preview": {
+    "preview_id": "preview_ec433903039f074384191d71",
+    "metrics": {
+      "started": 3,
+      "completed": 1,
+      "exited": 1,
+      "incomplete": 1
+    },
+    "analysis_findings": [
+      {
+        "id": "find_1",
+        "segment_id": "cover_v1",
+        "observation_refs": [
+          "evt_sess_517d6e021e23a5ce2de47986_0",
+          "evt_sess_230aaf301da5e37085f52441_0",
+          "evt_sess_a90638be5d1e141acd55cad8_0"
+        ],
+        "interpretation": "本次模拟中该段退出 1/3；只描述模拟事件，不证明真实受众因内容离开。",
+        "alternative_explanation": "退出可能是预设测试fixture、persona偏好或信息不足，不能据此确认内容是原因。",
+        "suggested_edit": "作为待用户选择的试验：把抽象表述换成材料中的具体步骤，保留原稿并在明确条件下重测。"
+      },
+      {
+        "id": "find_2",
+        "segment_id": "seg_hook_1",
+        "observation_refs": [
+          "evt_sess_230aaf301da5e37085f52441_1"
+        ],
+        "interpretation": "本次模拟中该段退出 0/1；只描述模拟事件，不证明真实受众因内容离开。",
+        "alternative_explanation": "退出可能是预设测试fixture、persona偏好或信息不足，不能据此确认内容是原因。",
+        "suggested_edit": "作为待用户选择的试验：把抽象表述换成材料中的具体步骤，保留原稿并在明确条件下重测。"
+      }
+    ],
+    "selected_finding": "find_2"
+  },
+  "isolation_audit": {
+    "pr_analyst": [],
+    "content_creator": [
+      {
+        "action": "draft",
+        "model_visible_input_keys": [
+          "brief_ref",
+          "material_refs"
+        ],
+        "context_seen_by_model": false
+      },
+      {
+        "action": "revise",
+        "model_visible_input_keys": [
+          "base_version_ref",
+          "brief_ref",
+          "revision_request_ref"
+        ],
+        "context_seen_by_model": false
+      }
+    ],
+    "operations_officer": [
+      {
+        "action": "prepare_brief",
+        "model_visible_input_keys": [
+          "input_mode",
+          "material_refs",
+          "selected_opportunity_ref",
+          "user_input"
+        ],
+        "context_seen_by_model": false
+      }
+    ],
+    "editorial_reviewer": [
+      {
+        "action": "assess_content",
+        "model_visible_input_keys": [
+          "brief_ref",
+          "material_refs",
+          "rule_report_ref",
+          "version_ref"
+        ],
+        "context_seen_by_model": false
+      },
+      {
+        "action": "assess_content",
+        "model_visible_input_keys": [
+          "brief_ref",
+          "material_refs",
+          "rule_report_ref",
+          "version_ref"
+        ],
+        "context_seen_by_model": false
+      }
+    ],
+    "traffic_scout": [
+      {
+        "action": "capture_opportunities",
+        "model_visible_input_keys": [
+          "goal",
+          "material_refs"
+        ],
+        "context_seen_by_model": false
+      }
+    ],
+    "data_analyst": [
+      {
+        "action": "diagnose_preview",
+        "model_visible_input_keys": [
+          "metrics_ref",
+          "preview_ref",
+          "version_ref"
+        ],
+        "context_seen_by_model": false
+      }
+    ],
+    "simulated_audience": [
+      {
+        "action": "read_segment",
+        "model_visible_input_keys": [
+          "current_segment",
+          "own_previous_reactions",
+          "persona",
+          "visible_history"
+        ],
+        "context_seen_by_model": false
+      },
+      {
+        "action": "read_segment",
+        "model_visible_input_keys": [
+          "current_segment",
+          "own_previous_reactions",
+          "persona",
+          "visible_history"
+        ],
+        "context_seen_by_model": false
+      },
+      {
+        "action": "read_segment",
+        "model_visible_input_keys": [
+          "current_segment",
+          "own_previous_reactions",
+          "persona",
+          "visible_history"
+        ],
+        "context_seen_by_model": false
+      },
+      {
+        "action": "read_segment",
+        "model_visible_input_keys": [
+          "current_segment",
+          "own_previous_reactions",
+          "persona",
+          "visible_history"
+        ],
+        "context_seen_by_model": false
+      },
+      {
+        "action": "read_segment",
+        "model_visible_input_keys": [
+          "current_segment",
+          "own_previous_reactions",
+          "persona",
+          "visible_history"
+        ],
+        "context_seen_by_model": false
+      },
+      {
+        "action": "read_segment",
+        "model_visible_input_keys": [
+          "current_segment",
+          "own_previous_reactions",
+          "persona",
+          "visible_history"
+        ],
+        "context_seen_by_model": false
+      }
+    ]
+  },
+  "not_tested_here": [
+    "production adapters (covered separately by offline transport integration tests)",
+    "live models / real token cost",
+    "real user confirmations via Flask/React UI",
+    "langgraph-checkpoint-sqlite persistence (plugin not installed)"
+  ]
+}

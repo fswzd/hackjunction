@@ -121,6 +121,23 @@ def set_session_state(db_path, external_account_id: str, *, status: str,
     return dict(row)
 
 
+def update_meta(db_path, external_account_id: str, patch: dict) -> dict:
+    """合并写 meta_json（如 login_error / import_error），供状态与经验库查询。"""
+    with connect(_db_file(db_path)) as db:
+        with immediate(db):
+            row = db.execute("SELECT meta_json FROM external_accounts WHERE id=?",
+                             (external_account_id,)).fetchone()
+            if row is None:
+                raise KeyError(external_account_id)
+            meta = json.loads(row["meta_json"] or "{}")
+            meta.update(patch)
+            db.execute("UPDATE external_accounts SET meta_json=?, updated_at=? WHERE id=?",
+                       (json.dumps(meta, ensure_ascii=False), utc_now(), external_account_id))
+            row = db.execute("SELECT * FROM external_accounts WHERE id=?",
+                             (external_account_id,)).fetchone()
+    return dict(row)
+
+
 def upsert_imported_videos(db_path, external_account_id: str, videos: list[dict],
                            source: str) -> list[dict]:
     """幂等导入：同 (账号, 平台作品 ID) 不重复；返回新增行。"""

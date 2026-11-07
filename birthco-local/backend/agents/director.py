@@ -1,11 +1,12 @@
 """Bounded standalone content writer; does not review, accept, or publish."""
 from dataclasses import dataclass, asdict
-from typing import Literal
+from typing import ClassVar, Literal
 from uuid import uuid4
 
 from pydantic import Field, ValidationError, model_validator
 
 from backend.adapters.model.mock import MockAdapter
+from backend.agents.output_contract import ENVELOPE_RULES
 from backend.adapters.model.protocol import ModelAdapter, ModelMessage, ModelRequest, ModelUsage
 from backend.domain.errors import DomainError
 from backend.domain.hashing import brief_hash, content_hash, canonical_bytes, sha256_json
@@ -28,6 +29,7 @@ class DirectorMaterial(Model):
 
 
 class DirectorInput(Model):
+    requires_draft_material: ClassVar[bool] = True
     confirmed: Confirmed
     brief: Brief
     brief_hash: Hash
@@ -73,15 +75,21 @@ class DirectorInput(Model):
             if any(not set(s.source_refs)<=set(ids) for s in self.base_content.segments):raise ValueError("unknown base material reference")
             scope=self.brief.edit_scope
             if set(scope.target_segment_ids+scope.preserve_segment_ids)!=set(old):raise ValueError("scope must cover the frozen base paragraphs")
-            drafts=[m for m in self.materials if m.kind=="existing_draft"]
-            if len(drafts)!=1:raise ValueError("provide exactly one original draft material")
-            import re
-            original=[p for p in re.split(r"\r?\n[ \t]*\r?\n",drafts[0].text) if p.strip()]
-            if original!=[s.text for s in self.base_content.segments]:raise ValueError("base paragraphs must match the authorized draft text exactly")
+            if self.requires_draft_material:
+                drafts=[m for m in self.materials if m.kind=="existing_draft"]
+                if len(drafts)!=1:raise ValueError("provide exactly one original draft material")
+                import re
+                original=[p for p in re.split(r"\r?\n[ \t]*\r?\n",drafts[0].text) if p.strip()]
+                if original!=[s.text for s in self.base_content.segments]:raise ValueError("base paragraphs must match the authorized draft text exactly")
             allowed=set(scope.target_segment_ids)|({"titles"} if scope.allow_title_change else set())|({"cover"} if scope.allow_cover_change else set())
             if not self.edit_requests or any(i.location not in allowed for i in self.edit_requests):raise ValueError("edit requests must target authorized locations")
             if len({i.location for i in self.edit_requests})!=len(self.edit_requests):raise ValueError("combine edit instructions for the same location into one request")
         return self
+
+
+class WorkflowRevisionInput(DirectorInput):
+    """Internal entry for an authorized, repository-resolved version."""
+    requires_draft_material: ClassVar[bool] = False
 
 
 SYSTEM="""你是众幕 AI 的内容导演，只写候选内容，不审校、不自签通过、不接受或发布。
@@ -92,7 +100,7 @@ SYSTEM="""你是众幕 AI 的内容导演，只写候选内容，不审校、不
 已有稿件必须输出完整 Revision 和 change_log：未修改段落保持ID、类型、文本和来源逐字不变；只改 edit_scope 授权的位置。
 change_log 只能引用已给 edit_requests 的 issue_id，finding_id=null，每项对应实际修改；替换用预留新ID，删除和移动保留旧ID；新增必须插在授权旧段后。
 标题/封面只在 scope 允许时修改，分别记录 metadata_update，old/new ID均为titles或cover。
-不足或失败不能假装完成，也不能越过范围来凑标题或篇幅。按输出schema返回JSON。"""
+不足或失败不能假装完成，也不能越过范围来凑标题或篇幅。按输出schema返回JSON。""" + "\n" + ENVELOPE_RULES
 
 
 @dataclass(frozen=True)
@@ -117,27 +125,39 @@ class DirectorResult:
 
 
 def validate_revision(snapshot:DirectorInput,revision:Revision):
-    base=snapshot.base_content
-    old={s.segment_id:s for s in base.segments};new={s.segment_id:s for s in revision.segments}
-    if len(new)!=len(revision.segments):raise DomainError("SCHEMA_INVALID","Duplicate revision segment IDs","Use unique IDs")
-    requests={i.id:i for i in snapshot.edit_requests};scope=snapshot.brief.edit_scope
+    scope = snapshot.brief.edit_scope
+    locations = {("issue", issue.id): issue.location for issue in snapshot.edit_requests}
+    validate_scoped_revision(snapshot.base_content, revision, locations,
+                             scope.allow_title_change, scope.allow_cover_change,
+                             set(snapshot.reserved_segment_ids), require_all=True)
+
+
+def validate_scoped_revision(base: ContentCandidate, revision: Revision, locations: dict,
+                             allow_title: bool, allow_cover: bool,
+                             reserved: set[str] | None = None, *, require_all: bool = False) -> None:
+    """Validate the actual patch and its provenance for both component and workflow."""
+    old = {s.segment_id: s for s in base.segments}
+    new = {s.segment_id: s for s in revision.segments}
+    if len(new) != len(revision.segments) or len(old) != len(base.segments):
+        raise DomainError("SCHEMA_INVALID", "Duplicate revision segment IDs", "Use unique IDs")
+    allowed_segments = set(locations.values()) & old.keys()
     expected=[s.segment_id for s in base.segments];moved=set();logged_metadata=set();generated=set();covered=set()
     for change in revision.change_log:
-        request=requests.get(change.issue_id)
-        if change.finding_id is not None or request is None or request.location!=change.old_segment_id:
+        ref = ("finding", change.finding_id) if change.finding_id is not None else ("issue", change.issue_id)
+        if locations.get(ref) != change.old_segment_id:
             raise DomainError("SCOPE_DENIED","Change is not linked to an authorized request","Use supplied issue IDs and locations")
-        covered.add(change.issue_id)
+        covered.add(ref)
         a,b=change.old_segment_id,change.new_segment_id
         if not change.reason.strip():raise DomainError("SCHEMA_INVALID","Change reason is blank","Describe the actual change")
         if change.change=="metadata_update":
-            allowed=(a=="titles" and scope.allow_title_change) or (a=="cover" and scope.allow_cover_change)
+            allowed=(a=="titles" and allow_title) or (a=="cover" and allow_cover)
             if not allowed or a in logged_metadata:raise DomainError("SCOPE_DENIED","Metadata change is not authorized or duplicated","Follow the frozen scope")
             logged_metadata.add(a);continue
-        if a not in scope.target_segment_ids or a not in expected:
+        if a not in allowed_segments or a not in expected:
             raise DomainError("SCOPE_DENIED","Changed paragraph is not an authorized base paragraph","Preserve unselected paragraphs")
         index=expected.index(a)
         if change.change in {"replace","insert_after"}:
-            if b not in snapshot.reserved_segment_ids or b in generated or b not in new:
+            if (reserved is not None and b not in reserved) or b in old or b in generated or b not in new:
                 raise DomainError("SCOPE_DENIED","New paragraph ID is not uniquely reserved","Use a fresh reserved ID")
             generated.add(b)
             if change.change=="replace":expected[index]=b
@@ -146,7 +166,7 @@ def validate_revision(snapshot:DirectorInput,revision:Revision):
         elif change.change=="move":
             if a in moved:raise DomainError("SCHEMA_INVALID","Duplicate move record","Record each move once")
             moved.add(a)
-    if covered!=set(requests):raise DomainError("SCHEMA_INVALID","Revision skipped requested changes","Address every selected request or ask for input")
+    if require_all and covered!=set(locations):raise DomainError("SCHEMA_INVALID","Revision skipped requested changes","Address every selected request or ask for input")
     if set(expected)!=set(new) or [i for i in expected if i not in moved]!=[s.segment_id for s in revision.segments if s.segment_id not in moved]:
         raise DomainError("SCOPE_DENIED","Revision changes do not match the change log","Record all additions, deletions and ordering changes")
     for ident in set(old)&set(new):

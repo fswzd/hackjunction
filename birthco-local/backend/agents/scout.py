@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import Field,ValidationError,model_validator
 
 from backend.adapters.model.mock import MockAdapter
+from backend.agents.output_contract import ENVELOPE_RULES
 from backend.adapters.model.protocol import ModelAdapter,ModelMessage,ModelRequest,ModelUsage
 from backend.domain.errors import DomainError
 from backend.domain.hashing import canonical_bytes,sha256_json
@@ -60,7 +61,8 @@ SYSTEM="""你是众幕 AI 的流量捕捉者（Scout），本次只分析用户�
 提供最多 max_opportunities 个有实质差异的机会。每个机会说明具体切口angle、受众问题audience_problem、为何适合账号account_fit、真实材料source_refs和需验证的hypothesis。
 source_refs只能引用本次材料ID，不得用账号ID、其他任务或虚构来源。每个机会至少一个来源，外层evidence_refs列出所有使用的来源ID。
 没有进行实时检索，因此所有evidence_date必须为null。明确当前性、受众兴趣和选题价值是待验证假设，不编造热点、发布时间、阅读量、平台推荐或市场数据。
-材料不足时status=needs_input并问清缺什么，不凑满三个选题。输出只用给定schema的JSON，不生成正文、不自作用户选择、不修改Brief。"""
+材料不足时status=needs_input并问清缺什么，不凑满三个选题。输出只用给定schema的JSON，不生成正文、不自作用户选择、不修改Brief。
+成功时至少一张机会卡；卡片 ID 和归一化选题切口不重复，引用非空且不重复，外层 evidence_refs 恰好是所有引用的并集。""" + "\n" + ENVELOPE_RULES
 
 
 def _normalized(value):

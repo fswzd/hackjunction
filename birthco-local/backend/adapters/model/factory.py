@@ -1,6 +1,6 @@
-"""统一 live 模型后端工厂：每个专家 agent 单列 .env 接口配置，缺省回退通用默认。
+"""统一 live 模型后端工厂：每个专家 agent 单列环境变量接口配置，缺省回退通用默认。
 
-.env 约定（详见仓库根 .env）：
+环境变量约定（只经运行时进程环境注入；代码不落盘、不读取任何配置文件）：
 
     MIMO_API_KEY / MIMO_BASE_URL / MIMO_MODEL_ID      # 通用默认（MiMo）
     PR_ANALYST_API_KEY / _BASE_URL / _MODEL_ID        # 各 agent 单列，可独立覆盖
@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import os
 
-from .mimo import DEFAULT_BASE_URL, DEFAULT_MODEL_ID, MiMoAdapter, _load_env_file
+from .mimo import DEFAULT_BASE_URL, DEFAULT_MODEL_ID, MiMoAdapter
 
 AGENT_ENV_PREFIXES: dict[str, str] = {
     # 组件名
@@ -67,8 +67,7 @@ def _resolve(suffix: str, prefix: str | None, fallback_env: str, default: str | 
 
 
 def create_live_adapter(agent_id: str | None = None, **kwargs) -> MiMoAdapter:
-    """按 agent 解析 .env 单列配置构造 MiMo 适配器；显式 kwargs 优先级最高。"""
-    _load_env_file()
+    """按 agent 解析环境变量单列配置构造 MiMo 适配器；显式 kwargs 优先级最高。"""
     prefix = _prefix(agent_id)
     api_key = kwargs.pop("api_key", None) or _resolve("API_KEY", prefix, "MIMO_API_KEY", None)
     base_url = kwargs.pop("base_url", None) or _resolve("BASE_URL", prefix, "MIMO_BASE_URL", DEFAULT_BASE_URL)
@@ -79,14 +78,12 @@ def create_live_adapter(agent_id: str | None = None, **kwargs) -> MiMoAdapter:
 
 
 def live_model_id(agent_id: str | None = None) -> str:
-    _load_env_file()
     prefix = _prefix(agent_id)
     return _resolve("MODEL_ID", prefix, "MIMO_MODEL_ID", DEFAULT_MODEL_ID) or DEFAULT_MODEL_ID
 
 
 def live_config_report(agent_id: str | None = None) -> dict:
     """脱敏配置一览（永不返回密钥），供检查工具/诊断使用。"""
-    _load_env_file()
     prefix = _prefix(agent_id)
     api_key = _resolve("API_KEY", prefix, "MIMO_API_KEY", None)
     return {

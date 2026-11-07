@@ -182,7 +182,7 @@ def gen_brief(call: AgentCall, resolver: TaskResolver) -> dict:
         "material_ids": [ref["id"] for ref in inp.get("material_refs", [])],
         "open_questions": [],
         "route": ["draft", "review", "export"],
-        "length_rule": {"minimum": 300, "maximum": 20000},
+        "length_rule": {"minimum": None, "maximum": 20000},
         "edit_scope": inp.get("edit_scope"),
     }
     return {"kind": "ok", "data": data, "usage": Usage.known(_tokens(data)).to_dict()}
@@ -191,7 +191,7 @@ def gen_brief(call: AgentCall, resolver: TaskResolver) -> dict:
 def gen_candidate(call: AgentCall, resolver: TaskResolver, with_cover: bool = True,
                   bad_types: bool = False) -> dict:
     brief = resolver.brief(call.input["brief_ref"])
-    mats = brief["payload"]["material_ids"][:2] or ["mat_default"]
+    mats = brief["payload"]["material_ids"][:2]
     if bad_types:
         data = {"titles": "not_a_list", "segments": []}
     else:
@@ -360,17 +360,22 @@ def gen_revision(call: AgentCall, resolver: TaskResolver) -> dict:
             new_segments.append(dict(seg))
     titles = list(base["payload"]["titles"])
     cover = base["payload"].get("cover_copy")
-    if request.get("allow_title_change"):
-        titles = [t + "（修订版）" for t in titles]
-    if request.get("allow_cover_change"):
+    metadata = []
+    if request.get("allow_title_change") and "titles" in cite:
+        titles = [t + "（修订版）" for t in titles] if titles else ["修订标题一", "修订标题二", "修订标题三"]
+        metadata.append(("titles", cite["titles"]))
+    cover_ref = cite.get("cover") or cite.get("cover_v1")
+    if request.get("allow_cover_change") and cover_ref:
         cover = (cover or "封面") + "（修订）"
-    if not change_log and not request.get("allow_title_change") and not request.get("allow_cover_change"):
-        raise ScopeViolation("no change within selected scope")
+        metadata.append(("cover", cover_ref))
+    for location, ref_id in metadata:
+        is_issue = request["kind"] == "issue_repair"
+        change_log.append({"finding_id": None if is_issue else ref_id,
+                           "issue_id": ref_id if is_issue else None,
+                           "old_segment_id": location, "new_segment_id": location,
+                           "change": "metadata_update", "reason": "按授权范围更新"})
     if not change_log:
-        change_log.append({"finding_id": None,
-                           "issue_id": (sorted(targets)[0] if targets else "iss_metadata_1"),
-                           "old_segment_id": "cover_v1", "new_segment_id": "cover_v1",
-                           "change": "metadata_update", "reason": "标题/封面按授权范围更新"})
+        raise ScopeViolation("no change within selected scope")
     data = {"titles": titles, "cover_copy": cover, "segments": new_segments, "change_log": change_log}
     return {"kind": "ok", "data": data, "usage": Usage.known(_tokens(data)).to_dict()}
 
@@ -541,13 +546,16 @@ class AdapterRouter:
                 audience_exits=audience_exits or DEFAULT_AUDIENCE_EXITS,
                 audience_timeout_at=audience_timeout_at or DEFAULT_AUDIENCE_TIMEOUTS),
         }
+        from .live_adapters import ProductionAdapter
+
+        specialist = ProductionAdapter(repo)
         self.reals = {
             "pr_analyst": RealAdapterStub("pr_analyst", ("analyze_request",)),
-            "content_creator": RealAdapterStub("content_creator", ("draft", "revise")),
-            "operations_officer": RealAdapterStub("operations_officer", ("prepare_brief",)),
-            "editorial_reviewer": RealAdapterStub("editorial_reviewer", ("assess_content",)),
-            "traffic_scout": RealAdapterStub("traffic_scout", ("capture_opportunities",)),
-            "data_analyst": RealAdapterStub("data_analyst", ("diagnose_preview",)),
+            "content_creator": specialist,
+            "operations_officer": specialist,
+            "editorial_reviewer": specialist,
+            "traffic_scout": specialist,
+            "data_analyst": specialist,
             "simulated_audience": RealAdapterStub("simulated_audience", ("read_segment",)),
         }
         # Real-entry injection: a teammate's real adapter replaces its stub here

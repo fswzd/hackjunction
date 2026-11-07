@@ -466,7 +466,9 @@
             }
           }
         }
-      },
+      }
+    },
+    "/api/v1/accounts/{account_id}": {
       "put": {
         "operationId": "put_accounts_account_id",
         "x-owner": "A02c",
@@ -9285,11 +9287,6 @@
             "title": "Name",
             "type": "string"
           },
-          "row_version": {
-            "minimum": 0,
-            "title": "Row Version",
-            "type": "integer"
-          },
           "creator_stage": {
             "enum": [
               "starting",
@@ -9298,6 +9295,11 @@
             ],
             "title": "Creator Stage",
             "type": "string"
+          },
+          "row_version": {
+            "minimum": 0,
+            "title": "Row Version",
+            "type": "integer"
           }
         },
         "required": [
@@ -13158,6 +13160,121 @@
           "simulation"
         ],
         "title": "AnalystInput",
+        "type": "object"
+      },
+      "PreviewObservation": {
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event": {
+            "$ref": "#/components/schemas/AudienceEvent"
+          }
+        },
+        "required": [
+          "event_id",
+          "event"
+        ],
+        "title": "PreviewObservation",
+        "type": "object"
+      },
+      "PreviewSession": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "persona_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Persona Id",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "completed",
+              "exited",
+              "incomplete"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewObservation"
+            },
+            "maxItems": 8,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "session_id",
+          "persona_id",
+          "outcome",
+          "events"
+        ],
+        "title": "PreviewSession",
+        "type": "object"
+      },
+      "PreviewAnalysisInput": {
+        "additionalProperties": false,
+        "description": "The workflow persists validated events, not the standalone transport trace.",
+        "properties": {
+          "version_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Version Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/ContentDelivery"
+          },
+          "personas": {
+            "items": {
+              "$ref": "#/components/schemas/Persona"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Personas",
+            "type": "array"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/VisibleSegment"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Segments",
+            "type": "array"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewSession"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Sessions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "version_id",
+          "content_hash",
+          "content",
+          "personas",
+          "segments",
+          "sessions"
+        ],
+        "title": "PreviewAnalysisInput",
         "type": "object"
       },
       "ApiSuccess_SessionRead_": {
