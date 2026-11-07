@@ -165,16 +165,12 @@ export function Overview() {
   return (
     <div className="space-y-6">
       <SectionHeader
-<<<<<<< Updated upstream
         className="studio-intro"
         eyebrow={`${formatDay(new Date().toISOString())} · 工作台`}
-=======
-        eyebrow={`Overview · ${formatDay(new Date().toISOString())}`}
->>>>>>> Stashed changes
         title={`${greeting}，${profile?.creatorName ?? "创作者"}`}
         description={`这里是「${
-          profile?.workspaceName ?? "我的 AI 公司"
-        }」。先处理需要你决定的事，再看团队正在做什么。`}
+          profile?.workspaceName ?? "我的内容工作室"
+        }」。把需求交清楚，把稿件做完整，把修改留得住。`}
         action={
           <Button
             variant="primary"
@@ -187,9 +183,9 @@ export function Overview() {
       />
 
       {approvals.length > 0 ? (
-        <div className="flex flex-col gap-3 rounded-2xl border border-violet/30 bg-violet/[0.07] p-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 rounded-sm border-l-2 border-line bg-surface p-4 sm:flex-row sm:items-center">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-violet/30 bg-violet/10 text-violet">
-            <Sparkles size={16} />
+            <CheckCircle2 size={16} />
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-text">
@@ -211,32 +207,24 @@ export function Overview() {
         </div>
       ) : null}
 
-      <section className="overflow-hidden rounded-2xl border border-line bg-surface">
+      <section className="overflow-hidden rounded-sm border border-line bg-surface">
         <Headquarters3D
           agents={snapshot.agents}
           selectedAgentId={selectedAgentId}
           onSelectAgent={selectAgent}
           onToggleImmersive={() => setImmersive(true)}
-<<<<<<< Updated upstream
           className="h-[400px] w-full sm:h-[500px] lg:h-[560px]"
         />
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3">
           <p className="text-[10px] leading-5 text-muted">
             点击工位查看角色 · 双击画面放大 · ⌘ + 滚轮缩放
-=======
-          className="h-[380px] w-full sm:h-[480px] lg:h-[600px]"
-        />
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3">
-          <p className="text-[10px] leading-5 text-muted">
-            状态由任务状态适配层驱动 · 点击工位查看员工详情 · 键盘用户可使用上方员工标签
->>>>>>> Stashed changes
           </p>
           <button
             type="button"
             onClick={() => setImmersive(true)}
             className="text-[10px] font-medium text-blue transition hover:text-text"
           >
-            进入我的 AI 公司 ↗
+            走进协作现场 ↗
           </button>
         </div>
       </section>
@@ -374,7 +362,7 @@ export function Overview() {
           <Card>
             <CardHeader>
               <div>
-                <h2 className="text-sm font-semibold">AI 员工</h2>
+                <h2 className="text-sm font-semibold">协作团队</h2>
                 <p className="mt-0.5 text-[11px] text-muted">
                   点击查看当前任务与详情
                 </p>

@@ -274,7 +274,6 @@ export default function HeadquartersScene({
 
   return (
     <>
-<<<<<<< Updated upstream
       <color attach="background" args={["#1c1915"]} />
       <fog attach="fog" args={["#1c1915", 30, 60]} />
       <CameraRig
@@ -295,20 +294,6 @@ export default function HeadquartersScene({
       <directionalLight position={[4, 7, 10]} intensity={1.05} color="#ffe7cc" />
       <pointLight position={[0, 5.5, 0]} intensity={2.2} color="#d8c2a4" distance={18} />
       <pointLight position={[0, 2.6, -5.2]} intensity={1.1} color="#e6d3b6" distance={9} />
-=======
-      <color attach="background" args={["#0b0e15"]} />
-      <fog attach="fog" args={["#0b0e15", 26, 52]} />
-      <CameraRig selectedAgentId={selectedAgentId} immersive={immersive} />
-
-      <ambientLight intensity={0.72} color="#b9c6e6" />
-      <directionalLight
-        position={[7, 12, 6]}
-        intensity={1.5}
-        color="#dfe7ff"
-      />
-      <directionalLight position={[-8, 5, -7]} intensity={0.62} color="#8f7bd6" />
-      <pointLight position={[0, 5.5, 0]} intensity={1.35} color="#83B8FF" distance={16} />
->>>>>>> Stashed changes
 
       {/* Floor */}
       <RoundedBox
@@ -316,36 +301,21 @@ export default function HeadquartersScene({
         radius={0.16}
         position={[0, -0.16, 0]}
       >
-<<<<<<< Updated upstream
         <meshStandardMaterial color="#403c33" roughness={0.88} metalness={0.12} />
       </RoundedBox>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0]}>
         <planeGeometry args={[16, 12]} />
         <meshStandardMaterial color="#49443a" roughness={0.9} />
-=======
-        <meshStandardMaterial color="#121722" roughness={0.88} metalness={0.12} />
-      </RoundedBox>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0]}>
-        <planeGeometry args={[16, 12]} />
-        <meshStandardMaterial color="#1a2130" roughness={0.9} />
->>>>>>> Stashed changes
       </mesh>
       <Grid
         args={[16, 12]}
         position={[0, 0, 0]}
         cellSize={0.55}
         cellThickness={0.5}
-<<<<<<< Updated upstream
         cellColor="#565043"
         sectionSize={2.2}
         sectionThickness={1}
         sectionColor="#655e4d"
-=======
-        cellColor="#26314a"
-        sectionSize={2.2}
-        sectionThickness={1}
-        sectionColor="#36455f"
->>>>>>> Stashed changes
         fadeDistance={24}
         fadeStrength={1.4}
         infiniteGrid={false}
@@ -377,27 +347,18 @@ export default function HeadquartersScene({
 
       {/* Back walls */}
       <RoundedBox args={[16.2, 3.2, 0.22]} radius={0.06} position={[0, 1.6, -6.05]}>
-<<<<<<< Updated upstream
         <meshStandardMaterial color="#3b372e" roughness={0.8} />
-=======
-        <meshStandardMaterial color="#191f2b" roughness={0.8} />
->>>>>>> Stashed changes
       </RoundedBox>
       <RoundedBox
         args={[0.22, 3.2, 12.2]}
         radius={0.06}
         position={[-8.05, 1.6, 0]}
       >
-<<<<<<< Updated upstream
         <meshStandardMaterial color="#3e3a31" roughness={0.82} />
-=======
-        <meshStandardMaterial color="#181e2b" roughness={0.82} />
->>>>>>> Stashed changes
       </RoundedBox>
 
       {/* Wall detail panels with slim frames */}
       {[-5.4, -3.8, 3.8, 5.4].map((x) => (
-<<<<<<< Updated upstream
         <group key={x} position={[x, 1.75, -5.9]}>
           <mesh position={[0, 0, -0.02]}>
             <boxGeometry args={[1.24, 2.04, 0.05]} />
@@ -413,28 +374,16 @@ export default function HeadquartersScene({
             />
           </mesh>
         </group>
-=======
-        <mesh key={x} position={[x, 1.75, -5.92]}>
-          <boxGeometry args={[1.1, 1.9, 0.05]} />
-          <meshStandardMaterial
-            color="#1b2230"
-            emissive="#83B8FF"
-            emissiveIntensity={0.06}
-            roughness={0.7}
-          />
-        </mesh>
->>>>>>> Stashed changes
       ))}
       <mesh position={[-7.94, 2.1, 0]}>
         <boxGeometry args={[0.05, 0.06, 9.4]} />
         <meshStandardMaterial
-          color="#83B8FF"
-          emissive="#83B8FF"
+          color="#cbb598"
+          emissive="#cbb598"
           emissiveIntensity={0.9}
         />
       </mesh>
 
-<<<<<<< Updated upstream
       {/* Backlit brand mark on the back wall — two leaves, one seam */}
       <group position={[0, 2.62, -5.9]}>
         <RoundedBox
@@ -480,13 +429,6 @@ export default function HeadquartersScene({
       <Plant position={[-7.2, 0, 5.3]} scale={1.05} />
       <Plant position={[7.2, 0, 5.3]} scale={1.2} />
       <Plant position={[6.9, 0, -1.1]} scale={0.85} />
-=======
-      {/* Brand strip on the back wall */}
-      <mesh position={[0, 2.55, -5.9]}>
-        <planeGeometry args={[4.6, 0.04]} />
-        <meshBasicMaterial color="#83B8FF" transparent opacity={0.55} />
-      </mesh>
->>>>>>> Stashed changes
 
       {operator ? (
         <OperatorDesk

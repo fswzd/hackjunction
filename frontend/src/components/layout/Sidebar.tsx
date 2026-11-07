@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { ChevronsLeft, ChevronsRight, X } from "lucide-react";
 import { cn } from "@/lib/format";
 import { useWorkspace } from "@/store/workspace";
@@ -6,18 +6,6 @@ import { creatorStageMeta } from "@/domain/profile";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { NAV_ITEMS } from "./nav";
 
-<<<<<<< Updated upstream
-=======
-function BrandMark() {
-  return (
-    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue/30 bg-blue/10">
-      <span className="text-[15px] font-bold tracking-tight text-blue">C</span>
-      <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-cyan" />
-    </span>
-  );
-}
-
->>>>>>> Stashed changes
 export function Sidebar({
   collapsed,
   mobileOpen,
@@ -56,7 +44,6 @@ export function Sidebar({
             collapsed && "lg:justify-center lg:px-2",
           )}
         >
-<<<<<<< Updated upstream
           <Link
             to="/"
             title="返回首页"
@@ -73,19 +60,6 @@ export function Sidebar({
               </div>
             ) : null}
           </Link>
-=======
-          <BrandMark />
-          {!collapsed ? (
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold tracking-tight">
-                Creator OS
-              </p>
-              <p className="truncate text-[10px] uppercase tracking-[0.18em] text-muted">
-                One Creator. One AI Company.
-              </p>
-            </div>
-          ) : null}
->>>>>>> Stashed changes
           <button
             type="button"
             onClick={onCloseMobile}
@@ -145,7 +119,7 @@ export function Sidebar({
           {!collapsed ? (
             <div className="mb-3 rounded-xl border border-line bg-raised/60 p-3">
               <p className="text-[11px] font-medium text-text">
-                黑客松演示工作区
+                本地创作工作区
               </p>
               <p className="mt-1 text-[10px] leading-4 text-muted">
                 {mode === "demo"
@@ -161,12 +135,12 @@ export function Sidebar({
             )}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-raised text-xs font-semibold text-blue">
-              {profile?.creatorName?.slice(0, 1) || "C"}
+              {profile?.creatorName?.slice(0, 1) || "幕"}
             </span>
             {!collapsed ? (
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium">
-                  {profile?.workspaceName || "我的 AI 公司"}
+                  {profile?.workspaceName || "我的内容工作室"}
                 </p>
                 <p className="truncate text-[10px] text-muted">
                   {creatorStageMeta(profile?.creatorStage).shortLabel} ·{" "}

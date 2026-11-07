@@ -44,10 +44,10 @@ export const AGENT_META: Record<AgentId, AgentMeta> = {
     role: "Operations Officer",
     actions: ["prepare_brief"],
     description:
-      "接住创作者目标，整理成待确认的 Brief，按确定性路由协调其余六个角色，并在任务书确认与最终验收两个节点等待人工决定。",
+      "理解创作目标、素材与交付要求，整理待确认的任务书并提出待补问题。流程调度由应用执行，关键决定由创作者作出。",
     accent: "#83B8FF",
     position: [0, 0, 0],
-    capabilities: ["Brief 生成", "路由规划", "人工确认节点", "团队调度"],
+    capabilities: ["任务书整理", "需求澄清", "交付标准", "账号经验"],
   },
   pr_analyst: {
     id: "pr_analyst",
