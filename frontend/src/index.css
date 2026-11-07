@@ -1,6 +1,16 @@
 @import "@fontsource-variable/inter";
 @import "tailwindcss";
 
+/* Display face for the brand lockup and the landing headlines. Subset to the
+   characters actually used in the UI so it ships as ~250 kB instead of 6 MB. */
+@font-face {
+  font-family: "ZCOOL XiaoWei";
+  src: url("./assets/fonts/zcool-xiaowei-subset.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-ink: #151513;
   --color-surface: #1d1d19;
@@ -20,6 +30,32 @@
     "Microsoft YaHei", system-ui, sans-serif;
   --font-display:
     "Inter Variable", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+
+  /* Slightly larger UI scale across the workspace. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.55rem;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.7rem;
+}
+
+/* Readability floor for the dense micro-copy utilities used across panels.
+   These rules are unlayered, so they win over the generated utilities. */
+.text-\[8px\] {
+  font-size: 11px;
+}
+
+.text-\[9px\] {
+  font-size: 12px;
+}
+
+.text-\[10px\] {
+  font-size: 12px;
+}
+
+.text-\[11px\] {
+  font-size: 13px;
 }
 
 html {
@@ -143,10 +179,10 @@ body {
 
 /* Editorial studio: quiet surfaces, generous typography, a restrained brand. */
 .studio-heading { font-family: "Songti SC", "STSong", "Noto Serif CJK SC", Georgia, serif; font-weight: 400; letter-spacing: -.045em; }
-.studio-brand { font-family: "Songti SC", "STSong", Georgia, serif; font-size: 25px; letter-spacing: .08em; }
-.studio-mark { display:flex; align-items:center; justify-content:center; width:36px; height:40px; border-left:1px solid #c7a78b; border-right:1px solid #c7a78b; color:#e1d5c3; font-family:"Songti SC",serif; font-size:25px; }
+.studio-brand { font-family: "ZCOOL XiaoWei", "Songti SC", "STSong", Georgia, serif; font-size: 24px; letter-spacing: .1em; line-height: 1.1; }
+.studio-subtitle { color: var(--color-muted); font-size: 12px; letter-spacing: .12em; line-height: 1.5; }
 .studio-intro { border-bottom:1px solid var(--color-line); padding-bottom:28px; margin-bottom:30px; }
 .studio-intro h1 { font-size:clamp(30px,3vw,46px); line-height:1.4; }
-.studio-intro::after { content:"创作 / 审稿 / 试映 / 交付"; display:block; margin-top:24px; color:var(--color-muted); font-size:10px; letter-spacing:.25em; }
+.studio-intro::after { content:"创作 / 审稿 / 试映 / 交付"; display:block; margin-top:24px; color:var(--color-muted); font-size:12px; letter-spacing:.18em; }
 nav[aria-label="主导航"] a { border-radius:2px; height:44px; }
 nav[aria-label="主导航"] a[aria-current="page"] { background:#c7a78b12; border-left:2px solid #c7a78b; }

@@ -7,8 +7,12 @@ import time
 
 from backend.domain.errors import DomainError
 
-MIGRATION = Path(__file__).with_name("migrations") / "001_initial.sql"
-VERSION = 1
+MIGRATIONS_DIR = Path(__file__).with_name("migrations")
+MIGRATIONS = (
+    (1, MIGRATIONS_DIR / "001_initial.sql"),
+    (2, MIGRATIONS_DIR / "002_account_creator_stage.sql"),
+)
+VERSION = MIGRATIONS[-1][0]
 
 
 class ManagedConnection(sqlite3.Connection):
@@ -72,35 +76,63 @@ class immediate:
 
 
 def migrate(data_dir: Path | str) -> Path:
-    """Explicit migration only. Existing DB is backed up before any DDL."""
+    """Explicit migration only. Existing DBs are backed up before any DDL."""
     data_dir = Path(data_dir).resolve()
     data_dir.mkdir(parents=True, exist_ok=True)
     path = data_dir / "db.sqlite"
+    applied = 0
     if path.exists():
         with closing(sqlite3.connect(path)) as probe:
-            version = probe.execute("PRAGMA user_version").fetchone()[0]
+            user_version = probe.execute("PRAGMA user_version").fetchone()[0]
             try:
                 recorded = probe.execute("SELECT max(version) FROM schema_migrations").fetchone()[0]
             except sqlite3.OperationalError:
                 recorded = None
             if recorded == VERSION:
                 return path
-            if recorded not in (None, 0) or version > VERSION:
-                raise DomainError("STORAGE_UNAVAILABLE", "Unknown schema version", "Restore a compatible database")
-            tables = probe.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()
-            if tables:
-                raise DomainError("STORAGE_UNAVAILABLE", "Unversioned database has tables", "Inspect or restore this database; migration is refused")
-            backup = data_dir / "backups" / utc_now().replace(":", "-") / "db.sqlite"
-            backup.parent.mkdir(parents=True, exist_ok=False)
-            with sqlite3.connect(backup) as target:
-                probe.backup(target)
+            tables = probe.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            ).fetchall()
+            if recorded in (None, 0):
+                if tables:
+                    raise DomainError(
+                        "STORAGE_UNAVAILABLE",
+                        "Unversioned database has tables",
+                        "Inspect or restore this database; migration is refused",
+                    )
+                applied = 0
+            elif recorded > VERSION or user_version > VERSION:
+                raise DomainError(
+                    "STORAGE_UNAVAILABLE",
+                    "Unknown schema version",
+                    "Restore a compatible database",
+                )
+            else:
+                applied = recorded
+                # Never run DDL on an existing versioned database without a copy.
+                backup = data_dir / "backups" / utc_now().replace(":", "-") / "db.sqlite"
+                backup.parent.mkdir(parents=True, exist_ok=False)
+                with sqlite3.connect(backup) as target:
+                    probe.backup(target)
     db = sqlite3.connect(path, timeout=5, isolation_level=None)
     try:
         db.execute("PRAGMA foreign_keys=ON")
         db.execute("PRAGMA busy_timeout=5000")
-        script = MIGRATION.read_text(encoding="utf-8")
-        # executescript commits an existing transaction, so the script owns it.
-        db.executescript("BEGIN IMMEDIATE;\n" + script + "\nINSERT INTO schema_migrations(version,applied_at) VALUES(1,'" + utc_now() + "');\nPRAGMA user_version=1;\nCOMMIT;")
+        for migration_version, migration_path in MIGRATIONS:
+            if migration_version <= applied:
+                continue
+            script = migration_path.read_text(encoding="utf-8")
+            # executescript commits an existing transaction, so the script owns it.
+            db.executescript(
+                "BEGIN IMMEDIATE;\n"
+                + script
+                + "\nINSERT INTO schema_migrations(version,applied_at) VALUES("
+                + str(migration_version)
+                + ",'"
+                + utc_now()
+                + "');\nCOMMIT;"
+            )
+        db.execute(f"PRAGMA user_version={VERSION}")
         db.execute("PRAGMA journal_mode=WAL")
     except BaseException:
         if db.in_transaction:

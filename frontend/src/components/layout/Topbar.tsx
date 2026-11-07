@@ -32,8 +32,8 @@ export function Topbar({ onOpenMobile }: { onOpenMobile: () => void }) {
 
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-text">{title.title}</p>
-        <p className="hidden text-[10px] uppercase tracking-[0.18em] text-muted sm:block">
-          {title.en}
+        <p className="hidden text-[10px] tracking-[0.12em] text-muted sm:block">
+          {title.sub}
         </p>
       </div>
 
@@ -82,7 +82,7 @@ export function Topbar({ onOpenMobile }: { onOpenMobile: () => void }) {
         >
           <Bell size={17} />
           {approvals > 0 ? (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-violet px-1 text-[9px] font-semibold text-ink">
+            <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-violet px-1 text-[9px] font-semibold text-ink">
               {approvals}
             </span>
           ) : null}

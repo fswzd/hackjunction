@@ -18,7 +18,7 @@ export function Projects() {
   return (
     <div className="space-y-6">
       <SectionHeader
-        eyebrow="Projects"
+        eyebrow="项目"
         title="内容项目"
         description="一个项目可以是一个系列、一个账号或一次持续创作。任务与产物都归档在项目下。"
         action={
@@ -33,7 +33,7 @@ export function Projects() {
       />
 
       {snapshot.projects.length ? (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {snapshot.projects.map((project) => {
             const tasks = snapshot.tasks.filter(
               (task) => task.projectId === project.id,

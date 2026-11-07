@@ -360,7 +360,7 @@ export function TaskDetail() {
         </p>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           <Card>
             <CardHeader>
@@ -373,7 +373,7 @@ export function TaskDetail() {
               <span className="text-[10px] text-muted">{progress}%</span>
             </CardHeader>
             <CardBody>
-              <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <ol className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {task.stages.map((stage, index) => {
                   const meta = AGENT_META[stage.agentId];
                   const state =
@@ -408,7 +408,7 @@ export function TaskDetail() {
                         </span>
                         <span className="flex items-center gap-1.5">
                           {stage.optional ? (
-                            <span className="rounded border border-line px-1 py-0.5 text-[8px] text-muted">
+                            <span className="rounded border border-line px-1 py-0.5 text-[10px] text-muted">
                               可选
                             </span>
                           ) : null}
@@ -485,7 +485,7 @@ export function TaskDetail() {
                     运营官已整理 Brief。确认后任务进入后台队列，内容主创才会开始生成候选稿；
                     退回则重新规划 Brief，不会产生内容。
                   </p>
-                  <dl className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <dl className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {[
                       ["创作想法", task.brief.idea || "未填写"],
                       ["目标读者", task.brief.audience || "未填写"],
@@ -524,7 +524,7 @@ export function TaskDetail() {
               ) : task.output ? (
                 <>
                   <div className="rounded-xl border border-line bg-ink/50 p-4">
-                    <pre className="whitespace-pre-wrap break-words font-sans text-[12px] leading-7 text-text/90">
+                    <pre className="whitespace-pre-wrap break-words font-sans text-[13px] leading-7 text-text/90">
                       {task.output.body}
                     </pre>
                   </div>
@@ -814,7 +814,7 @@ export function TaskDetail() {
                 <dt className="text-[10px] uppercase tracking-[0.12em] text-muted">
                   {label}
                 </dt>
-                <dd className="mt-1 text-[12px] leading-6 text-text/90">{value}</dd>
+                <dd className="mt-1 text-[13px] leading-6 text-text/90">{value}</dd>
               </div>
             ))}
           </dl>
@@ -831,7 +831,7 @@ export function TaskDetail() {
               onChange={(event) => setBodyDraft(event.target.value)}
               readOnly={!isDemo}
               rows={16}
-              className="w-full resize-y rounded-xl border border-line bg-ink/60 px-4 py-3 font-sans text-[12px] leading-7 text-text focus:border-blue/60 focus:outline-none read-only:text-muted"
+              className="w-full resize-y rounded-xl border border-line bg-ink/60 px-4 py-3 font-sans text-[13px] leading-7 text-text focus:border-blue/60 focus:outline-none read-only:text-muted"
             />
             {!isDemo ? (
               <span className="mt-1.5 block text-[10px] leading-5 text-muted">
@@ -888,7 +888,7 @@ export function TaskDetail() {
                 value={reviseBody}
                 onChange={(event) => setReviseBody(event.target.value)}
                 rows={10}
-                className="w-full resize-y rounded-xl border border-line bg-ink/60 px-4 py-3 font-sans text-[12px] leading-7 text-text focus:border-blue/60 focus:outline-none"
+                className="w-full resize-y rounded-xl border border-line bg-ink/60 px-4 py-3 font-sans text-[13px] leading-7 text-text focus:border-blue/60 focus:outline-none"
               />
             </label>
           )}

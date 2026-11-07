@@ -189,9 +189,16 @@ export interface AssetVM {
   body: string;
 }
 
+/**
+ * Where the creator is in their account journey. This is deliberately a small,
+ * stable vocabulary: onboarding, settings and the local backend all share it.
+ */
+export type CreatorStage = "starting" | "operating" | "established";
+
 export interface Profile {
   creatorName: string;
   workspaceName: string;
+  creatorStage: CreatorStage;
   industry: string;
   niche: string;
   audience: string;

@@ -2,13 +2,9 @@ import { Link, NavLink } from "react-router-dom";
 import { ChevronsLeft, ChevronsRight, X } from "lucide-react";
 import { cn } from "@/lib/format";
 import { useWorkspace } from "@/store/workspace";
+import { creatorStageMeta } from "@/domain/profile";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { NAV_ITEMS } from "./nav";
-
-function BrandMark() {
-  return (
-    <span className="studio-mark" aria-hidden="true">幕</span>
-  );
-}
 
 export function Sidebar({
   collapsed,
@@ -56,15 +52,11 @@ export function Sidebar({
               collapsed && "lg:justify-center",
             )}
           >
-            <BrandMark />
+            <BrandMark size={collapsed ? 30 : 32} />
             {!collapsed ? (
               <div className="min-w-0">
-                <p className="studio-brand truncate">
-                  众幕 AI
-                </p>
-                <p className="truncate text-[10px] uppercase tracking-[0.18em] text-muted">
-                  A STUDIO OF YOUR OWN.
-                </p>
+                <p className="studio-brand truncate">众幕 AI</p>
+                <p className="studio-subtitle truncate">一人内容工作室</p>
               </div>
             ) : null}
           </Link>
@@ -132,7 +124,7 @@ export function Sidebar({
               <p className="mt-1 text-[10px] leading-4 text-muted">
                 {mode === "demo"
                   ? "演示数据 · 本地持久化 · 未连接模型"
-                  : "真实接口模式 · 仅读取任务列表"}
+                  : "真实接口模式 · 账号阶段已同步"}
               </p>
             </div>
           ) : null}
@@ -151,6 +143,7 @@ export function Sidebar({
                   {profile?.workspaceName || "我的内容工作室"}
                 </p>
                 <p className="truncate text-[10px] text-muted">
+                  {creatorStageMeta(profile?.creatorStage).shortLabel} ·{" "}
                   {profile?.creatorName || "创作者"}
                 </p>
               </div>

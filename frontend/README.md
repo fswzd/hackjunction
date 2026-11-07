@@ -18,14 +18,14 @@ npm run build      # tsc -b && vite build
 npm run preview    # 预览生产构建
 ```
 
-首次打开会进入 onboarding；点击「使用示例身份」可快速填入示例画像。画像、任务和审批记录保存在浏览器 `localStorage`。
+首次打开会进入 onboarding；点击「使用示例身份」可快速填入示例画像。引导第一步会要求选择账号阶段（正在起号 / 已在做账号 / 已是成熟账号），这个选择会进入画像并影响团队提示。画像、任务和审批记录保存在浏览器 `localStorage`；真实接口模式下账号阶段会同步到本地后端。
 
 ## 两种数据模式
 
 | 模式 | 数据来源 | 说明 |
 | --- | --- | --- |
 | 演示模式（默认） | `src/adapters/mock.ts` + `localStorage` | 按后端 15 个任务状态与两条人工闸门建模：Brief 确认（`WAITING_CONFIRMATION`）与内容验收（`READY`）。自动推进会在闸门处停止 |
-| 真实接口模式 | `src/adapters/api.ts` | 接入 session、accounts、任务列表/详情、事件、Brief、版本与 feedback。可创建任务（含 `preview_requested`）、确认 Brief、编辑 Brief、验收内容、取消任务，并把内容修订意见记录为 `feedback`（`edit_request`）。资产下载与修订运行仍未接入 |
+| 真实接口模式 | `src/adapters/api.ts` | 接入 session、accounts、任务列表/详情、事件、Brief、版本与 feedback。可创建任务（含 `preview_requested`）、确认 Brief、编辑 Brief、验收内容、取消任务，并把内容修订意见记录为 `feedback`（`edit_request`）。账号阶段通过 `POST/PUT /api/v1/accounts` 写入 `accounts.creator_stage`；资产下载与修订运行仍未接入 |
 
 切换入口：设置 → 数据与连接。默认使用 Vite 同源代理 `/api` → `http://127.0.0.1:5001`（macOS 的 AirPlay 接收器占用 5000）。代理会移除 `Origin` / `Referer` / `Sec-Fetch-Site`，以满足后端 session 校验。后端不可用时会出现错误页，可直接切回演示模式。
 
@@ -62,7 +62,7 @@ cd frontend && BIRTHCO_PORT=5001 npm run dev
 
 ## 后端边界
 
-为关闭人工闸门，`birthco-local/backend/api/task_actions.py` 实现了契约中已记录但此前缺失的端点：`GET /brief`、`PUT /brief`、`GET /versions`、`GET /versions/{id}`、`POST /confirm`、`POST /accept`、`POST /cancel`、`POST /feedback`、`GET /feedback`。所有写操作沿用 session + CSRF + Idempotency-Key 与 row-version CAS，不修改既有代理/worker 代码。
+为关闭人工闸门，`birthco-local/backend/api/task_actions.py` 实现了契约中已记录但此前缺失的端点：`GET /brief`、`PUT /brief`、`GET /versions`、`GET /versions/{id}`、`POST /confirm`、`POST /accept`、`POST /cancel`、`POST /feedback`、`GET /feedback`。账号阶段使用 `GET /api/v1/accounts`、`POST /api/v1/accounts` 与 `PUT /api/v1/accounts/{id}`，写入 `accounts.creator_stage`。所有写操作沿用 session + CSRF + Idempotency-Key 与 row-version CAS，不修改既有代理/worker 代码。
 
 前端严格对齐后端契约 `seven-agent.v0.1` 的 7 个角色：
 
@@ -90,7 +90,7 @@ cd frontend && BIRTHCO_PORT=5001 npm run dev
 ## 已知限制
 
 - 真实接口已接通读取、创建、Brief 确认/编辑、内容验收、取消与 feedback 记录；内容修订运行（消费 feedback 生成新版本）仍需后端 worker，当前未接入。
-- 无轮询 / SSE，切换模式或手动刷新后才会重新拉取任务与事件。
+- 真实接口模式每 10 秒轮询一次任务快照（仅页面可见时），并在窗口重新聚焦时刷新；没有 SSE / 增量事件推送。轮询失败会保留上一次可用快照，不弹出错误页。
 - 后端持久化自动化编排（从 DRAFT 推进到两个人工闸门）仍未实现，可用测试数据或后续 worker 让任务到达 `WAITING_CONFIRMATION` / `READY`。
 - 日历按任务的 `updatedAt` 分组，尚未接入真实排期字段。
 - 3D 为程序化风格化场景，无外部模型资产与后处理；移动端 3D 标签较小，可用底部员工标签操作。

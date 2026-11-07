@@ -113,7 +113,7 @@ export function CalendarPage() {
   return (
     <div className="space-y-5">
       <SectionHeader
-        eyebrow="Calendar"
+        eyebrow="日历"
         title="内容日历"
         description="按任务最近一次状态变更聚合，帮助你看清哪一天发生了什么。排期能力将在接入后端后启用。"
         action={
@@ -127,7 +127,7 @@ export function CalendarPage() {
         }
       />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <Card className="overflow-hidden">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -210,7 +210,7 @@ export function CalendarPage() {
                       {items.slice(0, 2).map((task) => (
                         <span
                           key={task.id}
-                          className="flex items-center gap-1 truncate rounded bg-white/[0.04] px-1 py-0.5 text-[8px] leading-4 text-muted"
+                          className="flex items-center gap-1 truncate rounded bg-white/[0.04] px-1 py-0.5 text-[10px] leading-4 text-muted"
                         >
                           <span
                             className="h-1 w-1 shrink-0 rounded-full"
@@ -223,7 +223,7 @@ export function CalendarPage() {
                         </span>
                       ))}
                       {items.length > 2 ? (
-                        <span className="px-1 text-[8px] text-muted">
+                        <span className="px-1 text-[10px] text-muted">
                           +{items.length - 2} 条
                         </span>
                       ) : null}

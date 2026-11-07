@@ -12,6 +12,8 @@ import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
 import { AGENT_META, AGENT_ORDER, PIPELINE } from "@/domain/agents";
 import type { BackendStep } from "@/domain/types";
 import { useWorkspace } from "@/store/workspace";
+import { BrandMark } from "@/components/brand/BrandMark";
+import { FlowLines } from "@/components/landing/FlowLines";
 import { cn } from "@/lib/format";
 import "./landing.css";
 
@@ -57,7 +59,7 @@ const FLOW: FlowRow[] = [
   flowRow("planning", "02"),
   {
     key: "gate-brief",
-    index: "GATE 01",
+    index: "闸门一",
     label: "确认任务书",
     description:
       "检查目标、受众、要求与预算。确认之前不会进入生成；退回会保存为新的任务书版本，原决定与原因都有记录。",
@@ -71,7 +73,7 @@ const FLOW: FlowRow[] = [
   flowRow("analysis", "07", "诊断只解释已保存事件，不替换程序统计"),
   {
     key: "gate-accept",
-    index: "GATE 02",
+    index: "闸门二",
     label: "接收并导出",
     description:
       "按冻结的 READY 版本与内容哈希验收，写入接收记录。未经过哈希确认的内容不会被当作已交付。",
@@ -179,7 +181,7 @@ function AgentCard({
     >
       <div className="agent-card-head">
         <span className="agent-index">{String(index + 1).padStart(2, "0")}</span>
-        <span className="agent-role">{agent.role}</span>
+        <span className="agent-role">{agent.capabilities[0]}</span>
       </div>
       <h3>{agent.name}</h3>
       <p>{agent.description}</p>
@@ -247,6 +249,10 @@ export function Landing() {
         "--hero-fade",
         String(Math.max(1 - window.scrollY / (height * 0.82), 0)),
       );
+      root.style.setProperty(
+        "--flow-fade",
+        String(Math.max(0, 1 - window.scrollY / (height * 1.9))),
+      );
     };
 
     const onScroll = () => {
@@ -287,16 +293,15 @@ export function Landing() {
       >
         <IridescentOrb />
       </Suspense>
+      <FlowLines />
       <div className="landing-grain" aria-hidden="true" />
 
       <header className="landing-nav">
         <Link to="/" className="landing-brand" aria-label="众幕 AI 首页">
-          <span className="landing-mark" aria-hidden="true">
-            幕
-          </span>
+          <BrandMark size={30} />
           <span className="landing-brand-copy">
             <strong>众幕 AI</strong>
-            <small>A STUDIO OF YOUR OWN</small>
+            <small>一人内容工作室</small>
           </span>
         </Link>
         <nav className="landing-links" aria-label="落地页导航">
@@ -319,19 +324,25 @@ export function Landing() {
           <div className="landing-hero-glow" aria-hidden="true" />
           <div className="landing-hero-inner">
             <p className="landing-eyebrow" data-reveal>
-              众幕 AI — 面向一人内容工作室的多 Agent 协作平台
+              众幕 AI · 一人内容工作室
             </p>
-            <h1 className="landing-title" data-reveal>
-              一个人，
-              <br />
-              <span className="landing-title-serif">一支内容团队。</span>
+            <h1 className="landing-title">
+              <span className="landing-title-line">
+                <span>一个人，</span>
+              </span>
+              <span className="landing-title-line">
+                <span>一支内容团队。</span>
+              </span>
             </h1>
             <p className="landing-title-en" data-reveal>
               <em>One person. A whole studio.</em>
             </p>
             <p className="landing-lead" data-reveal>
-              把目标、素材与旧稿交给七个分工明确的 AI 角色。它们整理任务书、
-              创作、独立审稿、模拟试映，并在关键节点停下来等你决定。
+              <span>一个想法，几份散落的材料。</span>
+              <span>
+                七位角色分头接手：写成任务书，落笔成稿，挑出毛病，再替陌生的读者读一遍。
+              </span>
+              <span>你不必写完所有东西，只需要在每一个路口做决定。</span>
             </p>
             <div className="landing-actions" data-reveal>
               <MagneticLink to={enterPath} className="landing-btn landing-btn-primary">
@@ -363,18 +374,18 @@ export function Landing() {
             </dl>
           </div>
           <div className="landing-scroll" aria-hidden="true">
-            <span>SCROLL TO ENTER</span>
+            <span>向下浏览</span>
             <i>↓</i>
           </div>
           <div className="landing-hero-foot" aria-hidden="true">
-            PROJECT v2.0 · LOCAL-FIRST · MIMO × LANGGRAPH
+            项目书 v2.0 · 本地优先
           </div>
         </section>
 
         <section className="landing-statement">
           <div className="landing-statement-inner">
             <p className="landing-kicker" data-reveal>
-              THE PREMISE / 为什么是团队
+              为什么是团队
             </p>
             <h2 className="landing-h2" data-reveal>
               不是让 AI 替你写完，
@@ -408,7 +419,7 @@ export function Landing() {
         <section id="team" className="landing-section landing-team">
           <div className="landing-section-head">
             <p className="landing-kicker" data-reveal>
-              THE TEAM / 七个角色
+              七个角色
             </p>
             <h2 className="landing-h2" data-reveal>
               每个角色，
@@ -437,7 +448,7 @@ export function Landing() {
         <section id="workflow" className="landing-section landing-flow">
           <div className="landing-section-head">
             <p className="landing-kicker" data-reveal>
-              THE WORKFLOW / 从目标到交付
+              从目标到交付
             </p>
             <h2 className="landing-h2" data-reveal>
               两个人工闸门，
@@ -480,7 +491,7 @@ export function Landing() {
 
             <aside className="flow-aside">
               <div className="gate-card" data-reveal>
-                <p className="landing-kicker">GATE 01</p>
+                <p className="landing-kicker">人工闸门 · 一</p>
                 <h3>确认任务书</h3>
                 <p>
                   目标、受众、硬要求与预算绑定到某个任务书版本与指纹。
@@ -489,7 +500,7 @@ export function Landing() {
                 <code>WAITING_CONFIRMATION</code>
               </div>
               <div className="gate-card" data-reveal>
-                <p className="landing-kicker">GATE 02</p>
+                <p className="landing-kicker">人工闸门 · 二</p>
                 <h3>接收内容</h3>
                 <p>
                   只有 READY 版本可以被验收；接收记录包含版本、内容哈希与会话。
@@ -508,7 +519,7 @@ export function Landing() {
         <section id="status" className="landing-section landing-status">
           <div className="landing-section-head">
             <p className="landing-kicker" data-reveal>
-              BUILD STATUS / 现在进行到哪
+              现在进行到哪
             </p>
             <h2 className="landing-h2" data-reveal>
               工程原型已经跑通离线链路。
@@ -547,7 +558,7 @@ export function Landing() {
 
         <section className="landing-cta">
           <p className="landing-kicker" data-reveal>
-            START A TASK / 从一份真实需求开始
+            从一份真实需求开始
           </p>
           <h2 className="landing-h2" data-reveal>
             把下一份内容，
@@ -572,12 +583,10 @@ export function Landing() {
 
       <footer className="landing-footer">
         <div className="landing-footer-brand">
-          <span className="landing-mark" aria-hidden="true">
-            幕
-          </span>
+          <BrandMark size={34} />
           <div>
             <strong>众幕 AI</strong>
-            <p>面向一人内容工作室的多 Agent 协作平台</p>
+            <p>一人内容工作室 · 七个角色协同创作</p>
           </div>
         </div>
         <p className="landing-footer-meta">

@@ -3,10 +3,11 @@ import {
   Suspense,
   lazy,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { Expand, Loader2, RotateCcw } from "lucide-react";
+import { Expand, Loader2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import type { AgentId, AgentVM } from "@/domain/types";
 import { AGENT_META, STATUS_META } from "@/domain/agents";
 import { cn } from "@/lib/format";
@@ -82,7 +83,27 @@ export function Headquarters3D({
 }: Headquarters3DProps) {
   const [webgl] = useState(detectWebGL);
   const [ready, setReady] = useState(false);
+  const [userZoom, setUserZoom] = useState(1);
+  const stageRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
+
+  const clampZoom = (value: number) => Math.min(2.6, Math.max(0.72, value));
+  const nudgeZoom = (factor: number) =>
+    setUserZoom((current) => clampZoom(current * factor));
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    // Ctrl/⌘ + wheel is the familiar zoom gesture, and preventing the page
+    // zoom needs a non-passive native listener.
+    const onWheel = (event: WheelEvent) => {
+      if (!event.metaKey && !event.ctrlKey) return;
+      event.preventDefault();
+      nudgeZoom(event.deltaY > 0 ? 0.9 : 1.11);
+    };
+    stage.addEventListener("wheel", onWheel, { passive: false });
+    return () => stage.removeEventListener("wheel", onWheel);
+  }, []);
   const fallback = (
     <HeadquartersFallback
       agents={agents}
@@ -96,24 +117,24 @@ export function Headquarters3D({
 
   return (
     <div
+      ref={stageRef}
       className={cn(
-        "relative isolate overflow-hidden bg-[#0b0e15]",
+        "relative isolate overflow-hidden bg-[#12110e]",
         className,
       )}
+      onDoubleClick={(event) => {
+        if ((event.target as HTMLElement).closest("button")) return;
+        setUserZoom((current) => (current > 1.05 ? 1 : 1.8));
+      }}
     >
       {showHeader && !immersive ? (
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 bg-gradient-to-b from-[#0b0e15]/90 to-transparent p-4">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 hidden items-start justify-between gap-3 bg-gradient-to-b from-[#12110e]/90 to-transparent p-4 sm:flex">
           <div className="min-w-0">
-            <p className="hidden text-[10px] uppercase tracking-[0.22em] text-muted sm:block">
-              ZHONGMU / COLLECTIVE
+            <p className="text-[10px] tracking-[0.2em] text-muted/90">
+              众幕 AI · 内容工作室
             </p>
             <p className="mt-1 text-xs font-medium text-text">
-              {immersive ? "沉浸式协作现场" : (
-                <>
-                  协作现场
-                  <span className="hidden sm:inline"> · 七个角色 · 围绕同一份任务书</span>
-                </>
-              )}
+              七个角色 · 围绕同一份任务书
             </p>
           </div>
         </div>
@@ -121,11 +142,39 @@ export function Headquarters3D({
 
       {!immersive ? (
         <div className="absolute right-3 top-3 z-30 flex items-center gap-1.5">
+          <div className="flex items-center overflow-hidden rounded-lg border border-line bg-surface/85 backdrop-blur">
+            <button
+              type="button"
+              onClick={() => nudgeZoom(0.85)}
+              aria-label="缩小协作现场"
+              title="缩小"
+              className="p-2 text-muted transition hover:text-text disabled:opacity-40"
+              disabled={userZoom <= 0.73}
+            >
+              <ZoomOut size={14} />
+            </button>
+            <span className="min-w-9 select-none text-center text-[10px] tabular-nums text-muted">
+              {Math.round(userZoom * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => nudgeZoom(1.18)}
+              aria-label="放大协作现场"
+              title="放大"
+              className="p-2 text-muted transition hover:text-text disabled:opacity-40"
+              disabled={userZoom >= 2.59}
+            >
+              <ZoomIn size={14} />
+            </button>
+          </div>
           <button
             type="button"
-            onClick={() => onSelectAgent(null)}
+            onClick={() => {
+              onSelectAgent(null);
+              setUserZoom(1);
+            }}
             aria-label="重置镜头到工作室全景"
-            title="重置镜头"
+            title="重置镜头与缩放"
             className="rounded-lg border border-line bg-surface/80 p-2 text-muted backdrop-blur transition hover:text-text"
           >
             <RotateCcw size={14} />
@@ -161,13 +210,14 @@ export function Headquarters3D({
             onSelectAgent={onSelectAgent}
             immersive={immersive}
             reducedMotion={reducedMotion}
+            userZoom={userZoom}
             onReady={() => setReady(true)}
           />
         </Suspense>
       </SceneErrorBoundary>
 
       {/* Keyboard-accessible equivalent of the 3D hotspots */}
-      <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#0b0e15] via-[#0b0e15]/85 to-transparent px-3 pb-3 pt-8">
+      <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#12110e] via-[#12110e]/85 to-transparent px-3 pb-3 pt-8">
         <div className="flex gap-1.5 overflow-x-auto pb-0.5">
           {agents.map((agent) => {
             const meta = AGENT_META[agent.id];
@@ -190,7 +240,7 @@ export function Headquarters3D({
                   style={{ backgroundColor: status.color }}
                 />
                 {meta.name}
-                <span className="text-[9px] opacity-70">{status.label}</span>
+                <span className="text-[10px] opacity-70">{status.label}</span>
               </button>
             );
           })}

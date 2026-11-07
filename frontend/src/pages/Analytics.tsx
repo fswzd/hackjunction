@@ -188,12 +188,12 @@ export function Analytics() {
   return (
     <div className="space-y-5">
       <SectionHeader
-        eyebrow="Analytics"
+        eyebrow="复盘"
         title="数据分析"
         description="所有指标由当前工作空间实时计算，不使用占位数字。演示数据的样本量较小，仅用于验证闭环。"
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           label="任务总数"
           value={String(tasks.length)}
@@ -224,7 +224,7 @@ export function Analytics() {
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
             <div>
@@ -318,7 +318,7 @@ export function Analytics() {
         </Card>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
             <div>

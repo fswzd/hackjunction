@@ -52,8 +52,8 @@ export function HeadquartersFallback({
                 </span>
                 <AgentStatusBadge status={agent.status} />
               </div>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-muted">
-                {agent.role}
+              <p className="mt-1 text-[10px] tracking-[0.1em] text-muted">
+                {meta.capabilities.slice(0, 2).join(" · ")}
               </p>
               <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-muted">
                 {agent.activeTaskTitle ?? status.description}

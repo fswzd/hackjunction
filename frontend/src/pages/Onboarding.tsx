@@ -2,8 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, Sparkles } from "lucide-react";
 import type { Profile } from "@/domain/types";
+import {
+  CREATOR_STAGES,
+  creatorStageMeta,
+  normalizeCreatorStage,
+} from "@/domain/profile";
 import { useWorkspace } from "@/store/workspace";
 import { Button } from "@/components/ui/Button";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { cn } from "@/lib/format";
 
 const INDUSTRIES = [
@@ -46,6 +52,7 @@ const STEPS = [
 const EMPTY: Profile = {
   creatorName: "",
   workspaceName: "",
+  creatorStage: "starting",
   industry: INDUSTRIES[0],
   niche: "",
   audience: "",
@@ -77,10 +84,20 @@ export function Onboarding() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
+  // `creatorStage` always has a display value, but we still require one
+  // intentional click during onboarding. Returning profiles are already chosen.
+  const [stageChosen, setStageChosen] = useState(
+    Boolean(existing?.creatorStage),
+  );
 
   useEffect(() => {
     if (existing && !prefilled) {
-      setForm({ ...EMPTY, ...existing });
+      setForm({
+        ...EMPTY,
+        ...existing,
+        creatorStage: normalizeCreatorStage(existing.creatorStage),
+      });
+      setStageChosen(Boolean(existing.creatorStage));
       setPrefilled(true);
     }
   }, [existing, prefilled]);
@@ -89,11 +106,17 @@ export function Onboarding() {
     setForm((current) => ({ ...current, ...patch }));
 
   const canContinue = useMemo(() => {
-    if (step === 0) return Boolean(form.creatorName.trim() && form.workspaceName.trim());
+    if (step === 0) {
+      return Boolean(
+        form.creatorName.trim() &&
+          form.workspaceName.trim() &&
+          stageChosen,
+      );
+    }
     if (step === 1) return Boolean(form.industry);
     if (step === 2) return Boolean(form.audience.trim() && form.formats.length);
     return form.tone.length > 0 && form.goals.length > 0;
-  }, [step, form]);
+  }, [step, form, stageChosen]);
 
   const finish = async (profile: Profile = form) => {
     setSaving(true);
@@ -103,6 +126,7 @@ export function Onboarding() {
         ...profile,
         creatorName: profile.creatorName.trim() || "创作者",
         workspaceName: profile.workspaceName.trim() || "我的内容工作室",
+        creatorStage: normalizeCreatorStage(profile.creatorStage),
         completedAt: new Date().toISOString(),
       });
       navigate("/workspace/overview", { replace: true });
@@ -116,7 +140,7 @@ export function Onboarding() {
     if (!canContinue) {
       setError(
         step === 0
-          ? "请填写你的名字和工作空间名称。"
+          ? "请填写你的名字、工作空间名称，并选择你当前的账号阶段。"
           : step === 2
             ? "请描述你的目标读者，并至少选择一种内容形式。"
             : "请至少选择一项。",
@@ -135,6 +159,7 @@ export function Onboarding() {
     setForm({
       creatorName: "林知夏",
       workspaceName: "知夏的内容工作室",
+      creatorStage: "operating",
       industry: "内容创作者 / 自媒体",
       niche: "人像摄影与轻量创作方法",
       audience: "第一次拿起相机、想拍出自然感的摄影爱好者",
@@ -143,6 +168,7 @@ export function Onboarding() {
       goals: ["稳定更新", "打磨内容质量"],
       completedAt: "",
     });
+    setStageChosen(true);
     setError("");
   };
 
@@ -152,15 +178,10 @@ export function Onboarding() {
         <div className="inner-grid absolute inset-0 opacity-60" />
         <div className="relative">
           <div className="flex items-center gap-3">
-            <span className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-blue/30 bg-blue/10">
-              <span className="text-base font-bold text-blue">幕</span>
-              <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-cyan" />
-            </span>
+            <BrandMark size={36} />
             <div>
-              <p className="text-sm font-semibold tracking-tight">众幕 AI</p>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted">
-                A STUDIO OF YOUR OWN.
-              </p>
+              <p className="studio-brand text-lg">众幕 AI</p>
+              <p className="studio-subtitle">一人内容工作室</p>
             </div>
           </div>
 
@@ -202,9 +223,6 @@ export function Onboarding() {
                 <span className={index <= step ? "text-text" : "text-muted"}>
                   {item.title}
                 </span>
-                <span className="ml-auto text-[9px] uppercase tracking-[0.16em] text-muted">
-                  {item.en}
-                </span>
               </li>
             ))}
           </ul>
@@ -212,18 +230,16 @@ export function Onboarding() {
 
         <p className="relative text-[10px] leading-5 text-muted">
           {mode === "demo"
-            ? "演示模式：信息仅保存在本地浏览器，不会上传。正式版本将写入工作空间数据库。"
-            : "真实接口模式：画像接口尚未接入，当前仍使用本地持久化。"}
+            ? "演示模式：信息仅保存在本地浏览器，不会上传。"
+            : "真实接口模式：名字、工作空间与账号阶段会写入本地后端；其他画像字段保存在浏览器。"}
         </p>
       </aside>
 
       <main className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
-          <div className="flex items-center gap-3 lg:hidden">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue/30 bg-blue/10 text-xs font-bold text-blue">
-              C
-            </span>
-            <span className="text-sm font-semibold">众幕 AI</span>
+          <div className="flex items-center gap-2.5 lg:hidden">
+            <BrandMark size={28} />
+            <span className="studio-brand text-base">众幕 AI</span>
           </div>
           <div className="hidden items-center gap-2 lg:flex">
             {STEPS.map((item, index) => (
@@ -259,8 +275,8 @@ export function Onboarding() {
 
         <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-8">
           <div className="w-full max-w-2xl">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted">
-              Step {step + 1} / {STEPS.length} · {STEPS[step].en}
+            <p className="text-[11px] tracking-[0.16em] text-muted">
+              第 {step + 1} 步 / {STEPS.length} · {STEPS[step].title}
             </p>
             <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
               {step === 0
@@ -273,7 +289,7 @@ export function Onboarding() {
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted">
               {step === 0
-                ? "这些信息会显示在你的内容工作室里，也用于任务书的默认称呼。"
+                ? "这些信息会显示在你的内容工作室里，也用于任务书的默认称呼；账号阶段会同步到本地后端。"
                 : step === 1
                   ? "领域会影响选题捕捉与内容创作的默认方向，可以随时在设置里修改。"
                   : step === 2
@@ -312,6 +328,47 @@ export function Onboarding() {
                       className="h-12 w-full rounded-xl border border-line bg-raised px-4 text-sm text-text placeholder:text-muted/60 focus:border-blue/60 focus:outline-none"
                     />
                   </label>
+
+                  <fieldset>
+                    <legend className="mb-1.5 block text-xs font-medium">
+                      你现在的账号阶段
+                    </legend>
+                    <p className="mb-3 text-[11px] leading-5 text-muted">
+                      这会影响团队默认的选题、Brief 与协作节奏，之后可以在设置里修改。
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      {CREATOR_STAGES.map((stage) => {
+                        const active = stageChosen && form.creatorStage === stage.id;
+                        return (
+                          <button
+                            key={stage.id}
+                            type="button"
+                            onClick={() => {
+                              update({ creatorStage: stage.id });
+                              setStageChosen(true);
+                            }}
+                            aria-pressed={active}
+                            className={cn(
+                              "rounded-xl border p-3 text-left transition",
+                              active
+                                ? "border-blue/50 bg-blue/10 text-text"
+                                : "border-line bg-raised text-muted hover:border-[#43506a] hover:text-text",
+                            )}
+                          >
+                            <span className="block text-xs font-medium">
+                              {stage.label}
+                            </span>
+                            <span className="mt-1 block text-[11px] leading-5">
+                              {stage.description}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-[11px] leading-5 text-muted">
+                      {creatorStageMeta(form.creatorStage).hint}
+                    </p>
+                  </fieldset>
                 </div>
               ) : null}
 
@@ -459,6 +516,8 @@ export function Onboarding() {
                     </p>
                     <p className="mt-1 text-sm">{form.workspaceName}</p>
                     <p className="mt-1 text-[11px] leading-5 text-muted">
+                      阶段：{creatorStageMeta(form.creatorStage).label}
+                      <br />
                       {form.industry}
                       {form.niche ? ` · ${form.niche}` : ""}
                       <br />

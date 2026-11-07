@@ -25,7 +25,7 @@ export function Workforce() {
   return (
     <div className="space-y-6">
       <SectionHeader
-        eyebrow="AI Workforce"
+        eyebrow="协作团队"
         title="你的 协作团队"
         description="一位运营官与六位专业员工，对应后端 seven-agent.v0.1 的七个业务角色。每个角色都有清楚的职责、真实的任务状态和可追溯的交付物。"
         action={
@@ -92,7 +92,7 @@ export function Workforce() {
         </div>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {staff.map((agent) => {
           const meta = AGENT_META[agent.id];
           const status = STATUS_META[agent.status];
@@ -118,8 +118,8 @@ export function Workforce() {
                 <AgentStatusBadge status={agent.status} />
               </div>
               <h3 className="mt-4 text-sm font-semibold">{agent.name}</h3>
-              <p className="text-[10px] uppercase tracking-[0.14em] text-muted">
-                {agent.role}
+              <p className="text-[10px] tracking-[0.1em] text-muted">
+                {meta.capabilities.slice(0, 2).join(" · ")}
               </p>
               <p className="mt-1 font-mono text-[9px] text-muted/70">
                 {agent.id} · {meta.actions.join(" / ")}
