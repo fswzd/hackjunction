@@ -49,6 +49,8 @@ AgentAdapter.invoke(AgentCall) -> AgentResult   # 唯一边界
   （= call.input 投影）供隔离断言。
 - **RealAdapterStub**（正式模式）：`awaiting_owner_handoff` → 抛
   `AGENT_UNAVAILABLE`，**绝不静默换 Mock**（agent-interface.json 约束）。
+  七角色真实桥接已落地（P0-A）：`build_reals(repo, mode)` 产出的 TeamEntry 经
+  `AdapterRouter(reals=...)` 注入替换各 stub，逐角色 `agent_modes` 灰度。
 - 适配真实入口时：Adapter 解析 Ref（Repository 再校验）→ 组装队员入口所需参数
   → 封装 Python 函数或 HTTP；隐藏重试/自动修 JSON/换模型/多加调用一律禁止，
   内部多次调用必须逐次过中央预算。

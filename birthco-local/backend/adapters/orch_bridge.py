@@ -23,34 +23,19 @@
 """
 from __future__ import annotations
 
-import hashlib
-import json
 from typing import Any, Callable
 
+from backend.adapters.bridge_common import (
+    BridgePreSendFailure, BridgeUnknownOutcome, DEFAULT_DERIVED_AUDIENCE,
+    DEFAULT_DERIVED_STYLE, LEGAL_MATERIAL_KINDS, PLACEHOLDER_REQUIREMENT,
+    error_result, issue, orchestration_ref_digest, resolve_materials, usage_dict,
+)
 from backend.agents.operator import OperatorAgent, material_snapshot
 from backend.domain.errors import DomainError
 from backend.domain.schemas import CreateTask, EditScope, MaterialInput
 from backend.memory.operator_memory import OperatorMemory, iterative_retrieve, terms_of
 
-DEFAULT_DERIVED_AUDIENCE = "任务中描述的读者（可在确认前修改）"
-DEFAULT_DERIVED_STYLE = "符合任务要求"
-PLACEHOLDER_REQUIREMENT = [{"id": "req_extract", "text": "从任务中整理交付要求"}]
 DEFAULT_MEMORY_ASPECTS = ("受众", "平台", "风格", "篇幅", "要求")
-
-
-class BridgeUnknownOutcome(Exception):
-    """Model call sent but the outcome is unknown; explicit resend only."""
-
-
-class BridgePreSendFailure(Exception):
-    """Bridge could not build a valid request (resolution/config failure)."""
-
-
-def orchestration_ref_digest(text: str) -> str:
-    """编排层 material_refs 的 sha256 约定：sha256(canonical JSON of {"text": ...})."""
-    blob = json.dumps({"text": text}, sort_keys=True, separators=(",", ":"),
-                      ensure_ascii=False, allow_nan=False).encode("utf-8")
-    return hashlib.sha256(blob).hexdigest()
 
 
 def build_create_task(input_payload: dict, *, account_id: str,
@@ -69,9 +54,8 @@ def build_create_task(input_payload: dict, *, account_id: str,
         requirements = [{"id": r["id"], "text": r["text"]} for r in structured_reqs]
     else:
         requirements = [dict(r) for r in PLACEHOLDER_REQUIREMENT]
-    legal_kinds = {"user_supplied_experience", "source_text", "existing_draft"}
     material_inputs = [MaterialInput(
-        kind=row["kind"] if row.get("kind") in legal_kinds else "source_text",
+        kind=row["kind"] if row.get("kind") in LEGAL_MATERIAL_KINDS else "source_text",
         label=(row.get("label") or row["id"])[:1000],
         text=row["text"],
         source_url=row.get("source_url"),
@@ -93,45 +77,6 @@ def build_create_task(input_payload: dict, *, account_id: str,
     return task, edit_scope, frozenset(frozen)
 
 
-def resolve_materials(input_payload: dict,
-                      resolve_material: Callable[[dict], dict]) -> list[dict]:
-    """Resolve refs to rows, verifying each ref's content fingerprint (F-O4)."""
-    rows = []
-    for ref in input_payload.get("material_refs", []):
-        try:
-            row = resolve_material(ref)
-        except KeyError:
-            raise BridgePreSendFailure(f"material {ref.get('id')} cannot be resolved") from None
-        text = row.get("text")
-        if not isinstance(text, str):
-            raise BridgePreSendFailure(f"material {ref.get('id')} has no text")
-        expected = ref.get("sha256")
-        if expected is not None and expected != orchestration_ref_digest(text):
-            raise BridgePreSendFailure(f"material {ref.get('id')} fingerprint mismatch")
-        rows.append({**row, "id": ref["id"]})
-    return rows
-
-
-def _issue(reason: str, requested_change: str) -> dict:
-    return {"id": "iss_" + hashlib.sha256(reason.encode()).hexdigest()[:16],
-            "severity": "blocking", "location": "prepare_brief",
-            "reason": reason[:1000],
-            "requested_change": (requested_change or "检查输入")[:1000]}
-
-
-def _error_result(call_dict: dict, reason: str, requested_change: str = "检查输入后显式重发") -> dict:
-    """确定性输入拒单 = 已知 error 结果（零模型调用、零重试、不烧预算）。"""
-    return {**call_dict, "status": "error", "data": None, "questions": [],
-            "issues": [_issue(reason, requested_change)],
-            "usage": {"status": "unknown", "total_tokens": None}}
-
-
-def _usage_dict(usage) -> dict:
-    if usage.total is None:
-        return {"status": "unknown", "total_tokens": None}
-    return {"status": "known", "total_tokens": usage.total}
-
-
 def map_envelope(result, call: dict, *, id_map: dict[str, str] | None = None) -> dict:
     """OperatorResult -> AgentResult-shaped dict (contract envelope fields).
 
@@ -143,7 +88,7 @@ def map_envelope(result, call: dict, *, id_map: dict[str, str] | None = None) ->
     base = {"contract_version": call.get("contract_version"), "request_id": call["request_id"],
             "agent_id": call.get("agent_id", "operations_officer"),
             "action": call.get("action", "prepare_brief"),
-            "usage": _usage_dict(result.usage), "issues": []}
+            "usage": usage_dict(result.usage), "issues": []}
     if envelope.status == "ok" and envelope.data is not None:
         data = envelope.data.model_dump(mode="json")
         if id_map:
@@ -193,9 +138,9 @@ class OperatorTeamAdapter:
             task, edit_scope, frozen = build_create_task(
                 payload, account_id=account_id, materials=rows)
         except BridgePreSendFailure as exc:
-            return _error_result(call_dict, str(exc))
+            return error_result(call_dict, str(exc), location="prepare_brief")
         except (ValueError, KeyError, TypeError):
-            return _error_result(call_dict, "bridge input invalid")
+            return error_result(call_dict, "bridge input invalid", location="prepare_brief")
         memory_notes: list[str] = []
         if self.memory is not None:
             # 三轮迭代检索（≤3）：记忆以未复核数据注入，绝不进 system 指令区
@@ -211,7 +156,8 @@ class OperatorTeamAdapter:
         except DomainError as exc:
             if exc.code == "INTERRUPTED":
                 raise BridgeUnknownOutcome(str(exc.cause_hint)) from None
-            return _error_result(call_dict, exc.cause_hint or exc.code, exc.next_action)
+            return error_result(call_dict, exc.cause_hint or exc.code, exc.next_action,
+                                location="prepare_brief")
         id_map = {snap["material_id"]: row["id"]
                   for snap, row in zip(material_snapshot(task), rows)}
         return map_envelope(result, call_dict, id_map=id_map)

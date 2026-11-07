@@ -49,13 +49,13 @@ Repository 对每个引用重新校验归属与冻结 hash；语法合法不授�
 
 | 能力 owner | agent_id / action | 交付内容（每 action ≥1 例 + needs_input/error） | 状态 | 缺口 |
 |---|---|---|---|---|
-| 商单需求分析队员 | pr_analyst / analyze_request | 同上；引文/来源映射规则 | **awaiting_owner_handoff** | birthco-local tools/run_pr_analyst.py 为候选入口 |
-| 内容主创队员 | content_creator / draft, revise | 入口（Python 符号或受控 HTTP）、版本、prompt/schema hash、调用次数/重试、usage、凭据来源、失败分类、依赖锁、Mock | **awaiting_owner_handoff** | 真实入口/样例/调用计划未提供 |
-| 运营官队员 | operations_officer / prepare_brief | 同上 | **awaiting_owner_handoff** | 同上 |
-| 审稿员队员 | editorial_reviewer / assess_content | 同上；须申报内部调用次数（禁止隐藏第二次模型调用） | **awaiting_owner_handoff** | 同上 |
-| 流量捕捉队员 | traffic_scout / capture_opportunities | 同上；联网能力须显式配置授权 | **awaiting_owner_handoff** | 同上 |
-| 数据分析队员 | data_analyst / diagnose_preview | 同上；finding/观察引用规则 | **awaiting_owner_handoff** | 同上 |
-| 观众模拟队员 | simulated_audience / read_segment | 同上；单段单会话步进 | **awaiting_owner_handoff** | 同上 |
+| 商单需求分析队员 | pr_analyst / analyze_request | 同上；引文/来源映射规则 | **bridge_connected** | mock 联调 ✅(113 编排测试);live 冒烟见 evidence/live-smoke.json;真实主链全链路验收属 P0-C |
+| 内容主创队员 | content_creator / draft, revise | 入口（Python 符号或受控 HTTP）、版本、prompt/schema hash、调用次数/重试、usage、凭据来源、失败分类、依赖锁、Mock | **bridge_connected** | mock 联调 ✅(113 编排测试);live 冒烟见 evidence/live-smoke.json;真实主链全链路验收属 P0-C |
+| 运营官队员 | operations_officer / prepare_brief | 同上 | **bridge_connected** | mock 联调 ✅(113 编排测试);live 冒烟见 evidence/live-smoke.json;真实主链全链路验收属 P0-C |
+| 审稿员队员 | editorial_reviewer / assess_content | 同上；须申报内部调用次数（禁止隐藏第二次模型调用） | **bridge_connected** | mock 联调 ✅(113 编排测试);live 冒烟见 evidence/live-smoke.json;真实主链全链路验收属 P0-C |
+| 流量捕捉队员 | traffic_scout / capture_opportunities | 同上；联网能力须显式配置授权 | **bridge_connected** | mock 联调 ✅(113 编排测试);live 冒烟见 evidence/live-smoke.json;真实主链全链路验收属 P0-C |
+| 数据分析队员 | data_analyst / diagnose_preview | 同上；finding/观察引用规则 | **bridge_connected** | mock 联调 ✅(113 编排测试);live 冒烟见 evidence/live-smoke.json;真实主链全链路验收属 P0-C |
+| 观众模拟队员 | simulated_audience / read_segment | 同上；单段单会话步进 | **bridge_connected** | mock 联调 ✅(113 编排测试);live 冒烟见 evidence/live-smoke.json;真实主链全链路验收属 P0-C |
 | 编排队员（本交付） | 统一 Adapter / StateGraph / Gateway / Repository / 预算 / 恢复 | 本仓库 `backend/workflow/five_agent/` + 测试 + 证据 | **mock_connected**（接口+Mock 联调完成） | 真实 Adapter 联调待 owner 交接 |
 | 工程基础（A02a owner） | Flask API / worker / 依赖锁 | create_app、队列、幂等键、worker 租约 | 待接入 | 本包只有驱动层，无 HTTP 层 |
 | 存储（A02b owner） | 迁移 002（binding/gate/command/step_outputs 表） | 与本 Repository DDL 对齐 | 待接入 | 当前 SQLite DDL 内嵌于 repository.py |
