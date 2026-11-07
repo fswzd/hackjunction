@@ -1,0 +1,26 @@
+{
+  "videos": [
+    {
+      "platform_video_id": "改成笔记ID或自编唯一号-1",
+      "title": "改成笔记标题",
+      "published_at": "2026-09-12",
+      "plays": 12800,
+      "likes": 460,
+      "comments": 58,
+      "shares": 21,
+      "favorites": 190,
+      "top_comments": [
+        { "text": "改成真实热评内容", "likes": 86 },
+        { "text": "改成真实热评内容", "likes": 32 }
+      ]
+    },
+    {
+      "platform_video_id": "改成笔记ID或自编唯一号-2",
+      "title": "改成笔记标题（数据抄不到的字段直接删掉这一行，别填假数字）",
+      "plays": 3200,
+      "likes": 96,
+      "comments": 14,
+      "favorites": 47
+    }
+  ]
+}
