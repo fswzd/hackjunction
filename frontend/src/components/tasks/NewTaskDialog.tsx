@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
@@ -41,6 +41,11 @@ export function NewTaskDialog() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // 仅在弹窗打开瞬间重置表单：store 快照每轮询刷新一次（projects 数组身份
+  // 随之变化），若把 projects 放进依赖，正在输入的内容会被周期性清空。
+  const projectsRef = useRef(projects);
+  projectsRef.current = projects;
+
   useEffect(() => {
     if (!open) return;
     setTitle("");
@@ -49,11 +54,11 @@ export function NewTaskDialog() {
     setFormat(FORMATS[0]);
     setDuration(DURATIONS[1]);
     setTone(["清晰"]);
-    setProjectId(projects[0]?.id ?? "");
+    setProjectId(projectsRef.current[0]?.id ?? "");
     setPreviewRequested(false);
     setError("");
     setSubmitting(false);
-  }, [open, projects]);
+  }, [open]);
 
   const toggleTone = (value: string) => {
     setTone((current) =>

@@ -29,21 +29,29 @@ export function Modal({
   size = "md",
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
+  // 仅在开合时执行一次：不依赖 onClose 的函数身份，避免每次输入重渲染都
+  // 重跑 effect 把焦点抢回第一个可聚焦元素。
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
     const bodyOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const timer = window.setTimeout(() => {
-      const focusable = panelRef.current?.querySelector<HTMLElement>(
-        "input, textarea, select, button:not([data-modal-close])",
-      );
+      // 初始焦点优先真实输入控件；没有输入控件才退回首个按钮。
+      const panel = panelRef.current;
+      const focusable =
+        panel?.querySelector<HTMLElement>("input, textarea, select") ??
+        panel?.querySelector<HTMLElement>("button:not([data-modal-close])");
       focusable?.focus();
     }, 30);
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
       if (event.key !== "Tab" || !panelRef.current) return;
       const nodes = Array.from(
         panelRef.current.querySelectorAll<HTMLElement>(
@@ -69,7 +77,7 @@ export function Modal({
       window.clearTimeout(timer);
       previous?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
