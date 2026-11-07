@@ -64,7 +64,6 @@ const FLOW: FlowRow[] = [
     description:
       "检查目标、受众、要求与预算。确认之前不会进入生成；退回会保存为新的任务书版本，原决定与原因都有记录。",
     gate: true,
-    note: "WAITING_CONFIRMATION",
   },
   flowRow("scout", "03"),
   flowRow("draft", "04"),
@@ -76,36 +75,69 @@ const FLOW: FlowRow[] = [
     index: "闸门二",
     label: "接收并导出",
     description:
-      "按冻结的 READY 版本与内容哈希验收，写入接收记录。未经过哈希确认的内容不会被当作已交付。",
+      "验收时锁定当前版本并记录你确认的内容；未经确认的版本不会被当作已交付。退回意见会保留在下一次修改里。",
     gate: true,
-    note: "READY → ACCEPTED",
   },
 ];
 
-const STATUS = [
+interface PricingPlan {
+  id: string;
+  name: string;
+  kicker: string;
+  price: string;
+  period: string;
+  description: string;
+  features: string[];
+  cta: string;
+  featured?: boolean;
+}
+
+const PRICING: PricingPlan[] = [
   {
-    label: "编排",
-    title: "LangGraph",
-    text: "七角色路由、暂停与恢复、预算与调用收据。人工闸门由程序强制执行。",
-    tag: "已实现 · 离线验证",
+    id: "starter",
+    name: "起号版",
+    kicker: "从零开始",
+    price: "¥0",
+    period: "/ 月",
+    description: "先把第一轮内容跑顺，找到自己的表达节奏。",
+    features: [
+      "1 个工作空间",
+      "每月 3 个创作任务",
+      "七位 AI 角色协作",
+      "Brief 确认与内容验收",
+    ],
+    cta: "免费开始",
   },
   {
-    label: "角色",
-    title: "7 × 8",
-    text: "七个业务角色共用统一输入输出；Mock 与 live 严格分离，不互相冒充。",
-    tag: "部分真实调用证据",
+    id: "creator",
+    name: "创作者版",
+    kicker: "稳定更新",
+    price: "¥99",
+    period: "/ 月",
+    description: "给持续更新的创作者，一套能稳定交付的内容团队。",
+    features: [
+      "每月 30 个创作任务",
+      "模拟观众试映",
+      "版本对比与修改记录",
+      "内容资产库",
+    ],
+    cta: "选择创作者版",
+    featured: true,
   },
   {
-    label: "本地服务",
-    title: "Flask + SQLite",
-    text: "账号、任务、版本、接收与事件；单 worker 队列、幂等键与行版本校验。",
-    tag: "基础服务已具备",
-  },
-  {
-    label: "工作台",
-    title: "React",
-    text: "新建任务、任务书确认、版本验收、反馈与可点击的 3D 工位。",
-    tag: "原型已可用 · 全链路接入中",
+    id: "studio",
+    name: "工作室版",
+    kicker: "成熟账号",
+    price: "¥299",
+    period: "/ 月",
+    description: "给成熟账号与小团队，更多并行任务与优先支持。",
+    features: [
+      "每月 100 个创作任务",
+      "多账号工作区",
+      "优先任务队列",
+      "专属支持",
+    ],
+    cta: "选择工作室版",
   },
 ];
 
@@ -186,8 +218,8 @@ function AgentCard({
       <h3>{agent.name}</h3>
       <p>{agent.description}</p>
       <div className="agent-tags">
-        {agent.actions.map((action) => (
-          <code key={action}>{action}</code>
+        {agent.capabilities.slice(0, 2).map((capability) => (
+          <span key={capability}>{capability}</span>
         ))}
       </div>
       <span className="agent-glow" aria-hidden="true" />
@@ -301,13 +333,13 @@ export function Landing() {
           <BrandMark size={30} />
           <span className="landing-brand-copy">
             <strong>众幕 AI</strong>
-            <small>一人内容工作室</small>
+            <small>自媒体创作者工作室</small>
           </span>
         </Link>
         <nav className="landing-links" aria-label="落地页导航">
           <a href="#team">团队</a>
           <a href="#workflow">流程</a>
-          <a href="#status">现状</a>
+          <a href="#pricing">定价</a>
         </nav>
         <MagneticLink to={enterPath} className="landing-nav-cta">
           {hasProfile ? "进入工作台" : "开始使用"}
@@ -324,14 +356,30 @@ export function Landing() {
           <div className="landing-hero-glow" aria-hidden="true" />
           <div className="landing-hero-inner">
             <p className="landing-eyebrow" data-reveal>
-              众幕 AI · 一人内容工作室
+              众幕 AI · 自媒体创作者工作室
             </p>
             <h1 className="landing-title">
               <span className="landing-title-line">
-                <span>一个人，</span>
+                <span className="landing-title-copy">
+                  <span className="glyph glyph-one">一</span>
+                  <span className="glyph">个</span>
+                  <span className="glyph glyph-kai">人</span>
+                  <span className="glyph glyph-punct">，</span>
+                </span>
               </span>
               <span className="landing-title-line">
-                <span>一支内容团队。</span>
+                <span className="landing-title-copy">
+                  <span className="glyph glyph-one glyph-one-second">一</span>
+                  <span className="glyph glyph-serif">支</span>
+                  <span className="glyph">内容</span>
+                  <span className="glyph glyph-outline">
+                    团队
+                    <span className="glyph-outline-echo" aria-hidden="true">
+                      团队
+                    </span>
+                  </span>
+                  <span className="glyph glyph-ring">。</span>
+                </span>
               </span>
             </h1>
             <p className="landing-title-en" data-reveal>
@@ -360,7 +408,7 @@ export function Landing() {
                 <dd>7</dd>
               </div>
               <div>
-                <dt>业务动作</dt>
+                <dt>内容环节</dt>
                 <dd>8</dd>
               </div>
               <div>
@@ -368,8 +416,8 @@ export function Landing() {
                 <dd>2</dd>
               </div>
               <div>
-                <dt>任务状态</dt>
-                <dd>15</dd>
+                <dt>版本留痕</dt>
+                <dd>100%</dd>
               </div>
             </dl>
           </div>
@@ -378,7 +426,7 @@ export function Landing() {
             <i>↓</i>
           </div>
           <div className="landing-hero-foot" aria-hidden="true">
-            项目书 v2.0 · 本地优先
+            七位角色 · 一份任务书 · 你的决定
           </div>
         </section>
 
@@ -393,7 +441,7 @@ export function Landing() {
               <span>而是让每一步都有人负责。</span>
             </h2>
             <p className="landing-body" data-reveal>
-              创作、审稿与试映使用隔离的上下文。程序负责状态、预算、版本与幂等，
+              创作、审稿与试映使用隔离的上下文。程序负责流程、版本与记录，
               模型负责理解、创作与诊断。你保留事实表达、商业承诺与最终发布的决定权。
             </p>
             <ul className="landing-principles">
@@ -410,7 +458,7 @@ export function Landing() {
               <li data-reveal>
                 <span>03</span>
                 <strong>人决定，而不是自动放行</strong>
-                <p>两个人工闸门由程序强制等待，重复提交也有幂等记录。</p>
+                <p>两个人工闸门会真正停下来等你，重复提交也不会重复执行。</p>
               </li>
             </ul>
           </div>
@@ -482,7 +530,6 @@ export function Landing() {
                   {row.agent ? (
                     <div className="flow-agent">
                       <span>{row.agent}</span>
-                      <code>{row.action}</code>
                     </div>
                   ) : null}
                 </li>
@@ -494,65 +541,23 @@ export function Landing() {
                 <p className="landing-kicker">人工闸门 · 一</p>
                 <h3>确认任务书</h3>
                 <p>
-                  目标、受众、硬要求与预算绑定到某个任务书版本与指纹。
+                  目标、受众与硬要求会固定在一份任务书版本里。
                   你确认的是一份可检查的版本，而不是一段模糊描述。
                 </p>
-                <code>WAITING_CONFIRMATION</code>
               </div>
               <div className="gate-card" data-reveal>
                 <p className="landing-kicker">人工闸门 · 二</p>
                 <h3>接收内容</h3>
                 <p>
-                  只有 READY 版本可以被验收；接收记录包含版本、内容哈希与会话。
-                  退回意见进入 feedback，不会伪装成已经改稿。
+                  验收时锁定当前版本并记录你确认的内容；未经确认的版本不会被当作已交付。
+                  退回意见会保留在下一次修改里。
                 </p>
-                <code>READY → ACCEPTED</code>
               </div>
               <p className="flow-note" data-reveal>
-                试映运行前冻结人设、片段与预算。超时、未知结果与未完成单独统计，
-                不自动归为退出或已完成。
+                试映前会锁定人设与片段，结果按真实状态记录，
+                不把未完成伪装成已完成。
               </p>
             </aside>
-          </div>
-        </section>
-
-        <section id="status" className="landing-section landing-status">
-          <div className="landing-section-head">
-            <p className="landing-kicker" data-reveal>
-              现在进行到哪
-            </p>
-            <h2 className="landing-h2" data-reveal>
-              工程原型已经跑通离线链路。
-              <br />
-              <span>真实任务验收仍在继续。</span>
-            </h2>
-            <p className="landing-body" data-reveal>
-              当前阶段：七角色工程原型已建立，完成离线流程验证；MiMo 已有接入和
-              部分角色真实调用证据，正在推进完整工作流集成与用户工作台。
-            </p>
-          </div>
-
-          <div className="status-grid">
-            {STATUS.map((item) => (
-              <article key={item.label} className="status-card" data-reveal>
-                <p className="landing-kicker">{item.label}</p>
-                <h3>{item.title}</h3>
-                <p>{item.text}</p>
-                <span>{item.tag}</span>
-              </article>
-            ))}
-          </div>
-
-          <div className="status-notes">
-            <blockquote data-reveal>
-              “核心交付是可用内容与可靠流程；
-              <br />
-              核心验证是用户采用、交付效率和真实付费。”
-            </blockquote>
-            <p data-reveal>
-              我们不把 Mock 写成已完成。界面明确区分演示模式与真实接口：
-              真实模式失败时返回错误，不静默替代；未接入的下载与修订运行也会标注出来。
-            </p>
           </div>
         </section>
 
@@ -579,6 +584,66 @@ export function Landing() {
             </a>
           </div>
         </section>
+
+        <section id="pricing" className="landing-section landing-pricing">
+          <div className="landing-section-head">
+            <p className="landing-kicker" data-reveal>
+              定价
+            </p>
+            <h2 className="landing-h2" data-reveal>
+              先让一支团队，
+              <br />
+              <span>替你跑完下一轮内容。</span>
+            </h2>
+            <p className="landing-body" data-reveal>
+              按月订阅，随时取消。每个方案都包含七位 AI 角色、两个人工闸门与完整的版本记录。
+            </p>
+          </div>
+
+          <div className="pricing-grid">
+            {PRICING.map((plan) => (
+              <article
+                key={plan.id}
+                className={cn("pricing-card", plan.featured && "is-featured")}
+                data-reveal
+              >
+                <div className="pricing-card-head">
+                  <p className="landing-kicker">{plan.kicker}</p>
+                  {plan.featured ? (
+                    <span className="pricing-badge">推荐</span>
+                  ) : null}
+                </div>
+                <h3>{plan.name}</h3>
+                <p className="pricing-price">
+                  <strong>{plan.price}</strong>
+                  <span>{plan.period}</span>
+                </p>
+                <p className="pricing-copy">{plan.description}</p>
+                <ul className="pricing-features">
+                  {plan.features.map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
+                <MagneticLink
+                  to={enterPath}
+                  className={cn(
+                    "landing-btn pricing-cta",
+                    plan.featured
+                      ? "landing-btn-primary"
+                      : "landing-btn-ghost",
+                  )}
+                >
+                  {plan.cta}
+                  <ArrowRight size={15} />
+                </MagneticLink>
+              </article>
+            ))}
+          </div>
+
+          <p className="pricing-note" data-reveal>
+            年付 8 折 · 随时取消 · 价格以人民币计
+          </p>
+        </section>
       </main>
 
       <footer className="landing-footer">
@@ -586,16 +651,16 @@ export function Landing() {
           <BrandMark size={34} />
           <div>
             <strong>众幕 AI</strong>
-            <p>一人内容工作室 · 七个角色协同创作</p>
+            <p>自媒体创作者工作室 · 七个角色协同创作</p>
           </div>
         </div>
         <p className="landing-footer-meta">
-          项目书 v2.0 · 2026-11-07 · React / Flask / LangGraph / MiMo
+          © 2026 众幕 AI · 自媒体创作者工作室
         </p>
         <div className="landing-footer-links">
           <a href="#team">团队</a>
           <a href="#workflow">流程</a>
-          <a href="#status">现状</a>
+          <a href="#pricing">定价</a>
           <Link to={enterPath}>工作台</Link>
         </div>
       </footer>
