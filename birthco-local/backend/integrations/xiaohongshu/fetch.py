@@ -98,9 +98,105 @@ def _extract_notes(raw) -> list:
     raise FetchError(f"接口返回数据异常（{type(data).__name__}）；平台接口可能已变化")
 
 
+def _fetch_plain(external_account_id: str, count: int, with_comments: bool) -> list[PerfVideo]:
+    """通道 A：会话 cookie + 裸 fetch 直连平台接口。"""
+    from backend.integrations.xiaohongshu import session as xhs_session  # noqa: PLC0415
+
+    sync_playwright = xhs_session._playwright()
+    works: list[PerfVideo] = []
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True, channel="chromium")
+        context = browser.new_context(
+            storage_state=str(xhs_session.session_paths(external_account_id)))
+        page = context.new_page()
+        page.goto("https://creator.xiaohongshu.com/publish/publish-manage",
+                  wait_until="domcontentloaded")
+        raw = page.evaluate(
+            "async (url) => (await (await fetch(url)).json())",
+            NOTES_API.format(count=min(50, count)))
+        items = _extract_notes(raw)
+        for item in items:
+            video = normalize_note(item)
+            if with_comments:
+                try:
+                    comments_raw = page.evaluate(
+                        "async (id) => (await (await fetch("
+                        "'/api/comment/page?note_id='+id+'&page_size=20')).json())",
+                        video.platform_video_id)
+                    comments = normalize_comments(comments_raw, video.platform_video_id)
+                    video = video.model_copy(update={"top_comments": comments})
+                except Exception:
+                    pass  # 评论抓取失败不阻断笔记数据
+            works.append(video)
+            if len(works) >= count:
+                break
+        browser.close()
+    return works
+
+
+def _intercept_notes(external_account_id: str, count: int) -> list[dict]:
+    """通道 B：裸 fetch 被拒（缺签名/接口变化）时，收平台页面自带请求的响应。
+
+    页面自己的 JS 会带全签名头请求笔记列表，我们只旁听它拿到的 JSON，
+    不伪造任何签名，也不碰写操作。
+    """
+    from backend.integrations.xiaohongshu import session as xhs_session  # noqa: PLC0415
+
+    sync_playwright = xhs_session._playwright()
+    captured: list = []
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True, channel="chromium")
+        context = browser.new_context(
+            storage_state=str(xhs_session.session_paths(external_account_id)))
+        page = context.new_page()
+
+        def on_response(response):
+            if "/api/" not in response.url:
+                return
+            if not any(key in response.url for key in
+                       ("user/posted", "posted", "note", "publish", "content")):
+                return
+            try:
+                captured.append(response.json())
+            except Exception:
+                pass
+
+        page.on("response", on_response)
+        page.goto("https://creator.xiaohongshu.com/", wait_until="domcontentloaded")
+        page.wait_for_timeout(3000)
+        hrefs = page.evaluate(
+            """() => Array.from(document.querySelectorAll('a'))
+                .map(a => a.getAttribute('href') || '')
+                .filter(h => h && /publish|manage|note|content/i.test(h))""")
+        candidates = ["/publish/publish-manage", "/publish/publish-manage/note",
+                      "/new/note-manager", "/publish/manage", "/content-manage"]
+        for href in list(dict.fromkeys(list(hrefs) + candidates))[:8]:
+            target = href if href.startswith("/") else "/" + href
+            try:
+                page.goto("https://creator.xiaohongshu.com" + target,
+                          wait_until="domcontentloaded")
+                page.wait_for_timeout(4000)
+            except Exception:
+                continue
+            for payload in captured:
+                try:
+                    items = _extract_notes(payload)
+                except FetchError:
+                    continue
+                if items:
+                    browser.close()
+                    return items[:count]
+        browser.close()
+    raise FetchError("未能从平台页面捕获笔记列表（路由/接口已变化）；请改用 manual 通道")
+
+
 def fetch_recent_works(external_account_id: str, *, count: int = 10,
                        with_comments: bool = True) -> list[PerfVideo]:
-    """用已登录会话抓取最近 count 条笔记（含 top 评论）。"""
+    """用已登录会话抓取最近 count 条笔记（含 top 评论）。
+
+    双通道：先裸 fetch；被拒则旁听平台页面自带的签名请求兜底。
+    两通道都不通时给出可操作错误，绝不伪造数据。
+    """
     from backend.integrations.xiaohongshu import session as xhs_session  # noqa: PLC0415
 
     if not 1 <= count <= 50:
@@ -108,38 +204,12 @@ def fetch_recent_works(external_account_id: str, *, count: int = 10,
     state = xhs_session.load_session(xhs_session.session_paths(external_account_id))
     if not state:
         raise FetchError("会话不存在或未登录；请先 login 或使用 manual 通道")
-    sync_playwright = xhs_session._playwright()
-    works: list[PerfVideo] = []
     try:
-        with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=True, channel="chromium")
-            context = browser.new_context(
-                storage_state=str(xhs_session.session_paths(external_account_id)))
-            page = context.new_page()
-            page.goto("https://creator.xiaohongshu.com/publish/publish-manage",
-                      wait_until="domcontentloaded")
-            raw = page.evaluate(
-                "async (url) => (await (await fetch(url)).json())",
-                NOTES_API.format(count=min(50, count)))
-            items = _extract_notes(raw)
-            for item in items:
-                video = normalize_note(item)
-                if with_comments:
-                    try:
-                        comments_raw = page.evaluate(
-                            "async (id) => (await (await fetch("
-                            "'/api/comment/page?note_id='+id+'&page_size=20')).json())",
-                            video.platform_video_id)
-                        comments = normalize_comments(comments_raw, video.platform_video_id)
-                        video = video.model_copy(update={"top_comments": comments})
-                    except Exception:
-                        pass  # 评论抓取失败不阻断笔记数据
-                works.append(video)
-                if len(works) >= count:
-                    break
-            browser.close()
-    except FetchError:
-        raise
-    except Exception as exc:
-        raise FetchError(f"抓取失败：{exc}；可改用 manual 通道导入") from exc
-    return works
+        return _fetch_plain(external_account_id, count, with_comments)
+    except FetchError as plain_error:
+        try:
+            items = _intercept_notes(external_account_id, count)
+        except FetchError as intercept_error:
+            raise FetchError(f"{plain_error}；页面捕获兜底：{intercept_error}") from intercept_error
+        works = [normalize_note(item) for item in items]
+        return works[:count]

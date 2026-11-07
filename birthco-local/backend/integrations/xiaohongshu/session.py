@@ -51,8 +51,8 @@ def _playwright():
 def login_interactive(external_account_id: str, *, headless: bool = False) -> Path:
     """打开小红书创作服务平台登录页，扫码登录成功后保存 storage_state。
 
-    判定标准是平台接口真正认可会话（posted 接口 success=true），
-    而不是"页面上有 cookie"——避免在扫码生效前提前保存半截会话。
+    判定标准：posted 接口 success=true，或（兜底）页面已渲染且不再是登录页
+    （无短信登录/扫码登录表单）——避免在扫码生效前提前保存半截会话。
     """
     sync_playwright = _playwright()
     target = session_paths(external_account_id)
@@ -67,12 +67,17 @@ def login_interactive(external_account_id: str, *, headless: bool = False) -> Pa
                     const response = await fetch(
                         '/api/galaxy/user/posted?page=1&page_size=1&sort=created_desc');
                     const payload = await response.json();
-                    return Boolean(payload && payload.success === true);
-                } catch (err) {
-                    return false;
-                }
+                    if (payload && payload.success === true) return true;
+                } catch (err) { /* 接口不可用时看页面信号 */ }
+                const text = (document.body && document.body.innerText) || '';
+                return text.length > 50
+                    && !location.pathname.includes('login')
+                    && !text.includes('短信登录')
+                    && !text.includes('登 录');
             }""",
             timeout=LOGIN_WAIT_SECONDS * 1000)
+        # 登录跳转/下发 cookie 可能异步进行，稍等再存，避免存下过渡态
+        page.wait_for_timeout(2500)
         context.storage_state(path=str(target))
         browser.close()
     return target
