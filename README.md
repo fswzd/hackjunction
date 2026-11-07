@@ -24,6 +24,7 @@ python run_mock_demo.py                       # Mock 全流程 + evidence/
 |---|---|
 | `backend/workflow/five_agent/` | 契约、Repository、Gateway、投影隔离、规则/指标、Adapter、StateGraph、Driver |
 | `tests/five_agent/` | 契约/主链/分支试映改稿/恢复预算/七角色测试（55 项） |
+| `frontend/` | React 工作台与产品落地页：七角色工位、任务闸门、版本验收、程序化虹彩落地页 |
 | `docs/orchestration/` | 交付文档：00 流程图与边表 · 01 契约与接入清单 · 02 编排与 Adapter · 03 确认/版本/预算/恢复 · 04 验证与缺口 · 05 使用说明 |
 | `evidence/` | 接口检查、Mock 流程证据（命令/退出码/调用计数/哈希） |
 | `tools/` | 契约资源提取、langgraph 探针、冒烟 |

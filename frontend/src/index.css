@@ -2,18 +2,18 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #0d1017;
-  --color-surface: #171b25;
-  --color-raised: #212735;
-  --color-line: #303849;
-  --color-text: #f5f6fa;
-  --color-muted: #a1a9bb;
-  --color-blue: #83b8ff;
-  --color-cyan: #78e3de;
-  --color-violet: #b49cff;
-  --color-amber: #f0b36e;
-  --color-green: #8fd6a8;
-  --color-red: #f08a8a;
+  --color-ink: #151513;
+  --color-surface: #1d1d19;
+  --color-raised: #272722;
+  --color-line: #3b3a32;
+  --color-text: #eeeade;
+  --color-muted: #aaa79b;
+  --color-blue: #c7a78b;
+  --color-cyan: #b1bca4;
+  --color-violet: #bca8b5;
+  --color-amber: #c7a373;
+  --color-green: #a8b995;
+  --color-red: #d18f7d;
 
   --font-sans:
     "Inter Variable", "Inter", "PingFang SC", "Hiragino Sans GB",
@@ -78,10 +78,7 @@ body {
 }
 
 @utility inner-grid {
-  background-image:
-    linear-gradient(to right, rgba(131, 184, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(131, 184, 255, 0.045) 1px, transparent 1px);
-  background-size: 48px 48px;
+  background-image: radial-gradient(ellipse at top left, rgba(199,167,139,.035), transparent 65%);
 }
 
 @utility text-balance {
@@ -143,3 +140,13 @@ body {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Editorial studio: quiet surfaces, generous typography, a restrained brand. */
+.studio-heading { font-family: "Songti SC", "STSong", "Noto Serif CJK SC", Georgia, serif; font-weight: 400; letter-spacing: -.045em; }
+.studio-brand { font-family: "Songti SC", "STSong", Georgia, serif; font-size: 25px; letter-spacing: .08em; }
+.studio-mark { display:flex; align-items:center; justify-content:center; width:36px; height:40px; border-left:1px solid #c7a78b; border-right:1px solid #c7a78b; color:#e1d5c3; font-family:"Songti SC",serif; font-size:25px; }
+.studio-intro { border-bottom:1px solid var(--color-line); padding-bottom:28px; margin-bottom:30px; }
+.studio-intro h1 { font-size:clamp(30px,3vw,46px); line-height:1.4; }
+.studio-intro::after { content:"创作 / 审稿 / 试映 / 交付"; display:block; margin-top:24px; color:var(--color-muted); font-size:10px; letter-spacing:.25em; }
+nav[aria-label="主导航"] a { border-radius:2px; height:44px; }
+nav[aria-label="主导航"] a[aria-current="page"] { background:#c7a78b12; border-left:2px solid #c7a78b; }

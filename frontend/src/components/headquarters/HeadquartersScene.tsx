@@ -93,18 +93,18 @@ export default function HeadquartersScene({
 
   return (
     <>
-      <color attach="background" args={["#0b0e15"]} />
-      <fog attach="fog" args={["#0b0e15", 26, 52]} />
+      <color attach="background" args={["#191917"]} />
+      <fog attach="fog" args={["#191917", 26, 52]} />
       <CameraRig selectedAgentId={selectedAgentId} immersive={immersive} />
 
-      <ambientLight intensity={0.72} color="#b9c6e6" />
+      <ambientLight intensity={1.15} color="#e5decf" />
       <directionalLight
         position={[7, 12, 6]}
         intensity={1.5}
-        color="#dfe7ff"
+        color="#fff1dc"
       />
-      <directionalLight position={[-8, 5, -7]} intensity={0.62} color="#8f7bd6" />
-      <pointLight position={[0, 5.5, 0]} intensity={1.35} color="#83B8FF" distance={16} />
+      <directionalLight position={[-8, 5, -7]} intensity={0.62} color="#b6ad9b" />
+      <pointLight position={[0, 5.5, 0]} intensity={1.35} color="#cbb598" distance={16} />
 
       {/* Floor */}
       <RoundedBox
@@ -112,21 +112,21 @@ export default function HeadquartersScene({
         radius={0.16}
         position={[0, -0.16, 0]}
       >
-        <meshStandardMaterial color="#121722" roughness={0.88} metalness={0.12} />
+        <meshStandardMaterial color="#34342e" roughness={0.88} metalness={0.12} />
       </RoundedBox>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0]}>
         <planeGeometry args={[16, 12]} />
-        <meshStandardMaterial color="#1a2130" roughness={0.9} />
+        <meshStandardMaterial color="#3a3932" roughness={0.9} />
       </mesh>
       <Grid
         args={[16, 12]}
         position={[0, 0, 0]}
         cellSize={0.55}
         cellThickness={0.5}
-        cellColor="#26314a"
+        cellColor="#48473e"
         sectionSize={2.2}
         sectionThickness={1}
-        sectionColor="#36455f"
+        sectionColor="#555247"
         fadeDistance={24}
         fadeStrength={1.4}
         infiniteGrid={false}
@@ -134,14 +134,14 @@ export default function HeadquartersScene({
 
       {/* Back walls */}
       <RoundedBox args={[16.2, 3.2, 0.22]} radius={0.06} position={[0, 1.6, -6.05]}>
-        <meshStandardMaterial color="#191f2b" roughness={0.8} />
+        <meshStandardMaterial color="#302f29" roughness={0.8} />
       </RoundedBox>
       <RoundedBox
         args={[0.22, 3.2, 12.2]}
         radius={0.06}
         position={[-8.05, 1.6, 0]}
       >
-        <meshStandardMaterial color="#181e2b" roughness={0.82} />
+        <meshStandardMaterial color="#33322c" roughness={0.82} />
       </RoundedBox>
 
       {/* Wall detail panels */}
@@ -149,8 +149,8 @@ export default function HeadquartersScene({
         <mesh key={x} position={[x, 1.75, -5.92]}>
           <boxGeometry args={[1.1, 1.9, 0.05]} />
           <meshStandardMaterial
-            color="#1b2230"
-            emissive="#83B8FF"
+            color="#454238"
+            emissive="#cbb598"
             emissiveIntensity={0.06}
             roughness={0.7}
           />
@@ -159,8 +159,8 @@ export default function HeadquartersScene({
       <mesh position={[-7.94, 2.1, 0]}>
         <boxGeometry args={[0.05, 0.06, 9.4]} />
         <meshStandardMaterial
-          color="#83B8FF"
-          emissive="#83B8FF"
+          color="#cbb598"
+          emissive="#cbb598"
           emissiveIntensity={0.9}
         />
       </mesh>
@@ -168,7 +168,7 @@ export default function HeadquartersScene({
       {/* Brand strip on the back wall */}
       <mesh position={[0, 2.55, -5.9]}>
         <planeGeometry args={[4.6, 0.04]} />
-        <meshBasicMaterial color="#83B8FF" transparent opacity={0.55} />
+        <meshBasicMaterial color="#cbb598" transparent opacity={0.55} />
       </mesh>
 
       {operator ? (

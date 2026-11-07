@@ -6,18 +6,18 @@ type Size = "sm" | "md" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "bg-blue text-ink hover:brightness-110 active:brightness-95 shadow-[0_0_24px_rgba(131,184,255,0.18)]",
+    "bg-blue text-ink hover:brightness-110 active:brightness-95",
   secondary:
-    "bg-raised text-text border border-line hover:border-[#43506a] hover:bg-[#262e3e]",
+    "bg-raised text-text border border-line hover:border-[#777364] hover:bg-[#33332c]",
   ghost: "text-muted hover:text-text hover:bg-white/[0.04]",
   danger:
     "bg-red/12 text-red border border-red/30 hover:bg-red/20 hover:border-red/50",
 };
 
 const SIZES: Record<Size, string> = {
-  sm: "h-8 px-3 text-xs gap-1.5 rounded-lg",
-  md: "h-10 px-4 text-sm gap-2 rounded-xl",
-  lg: "h-12 px-6 text-sm gap-2.5 rounded-xl",
+  sm: "h-8 px-3 text-xs gap-1.5 rounded-sm",
+  md: "h-10 px-4 text-sm gap-2 rounded-sm",
+  lg: "h-12 px-6 text-sm gap-2.5 rounded-sm",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

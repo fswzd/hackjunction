@@ -463,7 +463,7 @@ export function OperatorDesk({
         accent={meta.accent}
         selected={selected}
         dimmed={dimmed}
-        subtitle="总协调"
+        subtitle="任务书整理"
         positionY={2.42}
       />
     </group>

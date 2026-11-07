@@ -19,7 +19,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { to: "/workspace/overview", label: "工作台总览", en: "Overview", icon: LayoutDashboard },
-  { to: "/workspace/workforce", label: "AI 员工", en: "AI Workforce", icon: Users },
+  { to: "/workspace/workforce", label: "协作团队", en: "AI Workforce", icon: Users },
   { to: "/workspace/projects", label: "内容项目", en: "Projects", icon: FolderKanban },
   { to: "/workspace/tasks", label: "任务中心", en: "Tasks", icon: ListChecks },
   { to: "/workspace/calendar", label: "创作日历", en: "Calendar", icon: CalendarDays },

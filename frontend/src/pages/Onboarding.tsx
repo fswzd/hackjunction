@@ -102,7 +102,7 @@ export function Onboarding() {
       await completeOnboarding({
         ...profile,
         creatorName: profile.creatorName.trim() || "创作者",
-        workspaceName: profile.workspaceName.trim() || "我的 AI 公司",
+        workspaceName: profile.workspaceName.trim() || "我的内容工作室",
         completedAt: new Date().toISOString(),
       });
       navigate("/workspace/overview", { replace: true });
@@ -153,13 +153,13 @@ export function Onboarding() {
         <div className="relative">
           <div className="flex items-center gap-3">
             <span className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-blue/30 bg-blue/10">
-              <span className="text-base font-bold text-blue">C</span>
+              <span className="text-base font-bold text-blue">幕</span>
               <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-cyan" />
             </span>
             <div>
-              <p className="text-sm font-semibold tracking-tight">Creator OS</p>
+              <p className="text-sm font-semibold tracking-tight">众幕 AI</p>
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted">
-                One Creator. One AI Company.
+                A STUDIO OF YOUR OWN.
               </p>
             </div>
           </div>
@@ -167,11 +167,11 @@ export function Onboarding() {
           <h1 className="mt-16 text-balance text-4xl font-semibold leading-[1.15] tracking-tight">
             一个人，
             <br />
-            就是一家公司。
+            也有一支内容团队。
           </h1>
           <p className="mt-5 max-w-sm text-sm leading-7 text-muted">
             先告诉我们你在做什么、说给谁听。
-            运营官会据此安排六名专业 AI 员工的协作方式。
+            从任务书到交付稿，让创作、审稿与修改有据可循。
           </p>
         </div>
 
@@ -223,7 +223,7 @@ export function Onboarding() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue/30 bg-blue/10 text-xs font-bold text-blue">
               C
             </span>
-            <span className="text-sm font-semibold">Creator OS</span>
+            <span className="text-sm font-semibold">众幕 AI</span>
           </div>
           <div className="hidden items-center gap-2 lg:flex">
             {STEPS.map((item, index) => (
@@ -273,7 +273,7 @@ export function Onboarding() {
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted">
               {step === 0
-                ? "这些信息会显示在你的 AI 公司里，也用于任务书的默认称呼。"
+                ? "这些信息会显示在你的内容工作室里，也用于任务书的默认称呼。"
                 : step === 1
                   ? "领域会影响选题捕捉与内容创作的默认方向，可以随时在设置里修改。"
                   : step === 2
@@ -504,7 +504,7 @@ export function Onboarding() {
                   {saving
                     ? "正在保存…"
                     : step === STEPS.length - 1
-                      ? "进入我的 AI 公司"
+                      ? "走进协作现场"
                       : "继续"}
                 </Button>
               </div>
