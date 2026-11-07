@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 CREATOR_URL = "https://creator.douyin.com/"
-LOGIN_WAIT_SECONDS = 180
+LOGIN_WAIT_SECONDS = 600  # 扫码登录给人留足时间，到点前窗口不关
 
 
 def session_dir() -> Path:
@@ -48,6 +48,19 @@ def _playwright():
     return sync_playwright
 
 
+def _launch_browser(pw, *, headless: bool = False):
+    """登录优先用系统真实 Chrome/Edge（平台风控对自动化浏览器更不友好），
+    未安装则回退 Playwright Chromium。"""
+    last_error: Exception | None = None
+    for channel in ("chrome", "msedge", "chromium"):
+        try:
+            return pw.chromium.launch(headless=headless, channel=channel)
+        except Exception as exc:  # 缺该发行版则试下一个
+            last_error = exc
+    raise PlaywrightNotInstalled(
+        f"无可用浏览器（chrome/msedge/chromium 均启动失败）：{last_error}")
+
+
 def login_interactive(external_account_id: str, *, headless: bool = False) -> Path:
     """打开创作者中心登录页，等待扫码登录成功后保存 storage_state。
 
@@ -56,12 +69,18 @@ def login_interactive(external_account_id: str, *, headless: bool = False) -> Pa
     sync_playwright = _playwright()
     target = session_paths(external_account_id)
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=headless)
+        browser = _launch_browser(pw, headless=headless)
         context = browser.new_context(accept_downloads=False)
         page = context.new_page()
         page.goto(CREATOR_URL, wait_until="domcontentloaded")
-        # 等待扫码完成：创作者中心登录后会出现工作台/内容管理入口
-        page.wait_for_url("**/creator-micro/**", timeout=LOGIN_WAIT_SECONDS * 1000)
+        try:
+            # 等待扫码完成：创作者中心登录后会出现工作台/内容管理入口
+            page.wait_for_url("**/creator-micro/**", timeout=LOGIN_WAIT_SECONDS * 1000)
+        except Exception as exc:
+            browser.close()
+            raise RuntimeError(
+                f"登录等待超时：请在 {LOGIN_WAIT_SECONDS // 60} 分钟内完成扫码登录；"
+                "若页面被平台弹回登录页，请重试或改用 manual 通道") from exc
         context.storage_state(path=str(target))
         browser.close()
     return target

@@ -77,7 +77,7 @@ export function AccountConnect() {
 
   const pollUntilDone = async (externalId: string) => {
     polling.current = true;
-    const deadline = Date.now() + 240_000;
+    const deadline = Date.now() + 660_000; // 必须盖过登录窗口的 10 分钟等待
     try {
       while (Date.now() < deadline && polling.current) {
         await sleep(2000);
