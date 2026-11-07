@@ -45,13 +45,13 @@ def test_host_config_and_migration_are_startup_gates(tmp_path):
         create_app({"data_dir": tmp_path})
 
 
-def test_global_write_gate_and_csrf_rotation(tmp_path):
+def test_global_write_gate_and_csrf_idempotency(tmp_path):
     client = make_client(tmp_path)
     first = client.get("/api/v1/session", base_url=BASE).get_json()["data"]["csrf_token"]
     second = client.get("/api/v1/session", base_url=BASE).get_json()["data"]["csrf_token"]
-    assert first != second
-    old = client.post("/api/v1/accounts", json={"name": "账号"}, headers={"X-CSRF-Token": first, "Idempotency-Key": "0123456789abcdef"}, base_url=BASE)
-    assert old.status_code == 401
+    # 同会话重复 bootstrap 必须幂等（token 为会话派生值）。旧行为每次轮换，
+    # 多份前端会话缓存互踩后写请求报 "CSRF token invalid"。
+    assert first == second
     missing_key = client.post("/api/v1/accounts", json={"name": "账号"}, headers={"X-CSRF-Token": second}, base_url=BASE)
     assert missing_key.status_code == 422
     unknown = client.get("/api/v1/not-a-route", base_url=BASE)

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Boxes,
   CheckCircle2,
@@ -113,8 +113,14 @@ export function Settings() {
   const [resetOpen, setResetOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
 
+  // 只在首次拿到画像时灌入一次：快照轮询会让 profile 对象身份每轮变化，
+  // 无门闩会把用户正在输入的内容整表覆盖（与 Onboarding 同型陷阱）。
+  const prefilled = useRef(false);
   useEffect(() => {
-    if (snapshot?.profile) setForm(snapshot.profile);
+    if (snapshot?.profile && !prefilled.current) {
+      setForm(snapshot.profile);
+      prefilled.current = true;
+    }
   }, [snapshot?.profile]);
 
   if (!snapshot) return null;
@@ -406,7 +412,7 @@ export function Settings() {
                 />
                 <Row
                   label="产物下载"
-                  value="/api/v1/artifacts/{id}/download · 未接入"
+                  value="GET tasks/{id}/artifacts + /artifacts/{id}/download · 已接入"
                   accent="#F0B36E"
                 />
                 <Row

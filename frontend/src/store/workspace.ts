@@ -62,6 +62,10 @@ interface WorkspaceState {
 let adapter: WorkspaceAdapter = createAdapter(getStoredMode());
 let initPromise: Promise<void> | null = null;
 let toastSeq = 0;
+// 快照世代号：写操作/模式切换开始时递增；任何在途读取落地前校验世代未变，
+// 否则丢弃过期快照（修复：10s 轮询旧快照覆盖刚写入的结果、模式切换后旧
+// Promise 回填串扰——两处同根）。
+let snapshotEpoch = 0;
 
 function readAutoplay(): boolean {
   try {
@@ -96,30 +100,33 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       set({ status: "loading", error: null });
       const mode = getStoredMode();
       adapter = createAdapter(mode);
+      const epoch = snapshotEpoch;
       try {
         const snapshot = await adapter.load();
-        set({ status: "ready", snapshot, mode });
+        if (epoch === snapshotEpoch) set({ status: "ready", snapshot, mode });
       } catch (error) {
-        set({ status: "error", error: errorMessage(error), mode });
+        if (epoch === snapshotEpoch) set({ status: "error", error: errorMessage(error), mode });
       }
     })();
     return initPromise;
   },
 
   reload: async () => {
+    const epoch = snapshotEpoch;
     try {
       const snapshot = await adapter.load();
-      set({ status: "ready", snapshot, error: null });
+      if (epoch === snapshotEpoch) set({ status: "ready", snapshot, error: null });
     } catch (error) {
-      set({ status: "error", error: errorMessage(error) });
+      if (epoch === snapshotEpoch) set({ status: "error", error: errorMessage(error) });
     }
   },
 
   refresh: async () => {
     if (get().mode !== "api") return;
+    const epoch = snapshotEpoch;
     try {
       const snapshot = await adapter.load();
-      set({ snapshot });
+      if (epoch === snapshotEpoch) set({ snapshot });
     } catch {
       /* polling must not replace a usable workspace with an error screen */
     }
@@ -127,11 +134,14 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
 
   setMode: async (mode) => {
     if (mode === get().mode) return;
+    snapshotEpoch += 1; // 旧模式在途读取全部作废
+    const epoch = snapshotEpoch;
     setStoredMode(mode);
     adapter = createAdapter(mode);
     set({ status: "loading", mode, error: null, selectedAgentId: null });
     try {
       const snapshot = await adapter.load();
+      if (epoch !== snapshotEpoch) return;
       set({
         status: "ready",
         snapshot,
@@ -150,13 +160,18 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   },
 
   completeOnboarding: async (profile) => {
+    snapshotEpoch += 1;
+    const epoch = snapshotEpoch;
     const snapshot = await adapter.saveProfile(profile);
-    set({ snapshot, status: "ready" });
+    if (epoch === snapshotEpoch) set({ snapshot, status: "ready" });
   },
 
   createTask: async (input) => {
+    snapshotEpoch += 1;
+    const epoch = snapshotEpoch;
     try {
       const snapshot = await adapter.createTask(input);
+      if (epoch !== snapshotEpoch) return;
       set({
         snapshot,
         toast: {
@@ -171,9 +186,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   },
 
   advanceTask: async (taskId) => {
+    snapshotEpoch += 1;
+    const epoch = snapshotEpoch;
     try {
       const snapshot = await adapter.advanceTask(taskId);
-      set({ snapshot });
+      if (epoch === snapshotEpoch) set({ snapshot });
     } catch (error) {
       get().showToast(errorMessage(error), "error");
     }
@@ -186,9 +203,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
     const task = running?.[0];
     if (!task) return;
+    snapshotEpoch += 1;
+    const epoch = snapshotEpoch;
     try {
       const snapshot = await adapter.advanceTask(task.id);
-      set({ snapshot });
+      if (epoch === snapshotEpoch) set({ snapshot });
     } catch {
       /* autoplay failures are silent; the manual controls surface errors */
     }
@@ -199,8 +218,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       (task) => task.id === taskId,
     )?.pendingAction;
     const apiMode = get().mode === "api";
+    snapshotEpoch += 1;
+    const epoch = snapshotEpoch;
     try {
       const snapshot = await adapter.decideTask(taskId, decision, options);
+      if (epoch !== snapshotEpoch) return;
       const briefGate = pendingAction === "confirm_brief";
       set({
         snapshot,
@@ -248,7 +270,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
 
   resetDemo: async () => {
     if (!adapter.reset) return;
+    snapshotEpoch += 1;
+    const epoch = snapshotEpoch;
     const snapshot = await adapter.reset();
+    if (epoch !== snapshotEpoch) return;
     set({
       snapshot,
       selectedAgentId: null,

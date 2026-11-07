@@ -487,11 +487,30 @@ class Repository:
             self._conn.commit()
 
     def discard_call(self, call_id: str, reason: str, usage: dict | None = None) -> None:
-        """Late/cancelled result: record usage as discarded, do not advance versions."""
+        """Late/cancelled result: record usage as discarded, do not advance versions.
+
+        与 fail_call/interrupt_call 同口径入账：每个 attempt 恰好计入一次
+        calls_reserved 与 normal/tech 拆分；迟到用量计入 tokens_known（未知则计
+        unknown_usage_calls）。否则取消/迟到路径的调用与 token 会从预算与成本账上消失。
+        """
         usage_status, usage_tokens = ("unknown", None) if usage is None else (usage["status"], usage["total_tokens"])
         with self._lock:
             self._conn.execute("UPDATE model_calls SET status='discarded', usage_status=?, usage_tokens=? WHERE id=?",
                                (usage_status, usage_tokens, call_id))
+            row = self._one("SELECT run_id, attempt FROM model_calls WHERE id=?", (call_id,))
+            if row is not None:
+                if usage is not None and usage["status"] == "known":
+                    self._conn.execute(
+                        "UPDATE usage_ledger SET tokens_known=tokens_known+? WHERE run_id=?",
+                        (usage["total_tokens"] or 0, row["run_id"]))
+                else:
+                    self._conn.execute(
+                        "UPDATE usage_ledger SET unknown_usage_calls=unknown_usage_calls+1 WHERE run_id=?",
+                        (row["run_id"],))
+                self._conn.execute(
+                    "UPDATE usage_ledger SET calls_reserved=calls_reserved+1, "
+                    "normal_calls=normal_calls+?, tech_retries=tech_retries+? WHERE run_id=?",
+                    (1 if row["attempt"] == 1 else 0, 0 if row["attempt"] == 1 else 1, row["run_id"]))
             self._conn.commit()
 
     def get_call(self, call_id: str) -> dict:

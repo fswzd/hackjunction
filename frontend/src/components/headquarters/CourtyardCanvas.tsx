@@ -124,6 +124,10 @@ export default function CourtyardCanvas({
   const host = useRef<HTMLDivElement>(null);
   const live = useRef({ agents, selectedAgentId, onSelectAgent });
   live.current = { agents, selectedAgentId, onSelectAgent };
+  // onReady 走 ref 转发：场景 effect 不依赖它的身份，否则轮询引起的
+  // 父级重渲染会整场 teardown 重建（GLTF 重载、缩放永久丢失）。
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
   const api = useRef<{
     reset: () => void;
     setZoom: (z: number) => void;
@@ -750,7 +754,7 @@ void main(){ vec2 c=gl_PointCoord-0.5; float d=length(c); if(d>0.5) discard; flo
         });
 
         resize();
-        onReady();
+        onReadyRef.current();
         api.current = {
           reset: resetView,
           // 只记目标值，渲染循环里平滑逼近，滚轮不会一格一跳
@@ -759,6 +763,7 @@ void main(){ vec2 c=gl_PointCoord-0.5; float d=length(c); if(d>0.5) discard; flo
           },
           rushTo,
         };
+        // 重建后从 ref 恢复用户缩放（而非闭包初值），否则缩放丢失
         camera.zoom = targetZoom = zoomRef.current;
         camera.updateProjectionMatrix();
         syncLabels();
@@ -1037,7 +1042,7 @@ void main(){ vec2 c=gl_PointCoord-0.5; float d=length(c); if(d>0.5) discard; flo
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [reducedMotion, onReady]);
+  }, [reducedMotion]);
 
   // 外层缩放按钮
   useEffect(() => {

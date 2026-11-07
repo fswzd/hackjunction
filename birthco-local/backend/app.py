@@ -84,7 +84,8 @@ def create_app(overrides: dict | None = None) -> Flask:
     from backend.api.task_actions import blueprint as actions_blueprint
     from backend.api.external_accounts import blueprint as external_accounts_blueprint
     from backend.api.previews import blueprint as previews_blueprint
-    for blueprint in (session_blueprint, accounts_blueprint, create_blueprint, reads_blueprint, actions_blueprint, previews_blueprint, external_accounts_blueprint):
+    from backend.api.artifacts import blueprint as artifacts_blueprint
+    for blueprint in (session_blueprint, accounts_blueprint, create_blueprint, reads_blueprint, actions_blueprint, previews_blueprint, external_accounts_blueprint, artifacts_blueprint):
         app.register_blueprint(blueprint)
     return app
 

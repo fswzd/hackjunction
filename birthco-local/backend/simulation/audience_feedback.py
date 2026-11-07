@@ -6,9 +6,10 @@ from dataclasses import dataclass, field
 
 from backend.domain.schemas import AudienceEvent
 
+# 去重后计数：重复词会让情绪分档随碰巧用词翻倍偏移（每个词只计一次）
 _NEGATIVE_KEYWORDS = [
     "垃圾", "无聊", "难看", "没用", "废话", "太长", "看不懂", "失望", "恶心",
-    "骗人", "假的", "不行", "差评", "无聊", "浪费", "糟糕", "恶心", "受不了",
+    "骗人", "假的", "不行", "差评", "浪费", "糟糕", "受不了",
     "没意思", "太水", "凑数", "抄的", "标题党", "退了", "不看了",
 ]
 
@@ -160,6 +161,7 @@ def build_feedback_report(
         exit_count=exited,
         completed_count=completed,
         total_viewers=total,
-        coverage_ratio=len(events) / (total * len(all_segment_ids)) if total and all_segment_ids else 0.0,
+        # 事件重复/越界引用可令比值 >1；clamp 到 [0,1] 与 summarize_sessions 口径一致
+        coverage_ratio=min(1.0, len(events) / (total * len(all_segment_ids))) if total and all_segment_ids else 0.0,
         completion_ratio=completed / total if total else 0.0,
     )

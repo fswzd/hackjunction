@@ -9,6 +9,7 @@ import {
   Search,
 } from "lucide-react";
 import type { AssetKind, AssetVM } from "@/domain/types";
+import type { AssetWithDownload } from "@/adapters/api";
 import { cn, formatRelative } from "@/lib/format";
 import { useWorkspace } from "@/store/workspace";
 import { Button } from "@/components/ui/Button";
@@ -40,6 +41,20 @@ function downloadText(filename: string, body: string) {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+function downloadAsset(asset: AssetVM) {
+  const url = (asset as AssetVM & AssetWithDownload).download_url;
+  if (url) {
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${safeFilename(asset.name)}.${asset.name.endsWith(".txt") ? "txt" : "md"}`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    return;
+  }
+  downloadText(`${safeFilename(asset.name)}.md`, asset.body);
 }
 
 function safeFilename(name: string): string {
@@ -251,9 +266,7 @@ export function Assets() {
               <Button
                 variant="primary"
                 icon={<Download size={13} />}
-                onClick={() =>
-                  downloadText(`${safeFilename(active.name)}.md`, active.body)
-                }
+                onClick={() => downloadAsset(active)}
               >
                 下载 Markdown
               </Button>

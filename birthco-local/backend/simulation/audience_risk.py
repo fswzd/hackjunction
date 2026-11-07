@@ -60,9 +60,16 @@ def keyword_risk_check(text: str) -> RiskVerdict:
                        detected_keywords=unique)
 
 
-def assess_risk(events: list[AudienceEvent], llm_checker=None) -> list[dict]:
+def assess_risk(events: list[AudienceEvent], llm_checker=None,
+                event_ids: list[str] | None = None) -> list[dict]:
+    """event_ids 为并行的真实事件 id 列表；缺省时退回 segment_id（兼容旧调用）。
+
+    旧行为把 segment_id 写进 event_id 字段，风险结论无法回指触发它的事件。
+    """
+    if event_ids is not None and len(event_ids) != len(events):
+        raise ValueError("event_ids must match events length")
     results = []
-    for e in events:
+    for index, e in enumerate(events):
         texts = [e.reaction]
         if e.comment_text:
             texts.append(e.comment_text)
@@ -82,5 +89,6 @@ def assess_risk(events: list[AudienceEvent], llm_checker=None) -> list[dict]:
                     )
             except Exception:
                 pass
-        results.append({"event_id": e.segment_id, "verdict": verdict.to_dict()})
+        results.append({"event_id": e.segment_id if event_ids is None else event_ids[index],
+                        "verdict": verdict.to_dict()})
     return results

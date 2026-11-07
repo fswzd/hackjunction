@@ -66,22 +66,37 @@ export function AccountConnect() {
     }
   };
 
+  // 世代号：卸载/切换模式后，在途轮询与回填全部作废（防旧 client 结果串扰新模式）
+  const generation = useRef(0);
+
   useEffect(() => {
+    generation.current += 1;
+    polling.current = false;
     setAccounts([]);
     setMessage(null);
     setExpandedId(null);
     setExperience(null);
     void refresh();
+    return () => {
+      generation.current += 1;
+      polling.current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client]);
 
   const pollUntilDone = async (externalId: string) => {
+    const gen = generation.current;
     polling.current = true;
     const deadline = Date.now() + 660_000; // 必须盖过登录窗口的 10 分钟等待
     try {
-      while (Date.now() < deadline && polling.current) {
+      while (
+        Date.now() < deadline &&
+        polling.current &&
+        gen === generation.current
+      ) {
         await sleep(2000);
         const status = await client.status(externalId);
+        if (gen !== generation.current) return status;
         setAccounts((current) =>
           current.map((item) =>
             item.external_account_id === externalId
@@ -102,7 +117,7 @@ export function AccountConnect() {
       }
       return await client.status(externalId);
     } finally {
-      polling.current = false;
+      if (gen === generation.current) polling.current = false;
     }
   };
 
@@ -121,15 +136,24 @@ export function AccountConnect() {
           : "演示模式：正在模拟登录与实绩导入…",
     });
     let registered: ExternalAccount | null = null;
+    const gen = generation.current;
+    // 仅本次新建的账号才允许失败回滚：register 对同 handle 幂等返回既有行，
+    // 无条件 remove 会误删既有账号并连带清掉其经验库实绩（数据灭失）。
+    // 必须在 register 之前测一次——之后 list 会包含本次新建行，无法区分。
+    let preexisting = false;
     try {
+      preexisting = (await client.list().catch(() => [])).some(
+        (item) => item.platform === platform && item.handle === handleValue,
+      );
       registered = await client.register({
         platform,
         handle: handleValue,
         displayName: displayName.trim(),
       });
-      // 登录成功前不入列；失败则回滚登记——账号不添加、库里不留痕
+      // 登录成功前不入列；失败只回滚本次新建的登记
       await client.login(registered.external_account_id);
       const status = await pollUntilDone(registered.external_account_id);
+      if (gen !== generation.current) return;
       if (status.session_status === "logged_in") {
         const confirmedId = registered.external_account_id;
         registered = null; // 已确认登录，后续异常不再回滚
@@ -149,7 +173,9 @@ export function AccountConnect() {
       } else {
         const target = registered.external_account_id;
         registered = null;
-        await client.remove(target).catch(() => undefined);
+        if (!preexisting) {
+          await client.remove(target).catch(() => undefined);
+        }
         const reason =
           status.login_error ??
           (status.import_error
@@ -159,16 +185,21 @@ export function AccountConnect() {
               : `状态 ${status.session_status}`);
         setMessage({
           tone: "error",
-          text: `登录失败（${reason}），账号未添加。可修改信息后重试；如需补录历史实绩，请用「手动导入 JSON」（会登记该账号）。`,
+          text: preexisting
+            ? `登录失败（${reason}）。该账号已在经验库中，历史实绩已保留；请稍后重试，或用「手动导入 JSON」补录。`
+            : `登录失败（${reason}），账号未添加。可修改信息后重试；如需补录历史实绩，请用「手动导入 JSON」（会登记该账号）。`,
         });
       }
       await refresh();
     } catch (error) {
       if (registered) {
-        await client.remove(registered.external_account_id).catch(() => undefined);
+        if (!preexisting) {
+          await client.remove(registered.external_account_id).catch(() => undefined);
+        }
         registered = null;
         await refresh().catch(() => undefined);
       }
+      if (gen !== generation.current) return;
       setMessage({
         tone: "error",
         text: `登录失败，账号未添加：${

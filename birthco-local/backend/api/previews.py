@@ -67,7 +67,10 @@ def _preview_read(db, preview_id: str) -> dict:
     summaries = [SessionSummary(session_id=s["id"], persona_id=s["persona_id"], cursor=s["cursor"], outcome=s["outcome"], stop_reason=s["stop_reason"]).model_dump(mode="json") for s in sessions]
     counts = db.execute("SELECT count(*) AS completed,sum(CASE WHEN u.usage_status='known' THEN u.input_tokens END) AS input_tokens,sum(CASE WHEN u.usage_status='known' THEN u.output_tokens END) AS output_tokens,sum(CASE WHEN u.usage_status='known' THEN u.total_tokens END) AS total_tokens,sum(CASE WHEN u.usage_status='unknown' THEN 1 ELSE 0 END) AS unknown_calls FROM model_calls c JOIN usage_ledger u ON u.call_id=c.id WHERE c.run_id=? AND c.status NOT IN ('reserved','sent')", (row["run_id"],)).fetchone()
     unknown = counts["unknown_calls"] or 0
-    usage = Usage(calls_reserved=0, calls_completed=counts["completed"] or 0, input_tokens=counts["input_tokens"], output_tokens=counts["output_tokens"], total_tokens=counts["total_tokens"], unknown_calls=unknown, cost_status="partial" if unknown and counts["total_tokens"] is not None else "unknown" if unknown else "unpriced", amount_minor=None, currency=None)
+    # 与 task_reads.summary 同口径：calls_reserved 取 runs 行；unknown（未决）不计入 completed
+    run_row = db.execute("SELECT calls_reserved FROM runs WHERE id=?", (row["run_id"],)).fetchone()
+    unresolved = db.execute("SELECT count(*) FROM model_calls WHERE run_id=? AND status='unknown'", (row["run_id"],)).fetchone()[0]
+    usage = Usage(calls_reserved=run_row["calls_reserved"] if run_row else 0, calls_completed=(counts["completed"] or 0) - unresolved, input_tokens=counts["input_tokens"], output_tokens=counts["output_tokens"], total_tokens=counts["total_tokens"], unknown_calls=unknown, cost_status="partial" if unknown and counts["total_tokens"] is not None else "unknown" if unknown else "unpriced", amount_minor=None, currency=None)
     from backend.domain.schemas import ErrorDetail
     metrics = json.loads(row["metrics_json"]) if row["metrics_json"] else None
     error = None

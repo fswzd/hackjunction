@@ -17,6 +17,8 @@ from backend.security.session import require_write
 blueprint = Blueprint("external_accounts", __name__)
 
 _login_jobs: dict[str, threading.Thread] = {}
+# 删除账号时置位：登录线程无法中断外部扫码，但收尾时必须兜底清理它迟到的写入
+_login_cancel: dict[str, threading.Event] = {}
 
 
 @blueprint.get("/api/v1/accounts/external")
@@ -72,9 +74,13 @@ def import_history(external_account_id: str):
             result = intake.import_manual(current_app.config["DB_PATH"],
                                           external_account_id, payload)
         elif source == "adapter":
+            raw_count = raw.get("count", 10)
+            if (isinstance(raw_count, bool) or not isinstance(raw_count, (int, float))
+                    or not 1 <= int(raw_count) <= 50):
+                raise ValueError("count must be a number between 1 and 50")
             result = intake.import_via_adapter(
                 current_app.config["DB_PATH"], external_account_id,
-                count=int(raw.get("count", 10)))
+                count=int(raw_count))
         else:
             raise ValueError("source must be manual or adapter")
     except KeyError:
@@ -82,6 +88,11 @@ def import_history(external_account_id: str):
     except ValueError as exc:
         return success({"error": {"code": "SCHEMA_INVALID", "detail": str(exc)}}, 400)
     except Exception as exc:  # adapter 抓取失败等：保留可操作提示，不产生半截数据
+        # 数据形状问题（TypeError/OverflowError…）是请求错误：400 返回且绝不动会话状态，
+        # 否则畸形 JSON 会把健康会话降级成 pending_adapter_setup。
+        if source != "adapter" or isinstance(exc, (TypeError, OverflowError)):
+            return success({"error": {"code": "SCHEMA_INVALID",
+                                      "detail": f"invalid import payload: {exc}"}}, 400)
         try:
             storage.update_meta(current_app.config["DB_PATH"], external_account_id,
                                 {"import_error": str(exc)})
@@ -120,6 +131,9 @@ def login_external_account(external_account_id: str):
                         "session_status": "logging_in"}, 202)
     storage.set_session_state(db_path, external_account_id, status="logging_in")
 
+    cancel = threading.Event()
+    _login_cancel[external_account_id] = cancel
+
     def _run():
         try:
             intake.login_and_import(db_path, external_account_id, count=10)
@@ -133,6 +147,13 @@ def login_external_account(external_account_id: str):
                 pass
         finally:
             _login_jobs.pop(external_account_id, None)
+            _login_cancel.pop(external_account_id, None)
+            if cancel.is_set():
+                # 登录中途账号被删除：兜底清理线程迟到的写入（会话凭据文件/登记行）
+                try:
+                    intake.delete_account(db_path, external_account_id)
+                except Exception:
+                    pass
 
     thread = threading.Thread(target=_run, name=f"login-{external_account_id}", daemon=True)
     _login_jobs[external_account_id] = thread
@@ -162,6 +183,9 @@ def remove_external_account(external_account_id: str):
     require_write()
     db_path = current_app.config["DB_PATH"]
     storage.ensure_integration_tables(db_path)
+    cancel = _login_cancel.get(external_account_id)
+    if cancel is not None:
+        cancel.set()  # 通知登录线程：结束后必须兜底清理迟到写入
     _login_jobs.pop(external_account_id, None)
     try:
         result = intake.delete_account(db_path, external_account_id)

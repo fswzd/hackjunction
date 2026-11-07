@@ -2,6 +2,7 @@ import {
   Component,
   Suspense,
   lazy,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -83,6 +84,8 @@ export function Headquarters3D({
 }: Headquarters3DProps) {
   const [webgl] = useState(detectWebGL);
   const [ready, setReady] = useState(false);
+  // 稳定身份：内联箭头会让 CourtyardCanvas 的场景 effect 随父级重渲染整场重建
+  const handleReady = useCallback(() => setReady(true), []);
   const [userZoom, setUserZoom] = useState(1);
   const stageRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
@@ -216,7 +219,7 @@ export function Headquarters3D({
             immersive={immersive}
             reducedMotion={reducedMotion}
             userZoom={userZoom}
-            onReady={() => setReady(true)}
+            onReady={handleReady}
           />
         </Suspense>
       </SceneErrorBoundary>

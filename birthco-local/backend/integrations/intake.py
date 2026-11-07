@@ -6,6 +6,7 @@ baseline_plays = 已导入作品播放数中位数；不伪造任何未抓到的
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from backend.integrations import storage
@@ -32,6 +33,8 @@ def register_account(db_path, payload: ExternalAccountCreate) -> dict:
 
 
 def import_manual(db_path, external_account_id: str, payload: ManualImport) -> dict:
+    # 先验账号存在（KeyError→404），否则外键错误会落成 502 并外泄内部错误串
+    storage.get_external_account(db_path, external_account_id)
     videos = [v.model_dump() for v in payload.videos]
     inserted = storage.upsert_imported_videos(db_path, external_account_id, videos,
                                               source=payload.source)
@@ -68,12 +71,16 @@ def mark_pending_adapter(db_path, external_account_id: str) -> dict:
 
 
 AUTH_ERROR_MARKERS = ("登录已过期", "未登录", "会话不存在", "会话无效",
-                      "not logged in", "unauthorized", "401")
+                      "not logged in", "unauthorized")
+# "401" 只按独立数字/HTTP 语境匹配：裸子串会把 "作品14015不存在" 误判为登录过期，
+# 进而级联触发账号回滚删除。整词边界：数字两侧不能是数字/字母。
+_AUTH_ERROR_RE = re.compile(r"(?<![0-9a-z])401(?![0-9a-z])", re.I)
 
 
 def _is_auth_error(text: str) -> bool:
     lowered = text.lower()
-    return any(marker.lower() in lowered for marker in AUTH_ERROR_MARKERS)
+    return (any(marker.lower() in lowered for marker in AUTH_ERROR_MARKERS)
+            or bool(_AUTH_ERROR_RE.search(text)))
 
 
 def mark_import_failure(db_path, external_account_id: str, exc: Exception,

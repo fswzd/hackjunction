@@ -1,4 +1,5 @@
 """Opaque local sessions and request-bound CSRF tokens."""
+import base64
 from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
@@ -17,6 +18,18 @@ KEY_PATTERN = re.compile(r"^[\x20-\x7e]{16,128}$")
 
 def _digest(value: str) -> str:
     return hmac.new(current_app.config["SESSION_SECRET"], value.encode(), hashlib.sha256).hexdigest()
+
+
+def _csrf_token(session_id: str) -> str:
+    """会话绑定的确定性 CSRF token：同会话恒等，bootstrap 可重复调用（幂等）。
+
+    替代此前每次 bootstrap 生成随机 token 的做法——多份前端会话缓存
+    （工作台与账号组件各自 ensureSession）重复 bootstrap 会互相顶掉对方
+    的 token，写请求随之报 "CSRF token invalid"。服务端仍只存 digest。
+    """
+    mac = hmac.new(current_app.config["SESSION_SECRET"],
+                   b"csrf:" + session_id.encode(), hashlib.sha256).digest()
+    return base64.urlsafe_b64encode(mac).rstrip(b"=").decode("ascii")
 
 
 def _allowed_origins() -> set[str]:
@@ -73,7 +86,6 @@ def bootstrap():
     from backend.api import success
     cookie = request.cookies.get(COOKIE)
     session_id = _digest(cookie) if cookie else None
-    csrf = secrets.token_urlsafe(32)
     new_cookie = cookie or secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
     expiry = (now + timedelta(hours=12)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
@@ -81,11 +93,13 @@ def bootstrap():
         with immediate(db):
             existing = db.execute("SELECT id,expires_at FROM app_sessions WHERE id=?", (session_id,)).fetchone() if session_id else None
             if existing and existing["expires_at"] > now.isoformat(timespec="milliseconds").replace("+00:00", "Z"):
-                db.execute("UPDATE app_sessions SET csrf_hash=?,expires_at=? WHERE id=?", (_digest(csrf), expiry, session_id))
+                pass  # 复用会话；CSRF 为派生值，重复 bootstrap 不轮换
             else:
                 new_cookie = secrets.token_urlsafe(32)
                 session_id = _digest(new_cookie)
-                db.execute("INSERT INTO app_sessions(id,csrf_hash,capability,expires_at) VALUES(?,?,'creator',?)", (session_id, _digest(csrf), expiry))
+                db.execute("INSERT INTO app_sessions(id,csrf_hash,capability,expires_at) VALUES(?,?,'creator',?)", (session_id, "", expiry))
+            csrf = _csrf_token(session_id)
+            db.execute("UPDATE app_sessions SET csrf_hash=?,expires_at=? WHERE id=?", (_digest(csrf), expiry, session_id))
     response = success({"session_id": session_id, "csrf_token": csrf, "capabilities": ["creator"]})
     response.set_cookie(COOKIE, new_cookie, httponly=True, samesite="Strict", secure=False, path="/", max_age=12 * 3600)
     return response

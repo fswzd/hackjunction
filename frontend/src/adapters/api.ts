@@ -11,6 +11,7 @@ import type {
   AgentId,
   AgentStatus,
   AgentVM,
+  AssetVM,
   BackendStep,
   BackendTaskState,
   CreateTaskInput,
@@ -124,6 +125,24 @@ interface BackendEvent {
   summary?: string;
   created_at?: string;
 }
+
+interface BackendArtifact {
+  artifact_id?: string;
+  version_id?: string;
+  content_hash?: string;
+  file_hash?: string;
+  format?: string;
+  byte_size?: number;
+  status?: string;
+  relative_path?: string;
+  download_url?: string | null;
+}
+
+/** AssetVM plus the real download endpoint produced by the artifacts API. */
+export type AssetWithDownload = {
+  download_url?: string | null;
+  file_hash?: string | null;
+};
 
 interface SessionInfo {
   session_id: string;
@@ -592,10 +611,16 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
     if (!this.sessionPromise) {
       this.sessionPromise = this.request<{ data: SessionInfo }>(
         "/api/v1/session",
-      ).then((payload) => {
-        this.session = payload.data;
-        return payload.data;
-      });
+      )
+        .then((payload) => {
+          this.session = payload.data;
+          return payload.data;
+        })
+        .catch((error: unknown) => {
+          // 一次瞬时失败不得永久锁死适配器：清掉缓存的 rejected Promise，下次调用重试
+          this.sessionPromise = null;
+          throw error;
+        });
     }
     return this.sessionPromise;
   }
@@ -627,6 +652,36 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
       },
     );
     return created.data;
+  }
+
+  private async loadAssets(tasks: TaskVM[]): Promise<AssetVM[]> {
+    const assets: AssetVM[] = [];
+    for (const task of tasks) {
+      if (!task.acceptedVersionId) continue;
+      try {
+        const payload = await this.request<{ data: BackendArtifact[] }>(
+          `/api/v1/tasks/${encodeURIComponent(task.id)}/artifacts`,
+        );
+        for (const row of payload.data ?? []) {
+          const artifactId = String(row.artifact_id ?? "");
+          if (!artifactId) continue;
+          assets.push({
+            id: artifactId,
+            name: `${task.title}.${row.format === "txt" ? "txt" : "md"}`,
+            kind: "script",
+            projectId: task.projectId,
+            taskId: task.id,
+            createdAt: task.updatedAt,
+            body: task.output?.body ?? "",
+            download_url: row.download_url ?? `/api/v1/artifacts/${encodeURIComponent(artifactId)}/download`,
+            file_hash: row.file_hash ?? null,
+          } as AssetVM & AssetWithDownload);
+        }
+      } catch {
+        /* artifact listing is optional for rendering the workspace */
+      }
+    }
+    return assets;
   }
 
   async load(): Promise<WorkspaceSnapshot> {
@@ -670,6 +725,7 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
         }。请确认 Flask 服务与 Vite 代理已启动，或在设置中切回演示模式。`,
       );
     }
+    const assets = await this.loadAssets(tasks);
 
     const now = new Date().toISOString();
     const localProfile = readProfile();
@@ -707,7 +763,7 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
           accent: "#83B8FF",
         },
       ],
-      assets: [],
+      assets,
       profile,
       updatedAt: now,
     };
