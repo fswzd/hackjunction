@@ -5,7 +5,7 @@ Design rules encoded here:
 - Brief has no independent id: composite (task_id, brief_version) + brief_hash.
 - Confirmation/gate decisions are CAS against a frozen subject hash; model text
   is never an authority.
-- Step outputs are immutable receipts UNIQUE(run_id, step, attempt); replay reads
+- Step outputs are immutable receipts UNIQUE(run_id, step, input_hash, attempt); replay reads
   them instead of calling agents again.
 - Cancel bumps run.epoch; late results are recorded as discarded, never commit.
 - usage unknown stays unknown (total_tokens NULL), never zero-filled.
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS workflow_step_outputs (
   input_hash TEXT NOT NULL, output_hash TEXT NOT NULL,
   payload_json TEXT NOT NULL, payload_bytes INTEGER NOT NULL,
   result_status TEXT NOT NULL, created_at TEXT NOT NULL,
-  UNIQUE (run_id, step_key, attempt)
+  UNIQUE (run_id, step_key, input_hash, attempt)
 );
 CREATE TABLE IF NOT EXISTS usage_ledger (
   run_id TEXT PRIMARY KEY, calls_reserved INTEGER NOT NULL DEFAULT 0,
@@ -447,15 +447,46 @@ class Repository:
         return [self._row(r) for r in self._all(
             "SELECT * FROM model_calls WHERE run_id=? ORDER BY created_at, attempt", (run_id,))]
 
-    def get_step_output(self, run_id: str, step_key: str) -> dict | None:
-        row = self._one(
-            "SELECT * FROM workflow_step_outputs WHERE run_id=? AND step_key=? ORDER BY attempt DESC LIMIT 1",
-            (run_id, step_key))
+    def get_step_output(self, run_id: str, step_key: str, input_hash: str | None = None) -> dict | None:
+        """Committed receipt for one logical step.
+
+        input_hash is the content commitment of the exact input payload: when
+        given, only a receipt produced from byte-identical input is returned.
+        A same-step_key receipt from different input is NOT a valid replay.
+        """
+        sql = ("SELECT * FROM workflow_step_outputs WHERE run_id=? AND step_key=?")
+        params: list = [run_id, step_key]
+        if input_hash is not None:
+            sql += " AND input_hash=?"
+            params.append(input_hash)
+        sql += " ORDER BY attempt DESC LIMIT 1"
+        row = self._one(sql, tuple(params))
         if row is None:
             return None
         out = self._row(row)
         out["payload"] = json.loads(out.pop("payload_json"))
         return out
+
+    def reconcile_orphan_calls(self, run_id: str) -> list[str]:
+        """Settle calls left in-flight by a crash; returns the settled call_ids.
+
+        A row still 'reserved'/'sent' when no adapter invocation is executing
+        belongs to a dead process: 'reserved' was never sent (aborted, counted),
+        'sent' may have reached the provider (interrupted, usage unknown).
+        Idempotent — only rows in ('reserved','sent') are touched, and each is
+        moved out of that set by fail_call/interrupt_call.
+        """
+        rows = [self._row(r) for r in self._all(
+            "SELECT id, attempt, send_intent FROM model_calls "
+            "WHERE run_id=? AND status IN ('reserved','sent')", (run_id,))]
+        settled = []
+        for row in rows:
+            if row["send_intent"]:
+                self.interrupt_call(row["id"], run_id, row["attempt"], usage=None)
+            else:
+                self.fail_call(row["id"], run_id, row["attempt"], status="aborted_pre_send")
+            settled.append(row["id"])
+        return settled
 
     def get_usage(self, run_id: str) -> dict:
         row = self._one("SELECT * FROM usage_ledger WHERE run_id=?", (run_id,))

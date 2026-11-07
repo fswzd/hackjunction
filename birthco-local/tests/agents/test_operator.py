@@ -22,8 +22,10 @@ class FixtureAdapter:
     def __init__(self, output): self.output, self.requests = output, []
     def complete(self, request):
         self.requests.append(request)
-        result = MockAdapter({request.call_id:json.dumps(self.output,ensure_ascii=False)}).complete(replace(request,mode="mock"))
-        return replace(result,mode=request.mode)
+        payload = self.output["__raw__"] if (isinstance(self.output, dict) and "__raw__" in self.output) \
+            else json.dumps(self.output, ensure_ascii=False)
+        result = MockAdapter({request.call_id: payload}).complete(replace(request, mode="mock"))
+        return replace(result, mode=request.mode)
 
 
 def test_mock_produces_frozen_brief_and_no_implicit_confirmation():
@@ -137,3 +139,46 @@ def test_unknown_frozen_field_is_rejected_before_any_call():
         OperatorAgent(adapter, mode="live", model_id="fixture-model").run(
             task(), frozen_fields=frozenset({"objective", "invented_field"}))
     assert caught.value.code == "SCOPE_DENIED" and adapter.requests == []
+
+
+def _ok_envelope():
+    value = OperatorAgent().run(task()).envelope.model_dump(mode="json")
+    return value
+
+
+def test_ok_with_questions_is_remapped_to_needs_input_without_extra_call():
+    value = _ok_envelope()
+    value["questions"] = [{"id": "q1", "question": "目标读者是谁？", "reason": "影响措辞"}]
+    adapter = FixtureAdapter(value)
+    result = OperatorAgent(adapter, mode="live", model_id="fixture-model").run(task())
+    assert result.envelope.status == "needs_input"
+    assert [q.id for q in result.envelope.questions] == ["q1"]
+    assert len(adapter.requests) == 1, "重映射零新增调用"
+
+
+def test_ok_with_data_open_questions_is_remapped_and_content_preserved():
+    value = _ok_envelope()
+    value["data"]["open_questions"] = [{"id": "q2", "question": "篇幅多少？", "reason": "影响长度"}]
+    adapter = FixtureAdapter(value)
+    result = OperatorAgent(adapter, mode="live", model_id="fixture-model").run(task())
+    assert result.envelope.status == "needs_input"
+    assert [q.id for q in result.envelope.questions] == ["q2"]
+    assert result.envelope.data.open_questions == []
+    assert result.envelope.data.objective == "选择相机", "内容一字不改"
+
+
+def test_fence_wrapped_output_is_parsed():
+    value = _ok_envelope()
+    adapter = FixtureAdapter({"__raw__": "```json\n" + json.dumps(value, ensure_ascii=False) + "\n```"})
+    result = OperatorAgent(adapter, mode="live", model_id="fixture-model").run(task())
+    assert result.envelope.status == "ok"
+
+
+def test_ok_with_only_issues_is_still_rejected():
+    value = _ok_envelope()
+    value["issues"] = [{"id": "i1", "severity": "advisory", "location": "brief",
+                        "reason": "备注", "requested_change": "无需处理"}]
+    adapter = FixtureAdapter(value)
+    with pytest.raises(DomainError) as caught:
+        OperatorAgent(adapter, mode="live", model_id="fixture-model").run(task())
+    assert caught.value.code == "SCHEMA_INVALID" and len(adapter.requests) == 1

@@ -17,9 +17,18 @@ class IsolationError(Exception):
 
 
 def build_prepare_brief_input(user_input: str, input_mode: str, material_refs: list[dict],
-                              selected_opportunity_ref: dict | None) -> dict:
-    return {"user_input": user_input[:20000], "input_mode": input_mode,
-            "material_refs": material_refs, "selected_opportunity_ref": selected_opportunity_ref}
+                              selected_opportunity_ref: dict | None,
+                              requirements: list[dict] | None = None,
+                              edit_scope: dict | None = None) -> dict:
+    payload = {"user_input": user_input[:20000], "input_mode": input_mode,
+               "material_refs": material_refs, "selected_opportunity_ref": selected_opportunity_ref}
+    # Optional bridge fields (contract opt:): structured user requirements keep
+    # their original ids; edit_scope channels the authorised draft-scope choice.
+    if requirements is not None:
+        payload["requirements"] = requirements
+    if edit_scope is not None:
+        payload["edit_scope"] = edit_scope
+    return payload
 
 
 def build_draft_input(brief_ref: dict, material_refs: list[dict]) -> dict:

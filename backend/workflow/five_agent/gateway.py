@@ -13,6 +13,7 @@ Per-call protocol (five-agent interaction design §4/§6):
 """
 from __future__ import annotations
 
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -74,7 +75,14 @@ class StepOutcome:
 
 @dataclass
 class BudgetGate:
-    """Central budget ledger. Every adapter invocation attempt passes through here."""
+    """Central budget ledger. Every adapter invocation attempt passes through here.
+
+    Settlement model: counters are committed exactly once per attempt, together
+    with the attempt's terminal call row (received / failed_* / interrupted) in
+    Repository.  In-flight rows left by a crash are settled by
+    Repository.reconcile_orphan_calls before the next attempt on the run is
+    reserved, so no attempt can escape accounting.
+    """
     repo: Repository
 
     def check_and_reserve(self, run_id: str, kind: str, attempt: int, action: str) -> None:
@@ -92,10 +100,6 @@ class BudgetGate:
         if usage["tokens_known"] >= profile.max_total_tokens:
             raise BudgetExceeded(f"token budget exhausted for run {run_id}")
 
-    def record_reservation(self, run_id: str, attempt: int) -> None:
-        # counters are committed together with call completion/failure in Repository
-        pass
-
 
 class AgentGateway:
     def __init__(self, repo: Repository, adapter_router: Callable[[str], Any],
@@ -105,6 +109,15 @@ class AgentGateway:
         self.validators = validators or default_validators()
         self.budget = BudgetGate(repo)
         self._clock = clock
+        self._locks_guard = threading.Lock()
+        self._run_locks: dict[str, threading.RLock] = {}
+
+    def _run_lock(self, run_id: str) -> threading.RLock:
+        """One logical run executes its calls serially; the lock makes
+        'no adapter invocation is executing for this run' a checkable fact at
+        invoke entry, so in-flight rows can be reconciled without heuristics."""
+        with self._locks_guard:
+            return self._run_locks.setdefault(run_id, threading.RLock())
 
     # ------------------------------------------------------------------ guards
     def _guard_run(self, run_id: str) -> dict:
@@ -122,17 +135,27 @@ class AgentGateway:
         - step_incomplete: (read_segment only) returns StepOutcome(unknown=True) and
           leaves run running; caller marks the audience session incomplete.
         """
+        with self._run_lock(run_id):
+            self.repo.reconcile_orphan_calls(run_id)
+            return self._invoke_inner(run_id, step_key, action, input_payload,
+                                      account_id, task_id, prompt_schema_version,
+                                      max_attempts, unknown_policy)
+
+    def _invoke_inner(self, run_id: str, step_key: str, action: str, input_payload: dict,
+                      account_id: str, task_id: str, prompt_schema_version: str,
+                      max_attempts: int, unknown_policy: str) -> StepOutcome:
         run = self._guard_run(run_id)
         agent_id = self.validators.contract["actions"][action]["agent_id"]
 
-        # 1) idempotent replay from committed domain receipt (zero model calls)
-        receipt = self.repo.get_step_output(run_id, step_key)
+        input_hash = frozen_input_hash(input_payload, prompt_schema_version)
+        # 1) idempotent replay from a committed receipt produced from IDENTICAL
+        #    input (input_hash).  A receipt under the same step_key but from a
+        #    different input is a stale artifact and must never be replayed.
+        receipt = self.repo.get_step_output(run_id, step_key, input_hash)
         if receipt is not None:
             result = AgentResult.from_dict(receipt["payload"])
             return StepOutcome(result=result, replayed=True, call_id=receipt["call_id"],
                                output_id=receipt["id"], attempts_used=0)
-
-        input_hash = frozen_input_hash(input_payload, prompt_schema_version)
         last_error: Exception | None = None
         attempt = 1
         while attempt <= max_attempts:
@@ -227,10 +250,11 @@ class AgentGateway:
         """Explicit user-confirmed resend of an INTERRUPTED call (new attempt)."""
         if not cost_risk_confirmed:
             raise GatewayError("resend requires explicit user cost-risk confirmation", code="ORIGIN_DENIED")
-        run = self.repo.get_run(run_id)
-        if run["status"] != "INTERRUPTED":
-            raise GatewayError(f"run {run_id} is {run['status']}, cannot resend", code="INVALID_TRANSITION")
-        attempts_used = len(self.repo.list_calls(run_id))
-        self.repo.set_run_status(run_id, "RUNNING")
-        return self.invoke(run_id, step_key, action, input_payload, account_id, task_id,
-                           prompt_schema_version, max_attempts=2)
+        with self._run_lock(run_id):
+            run = self.repo.get_run(run_id)
+            if run["status"] != "INTERRUPTED":
+                raise GatewayError(f"run {run_id} is {run['status']}, cannot resend", code="INVALID_TRANSITION")
+            attempts_used = len(self.repo.list_calls(run_id))
+            self.repo.set_run_status(run_id, "RUNNING")
+            return self.invoke(run_id, step_key, action, input_payload, account_id, task_id,
+                               prompt_schema_version, max_attempts=2)

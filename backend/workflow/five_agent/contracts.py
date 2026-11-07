@@ -162,6 +162,10 @@ class ContractValidators:
             "idea|existing_draft": {"enum": ["idea", "existing_draft"]},
             "Ref": ref, "Ref[]": {"type": "array", "items": ref, "maxItems": 20},
             "Ref|null": {"anyOf": [ref, {"type": "null"}]}, "BriefRef": brief_ref,
+            # operator bridge extensions (opt: prefix marks an optional input field)
+            "Requirement[]": {"type": "array", "maxItems": 30,
+                              "items": domain["Brief"]["$defs"]["Requirement"]},
+            "EditScope|null": {"anyOf": [domain["Brief"]["$defs"]["EditScope"], {"type": "null"}]},
         }
         context = _obj({
             "account_id": _ident(), "task_id": _ident(), "run_id": _ident(),
@@ -187,7 +191,16 @@ class ContractValidators:
             action_call["properties"]["action"] = {"const": action}
             input_type = contract["input_types"][action]
             if isinstance(input_type, dict):
-                action_call["properties"]["input"] = _obj({k: types[v] for k, v in input_type.items()})
+                props, optional = {}, []
+                for key, type_name in input_type.items():
+                    if isinstance(type_name, str) and type_name.startswith("opt:"):
+                        props[key] = types[type_name[4:]]
+                        optional.append(key)
+                    else:
+                        props[key] = types[type_name]
+                input_schema = _obj(props)
+                input_schema["required"] = [k for k in input_type if k not in optional]
+                action_call["properties"]["input"] = input_schema
             self._call_validators[action] = Draft202012Validator(action_call)
             self._output_validators[action] = Draft202012Validator(domain[descriptor["output_schema"]])
         self._result_validator = Draft202012Validator(result)
@@ -255,7 +268,45 @@ class ContractValidators:
                 self._output_validators[raw["action"]].validate(raw["data"])
             except Exception as exc:
                 raise ProtocolError(f"domain output violation for {raw['action']}: {exc.message}") from exc
+        if raw["action"] == "prepare_brief" and raw["status"] == "ok":
+            self._check_prepare_brief(raw, req)
         return raw
+
+    def _check_prepare_brief(self, raw: dict, req: dict) -> None:
+        """Semantic freeze at the orchestration boundary (audit F-O1/F-O2/F-O5).
+
+        Applies to every producer — mock generator and real bridge alike:
+        open_questions require needs_input; input_mode / material refs / route /
+        edit_scope stay inside the user's declared envelope; structured
+        requirements pass through with their original ids and texts.
+        """
+        data = raw["data"]
+        if data.get("open_questions"):
+            raise ProtocolError("prepare_brief: open_questions require needs_input")
+        if data.get("input_mode") != req["input"].get("input_mode"):
+            raise ProtocolError("prepare_brief: input_mode changed")
+        refs = {r["id"] for r in req["input"].get("material_refs", [])}
+        if not set(data.get("material_ids") or []) <= refs:
+            raise ProtocolError("prepare_brief: material_ids outside supplied refs")
+        if set(data.get("route") or []) - {"draft", "review", "export"}:
+            raise ProtocolError("prepare_brief: route outside the P0 content path")
+        reqs_in = req["input"].get("requirements")
+        if reqs_in is not None:
+            expected = {r["id"]: r["text"] for r in reqs_in}
+            actual = {r["id"]: r["text"] for r in data.get("requirements") or []}
+            if actual != expected:
+                raise ProtocolError("prepare_brief: requirements must keep supplied ids and texts")
+        scope_in = req["input"].get("edit_scope")
+        if scope_in is not None:
+            scope_out = data.get("edit_scope") or {}
+            # the production entry may fill preserve segments (unselected paragraphs
+            # are always preserved); targets and flags must be exactly as authorised
+            if (scope_out.get("target_segment_ids") != scope_in.get("target_segment_ids")
+                    or scope_out.get("allow_title_change") != scope_in.get("allow_title_change")
+                    or scope_out.get("allow_cover_change") != scope_in.get("allow_cover_change")
+                    or not set(scope_in.get("preserve_segment_ids") or [])
+                    <= set(scope_out.get("preserve_segment_ids") or [])):
+                raise ProtocolError("prepare_brief: edit_scope changed")
 
 
 _default_validators: ContractValidators | None = None
