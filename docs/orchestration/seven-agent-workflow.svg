@@ -1,0 +1,194 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1520 1280" width="1520" height="1280">
+  <style>text { font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif; }</style>
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ea580c"/>
+    </marker>
+    <marker id="arrow-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#9333ea"/>
+    </marker>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
+    </marker>
+  </defs>
+  <rect width="1520" height="1280" fill="#ffffff"/>
+  <text x="760" y="42" text-anchor="middle" font-size="20" font-weight="600" fill="#111827">多 Agent 自媒体内容系统 · 七角色编排 workflow（seven-agent.v0.1）</text>
+  <text x="760" y="66" text-anchor="middle" font-size="12" font-weight="400" fill="#6b7280">编排层 = LangGraph StateGraph（确定性控制器）· 业务角色固定七个 · Mock 已接通，真实入口待接入</text>
+  <rect x="24" y="88" width="230" height="472" rx="10" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="139" y="112" text-anchor="middle" font-size="14" font-weight="600" fill="#111827">七角色 × action</text>
+  <rect x="38" y="128" width="202" height="50" rx="8" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"/>
+  <text x="139" y="149" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">pr_analyst 商单需求分析员</text>
+  <text x="139" y="166" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">analyze_request</text>
+  <rect x="38" y="188" width="202" height="50" rx="8" fill="#dbeafe" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="139" y="209" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">operations_officer 运营官</text>
+  <text x="139" y="226" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">prepare_brief</text>
+  <rect x="38" y="248" width="202" height="50" rx="8" fill="#dcfce7" stroke="#86efac" stroke-width="1.5"/>
+  <text x="139" y="269" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">content_creator 内容主创</text>
+  <text x="139" y="286" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">draft / revise</text>
+  <rect x="38" y="308" width="202" height="50" rx="8" fill="#fee2e2" stroke="#fca5a5" stroke-width="1.5"/>
+  <text x="139" y="329" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">editorial_reviewer 审稿员</text>
+  <text x="139" y="346" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">assess_content</text>
+  <rect x="38" y="368" width="202" height="50" rx="8" fill="#ccfbf1" stroke="#5eead4" stroke-width="1.5"/>
+  <text x="139" y="389" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">traffic_scout 流量捕捉者</text>
+  <text x="139" y="406" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">capture_opportunities</text>
+  <rect x="38" y="428" width="202" height="50" rx="8" fill="#fef9c3" stroke="#fde047" stroke-width="1.5"/>
+  <text x="139" y="449" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">data_analyst 数据分析师</text>
+  <text x="139" y="466" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">diagnose_preview</text>
+  <rect x="38" y="488" width="202" height="50" rx="8" fill="#e0e7ff" stroke="#a5b4fc" stroke-width="1.5"/>
+  <text x="139" y="509" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">simulated_audience 模拟观众</text>
+  <text x="139" y="526" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">read_segment</text>
+  <text x="139" y="572" text-anchor="middle" font-size="9.5" font-weight="400" fill="#9ca3af">统一经 AgentAdapter.invoke 交互</text>
+  <circle cx="520" cy="100" r="11" fill="#ffffff" stroke="#374151" stroke-width="1.6"/>
+  <path d="M520,111 V138 M502,122 H538 M520,138 L507,158 M520,138 L533,158" fill="none" stroke="#374151" stroke-width="1.6"/>
+  <text x="520" y="176" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">用户：目标 / 素材 / 旧稿 / 商单</text>
+  <path d="M520,186 V204" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <rect x="405" y="208" width="230" height="44" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="520.0" y="226.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#111827">route · 程序路由</text>
+  <text x="520.0" y="244.0" text-anchor="middle" font-size="11" fill="#6b7280">不看模型输出的 next_agent/goto</text>
+  <path d="M520,252 V276 H355 V296" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <path d="M520,276 V296" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <path d="M520,276 H685 V296" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <text x="345" y="289" text-anchor="end" font-size="10" font-weight="400" fill="#6b7280">商单</text>
+  <text x="532" y="289" text-anchor="start" font-size="10" font-weight="400" fill="#6b7280">需捕捉</text>
+  <text x="695" y="289" text-anchor="start" font-size="10" font-weight="400" fill="#6b7280">明确目标/旧稿</text>
+  <rect x="280" y="300" width="150" height="66" rx="8" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"/>
+  <text x="355.0" y="329.0" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">pr_analyst</text>
+  <text x="355.0" y="347.0" text-anchor="middle" font-size="11" fill="#6b7280">analyze_request</text>
+  <text x="355" y="384" text-anchor="middle" font-size="9" font-weight="400" fill="#6b7280">pr_intake 子预算</text>
+  <rect x="445" y="300" width="150" height="66" rx="8" fill="#ccfbf1" stroke="#5eead4" stroke-width="1.5"/>
+  <text x="520.0" y="329.0" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">traffic_scout</text>
+  <text x="520.0" y="347.0" text-anchor="middle" font-size="11" fill="#6b7280">capture_opportunities</text>
+  <text x="520" y="384" text-anchor="middle" font-size="9" font-weight="400" fill="#6b7280">scout 子预算 · 可选</text>
+  <rect x="610" y="300" width="150" height="66" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="685.0" y="329.0" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">跳过</text>
+  <text x="685.0" y="347.0" text-anchor="middle" font-size="11" fill="#6b7280">记录 traffic_skipped</text>
+  <path d="M355,366 V388 H520 V408" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <path d="M520,366 V408" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <path d="M685,366 V388 H520" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <rect x="405" y="412" width="230" height="52" rx="8" fill="#dbeafe" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="520.0" y="434.0" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">operations_officer · prepare_brief</text>
+  <text x="520.0" y="452.0" text-anchor="middle" font-size="11" fill="#6b7280">整理 Brief（open_questions 空才可确认）</text>
+  <polygon points="385.0,540 520,502.0 655.0,540 520,578.0" fill="#fed7aa" stroke="#fdba74" stroke-width="1.5"/>
+  <text x="520" y="538" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">闸门 confirm_brief</text>
+  <text x="520" y="555" text-anchor="middle" font-size="10" fill="#6b7280">确认 Brief 版本 + hash</text>
+  <path d="M520,464 V498" fill="none" stroke="#ea580c" stroke-width="1.6" marker-end="url(#arrow-orange)"/>
+  <text x="534" y="486" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">信息齐全</text>
+  <path d="M385,540 H356 V438 H401" fill="none" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrow-purple)" stroke-dasharray="5,3"/>
+  <text x="348" y="486" text-anchor="end" font-size="10" font-weight="400" fill="#9333ea">缺信息→补料</text>
+  <text x="348" y="500" text-anchor="end" font-size="9" font-weight="400" fill="#9ca3af">wait_input·同预算</text>
+  <path d="M520,578 V608" fill="none" stroke="#ea580c" stroke-width="1.6" marker-end="url(#arrow-orange)"/>
+  <text x="534" y="598" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">批准</text>
+  <rect x="405" y="612" width="230" height="52" rx="8" fill="#dcfce7" stroke="#86efac" stroke-width="1.5"/>
+  <text x="520.0" y="634.0" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">content_creator · draft</text>
+  <text x="520.0" y="652.0" text-anchor="middle" font-size="11" fill="#6b7280">初稿（未确认零主创）</text>
+  <path d="M520,664 V696" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <text x="534" y="684" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">初稿</text>
+  <rect x="405" y="700" width="230" height="44" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="520.0" y="718.0" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">rules · 程序规则校验</text>
+  <text x="520.0" y="736.0" text-anchor="middle" font-size="11" fill="#6b7280">content-rules-v1（0 模型）</text>
+  <path d="M520,744 V782" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <text x="534" y="768" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">通过</text>
+  <rect x="405" y="786" width="230" height="52" rx="8" fill="#fee2e2" stroke="#fca5a5" stroke-width="1.5"/>
+  <text x="520.0" y="808.0" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">editorial_reviewer · assess_content</text>
+  <text x="520.0" y="826.0" text-anchor="middle" font-size="11" fill="#6b7280">独立上下文审校（无主创自评）</text>
+  <rect x="700" y="694" width="190" height="52" rx="8" fill="#dcfce7" stroke="#86efac" stroke-width="1.5"/>
+  <text x="795.0" y="716.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">content_creator · revise</text>
+  <text x="795.0" y="734.0" text-anchor="middle" font-size="11" fill="#6b7280">定向修订（业务修订 ≤1 次）</text>
+  <path d="M635,716 H696" fill="none" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrow-purple)"/>
+  <text x="665" y="708" text-anchor="middle" font-size="9.5" font-weight="400" fill="#9333ea">可修复且未修过</text>
+  <path d="M795,746 V770 H535 V748" fill="none" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrow-purple)"/>
+  <text x="660" y="784" text-anchor="middle" font-size="9.5" font-weight="400" fill="#9333ea">修复后重走规则</text>
+  <path d="M635,806 H920 V720 H894" fill="none" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrow-purple)"/>
+  <text x="770" y="820" text-anchor="middle" font-size="9.5" font-weight="400" fill="#9333ea">需改且未修过</text>
+  <text x="838" y="752" text-anchor="middle" font-size="9" font-weight="400" fill="#9ca3af">已修过仍阻断 → 人工</text>
+  <path d="M520,838 V868" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <text x="534" y="858" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">通过</text>
+  <rect x="405" y="872" width="230" height="44" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="520.0" y="890.0" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">export · 程序导出</text>
+  <text x="520.0" y="908.0" text-anchor="middle" font-size="11" fill="#6b7280">MD/TXT 就绪 · 0 模型调用</text>
+  <polygon points="385.0,990 520,952.0 655.0,990 520,1028.0" fill="#fed7aa" stroke="#fdba74" stroke-width="1.5"/>
+  <text x="520" y="988" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">闸门 accept_delivery</text>
+  <text x="520" y="1005" text-anchor="middle" font-size="10" fill="#6b7280">接受交付？</text>
+  <path d="M520,916 V948" fill="none" stroke="#ea580c" stroke-width="1.6" marker-end="url(#arrow-orange)"/>
+  <text x="534" y="938" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">导出完成</text>
+  <rect x="405" y="1060" width="230" height="52" rx="6" fill="#111827" stroke="#374151" stroke-width="1.5"/>
+  <text x="520" y="1082" text-anchor="middle" font-size="12" font-weight="600" fill="#ffffff">READY · 版本 accepted</text>
+  <text x="520" y="1100" text-anchor="middle" font-size="10" font-weight="400" fill="#d1d5db">拒绝 → 保持 ready 可下载</text>
+  <path d="M520,1028 V1056" fill="none" stroke="#ea580c" stroke-width="1.6" marker-end="url(#arrow-orange)"/>
+  <text x="534" y="1046" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">接受</text>
+  <rect x="980" y="180" width="340" height="800" rx="12" fill="#fafafa" stroke="#d1d5db" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="1150" y="208" text-anchor="middle" font-size="13" font-weight="600" fill="#111827">可选 · 试映与局部改稿</text>
+  <text x="1150" y="226" text-anchor="middle" font-size="9.5" font-weight="400" fill="#6b7280">独立 preview run / revision run · 未选建议零改稿</text>
+  <path d="M635,894 H940 V292 H1004" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#arrow-gray)" stroke-dasharray="6,4"/>
+  <text x="790" y="882" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">合格冻结版本（可选试映）</text>
+  <polygon points="1010.0,290 1150,252.0 1290.0,290 1150,328.0" fill="#fed7aa" stroke="#fdba74" stroke-width="1.5"/>
+  <text x="1150" y="288" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">闸门 preview_conditions</text>
+  <text x="1150" y="305" text-anchor="middle" font-size="10" fill="#6b7280">冻结场景 + 预算确认</text>
+  <path d="M1150,328 V356" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <text x="1162" y="348" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">逐段执行</text>
+  <rect x="1000" y="360" width="300" height="160" rx="10" fill="#ffffff" stroke="#c7d2fe" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <rect x="1025" y="385" width="200" height="56" rx="8" fill="#e0e7ff" stroke="#a5b4fc" stroke-width="1.5"/>
+  <text x="1125.0" y="409.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">simulated_audience</text>
+  <text x="1125.0" y="427.0" text-anchor="middle" font-size="11" fill="#6b7280">read_segment（逐段 · 只见四字段）</text>
+  <path d="M1225,398 C1288,378 1288,448 1225,432" fill="none" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrow-purple)"/>
+  <text x="1150" y="472" text-anchor="middle" font-size="9.5" font-weight="400" fill="#6b7280">循环：投影 → read_segment → 提交事件 → 推进</text>
+  <text x="1150" y="490" text-anchor="middle" font-size="9.5" font-weight="400" fill="#9ca3af">exit 结束本会话 · 超时 incomplete（不伪造 exit）</text>
+  <path d="M1150,520 V541" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <text x="1162" y="536" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">全部会话结束</text>
+  <rect x="1030" y="545" width="240" height="40" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="1150.0" y="570.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">程序指标 Metrics（0 模型）</text>
+  <path d="M1150,585 V606" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <rect x="1030" y="610" width="240" height="54" rx="8" fill="#fef9c3" stroke="#fde047" stroke-width="1.5"/>
+  <text x="1150.0" y="633.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">data_analyst · diagnose_preview</text>
+  <text x="1150.0" y="651.0" text-anchor="middle" font-size="11" fill="#6b7280">片段诊断（finding 引用真实事件）</text>
+  <path d="M1150,664 V703" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <text x="1162" y="688" text-anchor="middle" font-size="9.5" font-weight="400" fill="#6b7280">建议展示（模板渲染 0 模型）</text>
+  <polygon points="1010.0,745 1150,707.0 1290.0,745 1150,783.0" fill="#fed7aa" stroke="#fdba74" stroke-width="1.5"/>
+  <text x="1150" y="743" text-anchor="middle" font-size="12" font-weight="600" fill="#111827">闸门 select_findings</text>
+  <text x="1150" y="760" text-anchor="middle" font-size="10" fill="#6b7280">选择 finding / 范围 / 预算</text>
+  <path d="M1150,783 V811" fill="none" stroke="#ea580c" stroke-width="1.6" marker-end="url(#arrow-orange)"/>
+  <text x="1162" y="800" text-anchor="middle" font-size="10" font-weight="400" fill="#6b7280">选中 finding</text>
+  <rect x="1030" y="815" width="240" height="52" rx="8" fill="#dcfce7" stroke="#86efac" stroke-width="1.5"/>
+  <text x="1150.0" y="837.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">content_creator · revise（局部）</text>
+  <text x="1150.0" y="855.0" text-anchor="middle" font-size="11" fill="#6b7280">scope 校验 · 未选片段不变</text>
+  <path d="M1150,867 V881" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <rect x="1030" y="885" width="240" height="48" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="1150.0" y="905.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#111827">rules → assess_content → export v2</text>
+  <text x="1150.0" y="923.0" text-anchor="middle" font-size="11" fill="#6b7280">保留旧 ready/accepted 版本</text>
+  <path d="M1290,745 H1372" fill="none" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrow-purple)" stroke-dasharray="5,3"/>
+  <text x="1380" y="740" text-anchor="start" font-size="10" font-weight="400" fill="#9333ea">未选择 → 零改稿</text>
+  <path d="M1270,909 H1372" fill="none" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrow-purple)" stroke-dasharray="5,3"/>
+  <text x="1380" y="904" text-anchor="start" font-size="10" font-weight="400" fill="#9333ea">重测：新 run + 新预算</text>
+  <text x="770" y="1150" text-anchor="middle" font-size="13" font-weight="600" fill="#111827">统一交互通道 · 七个 Agent 互不直接调用 —— 模型输出 next_agent / goto /「已获批准」不参与调度</text>
+  <rect x="76" y="1166" width="230" height="46" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="191.0" y="1185.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">LangGraph 节点</text>
+  <text x="191.0" y="1203.0" text-anchor="middle" font-size="9.5" fill="#6b7280">StateGraph + 条件边</text>
+  <path d="M306,1189 H362" fill="none" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrow-purple)"/>
+  <rect x="366" y="1166" width="230" height="46" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="481.0" y="1185.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">AgentAdapter.invoke</text>
+  <text x="481.0" y="1203.0" text-anchor="middle" font-size="9.5" fill="#6b7280">AgentCall → AgentResult</text>
+  <path d="M596,1189 H652" fill="none" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrow-purple)"/>
+  <rect x="656" y="1166" width="230" height="46" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="771.0" y="1185.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">Gateway</text>
+  <text x="771.0" y="1203.0" text-anchor="middle" font-size="9.5" fill="#6b7280">预算 · 回执重放 · 取消 fence</text>
+  <path d="M886,1189 H942" fill="none" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrow-purple)"/>
+  <rect x="946" y="1166" width="230" height="46" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="1061.0" y="1185.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">Repository（SQLite）</text>
+  <text x="1061.0" y="1203.0" text-anchor="middle" font-size="9.5" fill="#6b7280">领域事实源 · 版本/闸门/账本</text>
+  <path d="M1176,1189 H1232" fill="none" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrow-purple)"/>
+  <rect x="1236" y="1166" width="230" height="46" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="1351.0" y="1185.0" text-anchor="middle" font-size="11.5" font-weight="600" fill="#111827">七角色 Mock / 真实</text>
+  <text x="1351.0" y="1203.0" text-anchor="middle" font-size="9.5" fill="#6b7280">live 不回退 Mock</text>
+  <line x1="76" y1="1252" x2="116" y2="1252" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow-blue)"/>
+  <text x="122" y="1256" text-anchor="start" font-size="10" font-weight="400" fill="#6b7280">主链数据流</text>
+  <line x1="256" y1="1252" x2="296" y2="1252" stroke="#ea580c" stroke-width="1.6" marker-end="url(#arrow-orange)"/>
+  <text x="302" y="1256" text-anchor="start" font-size="10" font-weight="400" fill="#6b7280">用户闸门/决策</text>
+  <line x1="456" y1="1252" x2="496" y2="1252" stroke="#9333ea" stroke-width="1.6" marker-end="url(#arrow-purple)"/>
+  <text x="502" y="1256" text-anchor="start" font-size="10" font-weight="400" fill="#6b7280">循环/修订/协议调用</text>
+  <line x1="676" y1="1252" x2="716" y2="1252" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="6,4" marker-end="url(#arrow-gray)"/>
+  <text x="722" y="1256" text-anchor="start" font-size="10" font-weight="400" fill="#6b7280">可选分支/记录</text>
+  <text x="1466" y="1256" text-anchor="end" font-size="10" font-weight="400" fill="#9ca3af">证据分级：接口检查 ✓ · Mock 流程 ✓ · 真实联调/模型/用户 ✗ 待接入</text>
+</svg>
