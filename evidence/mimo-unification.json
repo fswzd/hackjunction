@@ -1,0 +1,75 @@
+{
+  "evidence_kind": "model_backend_unified_mimo",
+  "mode": "real_model_single_connectivity_call + offline_adapter_tests",
+  "observed_at": "2026-11-07T04:39:21.062191+00:00",
+  "model_id": "mimo-v2.6-pro",
+  "base_url": "https://api.xiaomimimo.com/anthropic",
+  "commands": [
+    {
+      "cmd": "python -m pytest tests/adapters tests/agents -q",
+      "cwd": "birthco-local",
+      "exit_code": 0,
+      "tests_passed": 322
+    },
+    {
+      "cmd": "python tools/check_mimo.py --dry-run",
+      "cwd": "birthco-local",
+      "exit_code": 0
+    },
+    {
+      "cmd": "python tools/check_mimo.py --live --max-calls 1",
+      "cwd": "birthco-local",
+      "exit_code": 0,
+      "result": {
+        "call_status": "received",
+        "finish_reason": "end_turn",
+        "provider_request_id": "05c3e820-7b19-4703-b087-72bd9bb31e90_ff05a6edd7034bdcba9f7246270878ad",
+        "usage": {
+          "input": 34,
+          "output": 23,
+          "total": 57
+        },
+        "response_hash": "e2c92521e8452e0d72796e7ed22aaca21b935c1b307acb1be88b7437d28c8103",
+        "text_preview": "{\"ok\":true}",
+        "evidence_class": "real_model_single_connectivity_call"
+      }
+    }
+  ],
+  "changed_files": [
+    ".env",
+    ".gitignore",
+    "birthco-local/backend/adapters/model/mimo.py",
+    "birthco-local/backend/adapters/model/factory.py",
+    "birthco-local/tools/check_mimo.py",
+    "birthco-local/tests/adapters/model/test_mimo.py",
+    "birthco-local/tests/agents/test_team_demo.py",
+    "birthco-local/tools/run_analyst.py",
+    "birthco-local/tools/run_audience.py",
+    "birthco-local/tools/run_director.py",
+    "birthco-local/tools/run_operator.py",
+    "birthco-local/tools/run_pr_analyst.py",
+    "birthco-local/tools/run_reviewer.py",
+    "birthco-local/tools/run_scout.py",
+    "birthco-local/完整使用说明.md",
+    "birthco-local/README.md",
+    "birthco-local/OPERATOR.md",
+    "birthco-local/DIRECTOR.md",
+    "birthco-local/REVIEWER.md",
+    "birthco-local/SCOUT.md",
+    "birthco-local/AUDIENCE.md",
+    "birthco-local/ANALYST.md",
+    "birthco-local/PR_ANALYST.md"
+  ],
+  "legacy_untouched": [
+    "birthco-local/backend/adapters/model/qwen.py",
+    "birthco-local/tools/check_qwen.py",
+    "birthco-local/tests/adapters/model/test_transport.py",
+    "birthco-local/tests/adapters/model/test_redaction.py"
+  ],
+  "security_note": "MiMo Key 曾明文存在于 git 历史(an.py)与聊天记录；正式接线前必须轮换。.env 已 gitignore。",
+  "not_tested_here": [
+    "seven-agent real adapter binding (audience in progress)",
+    "budget ledger integration for live usage",
+    "multi-call live quality"
+  ]
+}

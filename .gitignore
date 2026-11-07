@@ -21,3 +21,6 @@ results/
 *.key
 archive/private/
 .restructure/
+
+# 模型凭据只放本地环境，禁止入库
+.env
