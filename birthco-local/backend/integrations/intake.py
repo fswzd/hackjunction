@@ -57,6 +57,7 @@ def import_via_adapter(db_path, external_account_id: str, *, count: int = 10) ->
         db_path, external_account_id, [w.model_dump() for w in works], source="adapter")
     account = storage.get_external_account(db_path, external_account_id)
     storage.set_session_state(db_path, external_account_id, status="logged_in")
+    storage.update_meta(db_path, external_account_id, {"import_error": None})
     return {"imported": len(inserted), "baseline_plays": account["baseline_plays"],
             "imported_count": account["imported_count"]}
 
@@ -64,6 +65,23 @@ def import_via_adapter(db_path, external_account_id: str, *, count: int = 10) ->
 def mark_pending_adapter(db_path, external_account_id: str) -> dict:
     return storage.set_session_state(db_path, external_account_id,
                                      status="pending_adapter_setup")
+
+
+AUTH_ERROR_MARKERS = ("登录已过期", "未登录", "会话不存在", "会话无效",
+                      "not logged in", "unauthorized", "401")
+
+
+def _is_auth_error(text: str) -> bool:
+    lowered = text.lower()
+    return any(marker.lower() in lowered for marker in AUTH_ERROR_MARKERS)
+
+
+def mark_import_failure(db_path, external_account_id: str, exc: Exception,
+                        *, fallback: str) -> dict:
+    """导入失败归类：登录类错误置 expired（会话不被平台认可，需重扫），
+    否则置 fallback——绝不让"平台不认的会话"停留在 logged_in 假象上。"""
+    status = "expired" if _is_auth_error(str(exc)) else fallback
+    return storage.set_session_state(db_path, external_account_id, status=status)
 
 
 def delete_account(db_path, external_account_id: str) -> dict:
@@ -114,10 +132,13 @@ def login_and_import(db_path, external_account_id: str, *, count: int = 10) -> d
     try:
         return import_via_adapter(db_path, external_account_id, count=count)
     except Exception as exc:
-        # 会话已建立，仅实绩抓取失败：记录错误，可稍后用 import 重试或 manual 补录
+        # 记录错误并归类：登录类错误置 expired（刚存的会话平台不认，等于没接上），
+        # 其余保持 logged_in（会话有效，仅数据通道故障），可重试或 manual 补录
         storage.update_meta(db_path, external_account_id, {"import_error": str(exc)})
+        mark_import_failure(db_path, external_account_id, exc, fallback="logged_in")
         latest = storage.get_external_account(db_path, external_account_id)
         return {"imported": 0, "import_error": str(exc),
+                "session_status": latest["session_status"],
                 "baseline_plays": latest["baseline_plays"],
                 "imported_count": latest["imported_count"]}
 

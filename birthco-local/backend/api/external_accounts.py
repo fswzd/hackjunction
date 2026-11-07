@@ -83,7 +83,11 @@ def import_history(external_account_id: str):
         return success({"error": {"code": "SCHEMA_INVALID", "detail": str(exc)}}, 400)
     except Exception as exc:  # adapter 抓取失败等：保留可操作提示，不产生半截数据
         try:
-            storage.mark_pending_adapter(current_app.config["DB_PATH"], external_account_id)
+            storage.update_meta(current_app.config["DB_PATH"], external_account_id,
+                                {"import_error": str(exc)})
+            # 登录类错误置 expired（别再显示"已登录"），其余 pending_adapter_setup
+            intake.mark_import_failure(current_app.config["DB_PATH"], external_account_id,
+                                       exc, fallback="pending_adapter_setup")
         except Exception:
             pass  # 状态回写失败不得掩盖真实抓取错误
         return success({"error": {"code": "MODEL_UNAVAILABLE",
@@ -144,9 +148,12 @@ def login_external_account(external_account_id: str):
 def external_account_status(external_account_id: str):
     storage.ensure_integration_tables(current_app.config["DB_PATH"])
     try:
-        return success(intake.status(current_app.config["DB_PATH"], external_account_id))
+        payload = intake.status(current_app.config["DB_PATH"], external_account_id)
     except KeyError:
         return success({"error": {"code": "NOT_FOUND", "detail": "unknown external account"}}, 404)
+    thread = _login_jobs.get(external_account_id)
+    payload["job_running"] = bool(thread and thread.is_alive())
+    return success(payload)
 
 
 @blueprint.delete("/api/v1/accounts/external/<external_account_id>")

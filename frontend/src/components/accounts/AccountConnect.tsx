@@ -77,7 +77,7 @@ export function AccountConnect() {
 
   const pollUntilDone = async (externalId: string) => {
     polling.current = true;
-    const deadline = Date.now() + 210_000;
+    const deadline = Date.now() + 240_000;
     try {
       while (Date.now() < deadline && polling.current) {
         await sleep(2000);
@@ -94,16 +94,11 @@ export function AccountConnect() {
               : item,
           ),
         );
-        if (status.session_status === "logged_in") return status;
-        if (status.login_error) return status;
-        if (
-          status.session_status !== "logging_in" &&
-          status.session_status !== "none"
-        ) {
-          // pending_adapter_setup / expired：登录线程已结束
-          return status;
-        }
-        // logging_in（等扫码）或刚复位的 none：继续观察至超时
+        // 登录线程（含扫码 + 自动抓取）全部结束才下结论，
+        // 避免"登录成功"假象先于抓取结果出现
+        const running =
+          Boolean(status.job_running) || status.session_status === "logging_in";
+        if (!running) return status;
       }
       return await client.status(externalId);
     } finally {
@@ -157,7 +152,11 @@ export function AccountConnect() {
         await client.remove(target).catch(() => undefined);
         const reason =
           status.login_error ??
-          (status.session_status === "logging_in" ? "登录等待超时" : "登录未完成");
+          (status.import_error
+            ? `平台不认这次登录：${status.import_error}`
+            : status.session_status === "logging_in"
+              ? "登录等待超时"
+              : `状态 ${status.session_status}`);
         setMessage({
           tone: "error",
           text: `登录失败（${reason}），账号未添加。可修改信息后重试；如需补录历史实绩，请用「手动导入 JSON」（会登记该账号）。`,

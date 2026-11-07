@@ -36,6 +36,8 @@ export interface ExternalAccountStatus {
   import_error: string | null;
   imported_count: number;
   baseline_plays: number | null;
+  /** 后端登录/导入线程仍在运行（前端据此等最终结果再下结论） */
+  job_running?: boolean;
 }
 
 export interface ManualVideo {

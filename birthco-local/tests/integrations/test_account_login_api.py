@@ -146,3 +146,38 @@ def test_delete_external_account_rolls_back_registration(tmp_path):
                           headers={**headers, "Idempotency-Key": "deleteext2234567890ab"},
                           base_url=BASE)
     assert again.status_code == 404, "重复删除返回 404 而非假成功"
+
+
+def test_import_auth_error_marks_expired_not_logged_in(tmp_path, monkeypatch):
+    client, headers = _client(tmp_path)
+    external_id = _register(client, headers)
+
+    def boom(db_path, external_account_id, *, count=10):
+        raise RuntimeError("接口返回失败：登录已过期")
+
+    monkeypatch.setattr(intake, "import_via_adapter", boom)
+    response = client.post(f"/api/v1/accounts/external/{external_id}/import",
+                           headers={**headers, "Idempotency-Key": "autherr12345678901ab"},
+                           base_url=BASE, json={"source": "adapter", "count": 5})
+    assert response.status_code == 502
+    status = client.get(f"/api/v1/accounts/external/{external_id}/status",
+                        base_url=BASE).get_json()["data"]
+    assert status["session_status"] == "expired", "平台不认的会话不得停留在已登录假象上"
+    assert "登录已过期" in (status["import_error"] or "")
+
+
+def test_import_non_auth_error_marks_pending(tmp_path, monkeypatch):
+    client, headers = _client(tmp_path)
+    external_id = _register(client, headers)
+
+    def boom(db_path, external_account_id, *, count=10):
+        raise RuntimeError("抓取失败：平台路由已变化")
+
+    monkeypatch.setattr(intake, "import_via_adapter", boom)
+    response = client.post(f"/api/v1/accounts/external/{external_id}/import",
+                           headers={**headers, "Idempotency-Key": "routeerr1234567890ab"},
+                           base_url=BASE, json={"source": "adapter", "count": 5})
+    assert response.status_code == 502
+    status = client.get(f"/api/v1/accounts/external/{external_id}/status",
+                        base_url=BASE).get_json()["data"]
+    assert status["session_status"] == "pending_adapter_setup", "会话有效仅数据通道故障"
