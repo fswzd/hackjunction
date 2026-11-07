@@ -56,7 +56,7 @@ export function Sidebar({
             {!collapsed ? (
               <div className="min-w-0">
                 <p className="studio-brand truncate">众幕 AI</p>
-                <p className="studio-subtitle truncate">一人内容工作室</p>
+                <p className="studio-subtitle truncate">自媒体创作者工作室</p>
               </div>
             ) : null}
           </Link>

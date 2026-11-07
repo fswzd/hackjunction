@@ -182,7 +182,7 @@ export function Onboarding() {
             <BrandMark size={36} />
             <div>
               <p className="studio-brand text-lg">众幕 AI</p>
-              <p className="studio-subtitle">一人内容工作室</p>
+              <p className="studio-subtitle">自媒体创作者工作室</p>
             </div>
           </div>
 
