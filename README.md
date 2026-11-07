@@ -12,19 +12,19 @@ hackjunction_26.1106 — 多 Agent 自媒体内容系统 · 七角色工作流�
 ```text
 python -m pip install langgraph==1.1.10 jsonschema pytest
 python tools/extract_schemas.py --handoff-root <交接包>/creator-agent-team   # 生成契约资源（已生成）
-python -m pytest tests/five_agent -q          # 55 tests
+python -m pytest tests/five_agent -q          # 86 tests（含 F-03 素材指纹回归）
 python run_mock_demo.py                       # Mock 全流程 + evidence/
 ```
 
-无需 API Key、不联网；Mock 与真实实现同契约，live 模式绝不回退 Mock。
+默认 Mock 零联网零费用；真实 MiMo（mimo-v2.6-pro）已通过单次连通性验证（凭据见 .env）；
+Mock 与真实实现同契约，live 模式绝不回退 Mock。
 
 ## 目录
 
 | 路径 | 内容 |
 |---|---|
 | `backend/workflow/five_agent/` | 契约、Repository、Gateway、投影隔离、规则/指标、Adapter、StateGraph、Driver |
-| `tests/five_agent/` | 契约/主链/分支试映改稿/恢复预算/七角色测试（55 项） |
-| `frontend/` | React 工作台与产品落地页：七角色工位、任务闸门、版本验收、程序化虹彩落地页 |
+| `tests/five_agent/` | 契约/主链/分支试映改稿/恢复预算/七角色/素材指纹测试（86 项）；birthco-local 组件另有 464 项 |
 | `docs/orchestration/` | 交付文档：00 流程图与边表 · 01 契约与接入清单 · 02 编排与 Adapter · 03 确认/版本/预算/恢复 · 04 验证与缺口 · 05 使用说明 |
 | `evidence/` | 接口检查、Mock 流程证据（命令/退出码/调用计数/哈希） |
 | `tools/` | 契约资源提取、langgraph 探针、冒烟 |
@@ -34,8 +34,8 @@ python run_mock_demo.py                       # Mock 全流程 + evidence/
 
 ## 证据分级
 
-[接口检查] ✅ · [Mock 流程] ✅ · [真实 Adapter 联调] ❌（awaiting_owner_handoff）·
-[真实模型] ❌ · [真实用户] ❌ —— 详见 [docs/orchestration/04-verification.md](docs/orchestration/04-verification.md)。
+[接口检查] ✅ · [Mock 流程] ✅ · [真实 Adapter 联调] ❌（运营官桥接已有，装配进 worker 待集成）·
+[真实模型] ◐（MiMo 连通性已验证，内容质量未验收）· [真实用户] ❌ —— 详见 [docs/orchestration/04-verification.md](docs/orchestration/04-verification.md)。
 
 ## 安全提示
 

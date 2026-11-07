@@ -32,6 +32,21 @@ def _fp(payload: dict) -> str:
     return frozen_input_hash(payload, PROMPT_SCHEMA_VERSION)
 
 
+def _material_refs(svc: Services, task_id: str, material_ids: list) -> list:
+    """按任务归属解引用素材，指纹=sha256(canonical({"text": 正文}))（F-03）。
+
+    与真实桥接约定一致（orch_bridge F-O4）：同一素材 ID 指纹随正文变化；
+    缺失引用直接拒绝（INPUT_MISSING），不用 ID 冒充正文哈希。"""
+    rows = {m["id"]: m for m in svc.repo.list_materials(task_id)}
+    refs = []
+    for mid in material_ids:
+        row = rows.get(mid)
+        if row is None:
+            raise DomainError(f"missing material {mid}", "INPUT_MISSING")
+        refs.append({"id": mid, "sha256": object_hash({"text": row["text"]})})
+    return refs
+
+
 def _gate(state: FiveAgentState, svc: Services, kind: str, subject: dict) -> dict:
     gate_id = f"gate_{object_hash({'run': state['run_id'], 'kind': kind, 'subject': subject})[:24]}"
     return svc.repo.prepare_gate(gate_id, state["run_id"], kind, subject)
@@ -481,7 +496,7 @@ def node_draft(state: FiveAgentState, svc: Services) -> dict:
     brief = svc.repo.get_brief(brief_ref["task_id"], brief_ref["brief_version"])
     if not brief["confirmed_at"]:
         raise DomainError("unconfirmed brief: zero creator calls allowed", "ORIGIN_DENIED")
-    material_refs = [{"id": mid, "sha256": object_hash({"text": mid})} for mid in brief["payload"]["material_ids"]]
+    material_refs = _material_refs(svc, state["task_id"], brief["payload"]["material_ids"])
     step_key = step_key_draft(_fp({"brief_ref": brief_ref})[:16])
     input_payload = proj.build_draft_input(brief_ref, material_refs)
     try:
