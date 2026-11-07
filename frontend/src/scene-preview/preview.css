@@ -1,0 +1,112 @@
+html,body,#root{margin:0;width:100%;height:100%;overflow:hidden}
+body{
+  font-family:"Inter Variable","Microsoft YaHei",system-ui,sans-serif;
+  background:#07050c;color:#cfd6ee;
+  -webkit-font-smoothing:antialiased;
+}
+.hud-mono,.anchor,.hud-bar,aside label,.panel-meta,.a-id{
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Consolas,"SFMono-Regular","Microsoft YaHei",monospace;
+}
+header{height:56px;display:flex;gap:16px;align-items:center;padding:0 18px;border-bottom:1px solid rgba(190,205,255,.10);background:#07050c}
+.brand{font-family:"ZCOOL XiaoWei",serif;font-size:22px;color:#e9edff;letter-spacing:.10em}
+header .hud-mono{font-size:10px;letter-spacing:.16em;color:#6d779b;text-transform:uppercase}
+header em{font-style:normal;color:#ff7a8a;margin-left:10px}
+a{color:#9fb2ff;text-decoration:none}
+header a{margin-left:auto;font-size:10px;letter-spacing:.14em}
+
+/* 画布 */
+.viewport{position:absolute;left:0;top:56px;right:300px;bottom:34px;overflow:hidden;background:#07050c}
+.viewport canvas{display:block}
+.loading{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;white-space:nowrap;color:#5c6688;font-size:11px;letter-spacing:.22em}
+
+/* ===== 区域弹窗（赛博风，颜色随区域）===== */
+.anchor{
+  position:absolute;transform:translate(-50%,-100%);
+  display:grid;gap:1px;padding:5px 8px 6px;
+  background:linear-gradient(180deg,rgba(10,8,18,.94),rgba(10,8,18,.70));
+  border:1px solid color-mix(in srgb,var(--c) 34%,transparent);
+  border-left:2px solid var(--c);
+  color:#cfd6f0;font-size:10px;line-height:1.25;letter-spacing:.06em;text-transform:uppercase;
+  cursor:pointer;white-space:nowrap;
+  box-shadow:0 0 18px -6px var(--c),inset 0 0 14px -10px var(--c);
+  backdrop-filter:blur(4px);
+  transition:box-shadow .16s,border-color .16s,transform .16s;
+}
+.anchor::after{
+  content:"";position:absolute;right:-1px;bottom:-1px;width:6px;height:6px;
+  border-right:1px solid var(--c);border-bottom:1px solid var(--c);opacity:.75;
+}
+.anchor:hover,.anchor.chosen{
+  border-color:var(--c);
+  box-shadow:0 0 26px -3px var(--c),inset 0 0 20px -10px var(--c);
+  transform:translate(-50%,-100%) translateY(-2px);
+}
+.anchor .a-id{font-size:8.5px;letter-spacing:.16em;color:var(--c);opacity:.72}
+.anchor b{font-size:11.5px;font-weight:600;letter-spacing:.10em;color:#f2f5ff}
+.anchor small{font-size:9px;letter-spacing:.12em;color:#98a2c4;display:flex;align-items:center;gap:4px}
+.dot{display:inline-block;width:4px;height:4px;border-radius:50%;background:#5cf2b4;box-shadow:0 0 6px currentColor;color:#5cf2b4}
+.anchor .dot.bad,.panel-meta .bad{color:#ff5a5a}
+.anchor .dot.bad{background:#ff5a5a;box-shadow:0 0 6px #ff5a5a}
+
+/* ===== HUD 装饰：角标 / 十字 / 检测框 ===== */
+.hud-lines{position:absolute;inset:0;pointer-events:none;z-index:1}
+.hud-corner{position:absolute;width:20px;height:20px;border:1px solid rgba(196,210,255,.32)}
+.hud-corner.tl{left:14px;top:14px;border-right:0;border-bottom:0}
+.hud-corner.tr{right:14px;top:14px;border-left:0;border-bottom:0}
+.hud-corner.bl{left:14px;bottom:14px;border-right:0;border-top:0}
+.hud-corner.br{right:14px;bottom:14px;border-left:0;border-top:0}
+​.hud-cross{position:absolute;color:rgba(196,210,255,.45);font-size:11px;line-height:1}
+.hud-cross.c1{left:8%;top:26%}
+.hud-cross.c2{right:15%;top:16%}
+.hud-cross.c3{left:16%;bottom:26%}
+.hud-cross.c4{right:19%;bottom:31%}
+.hud-frame{position:absolute;border:1px solid rgba(196,210,255,.20)}
+.hud-frame.f1{left:27%;top:21%;width:21%;height:19%}
+.hud-frame.f2{right:24%;top:41%;width:13%;height:12%}
+
+/* ===== 底部状态条 ===== */
+.hud-bar{
+  position:absolute;left:0;right:300px;bottom:0;height:34px;
+  display:flex;align-items:center;gap:18px;padding:0 16px;
+  border-top:1px solid rgba(196,210,255,.10);
+  background:linear-gradient(180deg,rgba(7,5,12,0),rgba(7,5,12,.92));
+  font-size:9.5px;letter-spacing:.16em;color:#727c9e;text-transform:uppercase;
+}
+.hud-bar .dot{color:#5cf2b4;background:#5cf2b4;margin-right:6px;vertical-align:middle}
+.hud-alert{color:#ff5a5a;letter-spacing:.14em}
+.hud-bar .right{margin-left:auto;color:#8e98bb}
+
+/* ===== 右侧面板 ===== */
+aside{
+  position:absolute;right:0;top:56px;bottom:0;width:300px;padding:18px;box-sizing:border-box;
+  background:rgba(9,7,16,.94);
+  border-left:1px solid color-mix(in srgb,var(--accent) 26%,transparent);
+  box-shadow:inset 14px 0 30px -30px var(--accent);
+}
+.panel-head{border-bottom:1px solid rgba(196,210,255,.10);padding-bottom:12px;margin-bottom:14px}
+.panel-head .a-id{font-size:9px;letter-spacing:.18em;color:var(--accent);opacity:.8}
+aside h2{font-size:17px;margin:4px 0 10px;color:#eaeeff;letter-spacing:.06em;font-weight:600}
+.panel-meta{display:grid;grid-template-columns:56px 1fr;gap:3px 8px;font-size:9.5px;letter-spacing:.12em;color:#6b7595;text-transform:uppercase}
+.panel-meta b{color:#cdd5f0;font-weight:500}
+aside p{font-size:12px;line-height:1.75;color:#8d97b7;margin:0 0 12px}
+aside label{display:block;font-size:9.5px;letter-spacing:.14em;color:#6b7595;text-transform:uppercase}
+select,aside button,.enter{
+  display:block;width:100%;padding:9px 10px;margin-top:8px;box-sizing:border-box;
+  background:rgba(18,14,30,.92);color:#dfe5ff;
+  border:1px solid color-mix(in srgb,var(--accent) 30%,rgba(196,210,255,.14));
+  border-radius:2px;font-size:11.5px;letter-spacing:.08em;cursor:pointer;
+  transition:border-color .16s,box-shadow .16s;
+}
+select:focus,aside button:hover,.enter:hover{
+  border-color:var(--accent);box-shadow:0 0 18px -6px var(--accent);outline:none;
+}
+.enter{text-align:center;color:#e9edff;margin-top:12px}
+.panel-foot{position:absolute;left:18px;right:18px;bottom:14px;display:flex;gap:10px;flex-wrap:wrap;font-size:9px;letter-spacing:.12em;color:#4e5876;text-transform:uppercase}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* 屏幕质感：暗角 + 细扫描线，只覆盖画布 */
+.viewport::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:
+    radial-gradient(122% 96% at 50% 46%,rgba(0,0,0,0) 52%,rgba(4,3,9,.46) 100%),
+    repeating-linear-gradient(0deg,rgba(190,205,255,.030) 0 1px,rgba(0,0,0,0) 1px 3px);
+}
