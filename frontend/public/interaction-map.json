@@ -1,0 +1,161 @@
+{
+  "version": "v04",
+  "coordinates": "Blender Z up meters; GLB uses Y up",
+  "runtime": "All hover, tooltips, labels and business-panel actions owned by frontend",
+  "objects": [
+    {
+      "object_id": "HitBase_Reception",
+      "visible_base_id": "Sensor_Reception",
+      "region_id": "Region_Reception",
+      "workstation_id": "Workstation_Reception",
+      "region_name": "需求与运营",
+      "label_anchor_id": "LabelAnchor_Reception",
+      "interaction_anchor_id": "Anchor_Reception",
+      "frontend_entry": "/workspace/tasks",
+      "task_detail_template": "/workspace/tasks/:taskId",
+      "label_position_blender": [
+        -10.0,
+        -2.0,
+        5.199999809265137
+      ],
+      "pivot_blender": [
+        -10.0,
+        -0.44999998807907104,
+        0.23499999940395355
+      ],
+      "note": "Select task before opening task detail; no automatic approval"
+    },
+    {
+      "object_id": "HitBase_Inspiration",
+      "visible_base_id": "Sensor_Inspiration",
+      "region_id": "Region_Inspiration",
+      "workstation_id": "Workstation_Inspiration",
+      "region_name": "灵感选题",
+      "label_anchor_id": "LabelAnchor_Inspiration",
+      "interaction_anchor_id": "Anchor_Inspiration",
+      "frontend_entry": "/workspace/tasks",
+      "task_detail_template": "/workspace/tasks/:taskId",
+      "label_position_blender": [
+        -10.0,
+        7.0,
+        5.0
+      ],
+      "pivot_blender": [
+        -10.0,
+        5.449999809265137,
+        0.23499999940395355
+      ],
+      "note": "Select task before opening task detail; no automatic approval"
+    },
+    {
+      "object_id": "HitBase_Creation",
+      "visible_base_id": "Sensor_Creation",
+      "region_id": "Region_Creation",
+      "workstation_id": "Workstation_Creation",
+      "region_name": "内容创作",
+      "label_anchor_id": "LabelAnchor_Creation",
+      "interaction_anchor_id": "Anchor_Creation",
+      "frontend_entry": "/workspace/tasks",
+      "task_detail_template": "/workspace/tasks/:taskId",
+      "label_position_blender": [
+        0.0,
+        7.0,
+        3.799999952316284
+      ],
+      "pivot_blender": [
+        0.0,
+        5.449999809265137,
+        0.23499999940395355
+      ],
+      "note": "Select task before opening task detail; no automatic approval"
+    },
+    {
+      "object_id": "HitBase_Review",
+      "visible_base_id": "Sensor_Review",
+      "region_id": "Region_Review",
+      "workstation_id": "Workstation_Review",
+      "region_name": "独立审稿",
+      "label_anchor_id": "LabelAnchor_Review",
+      "interaction_anchor_id": "Anchor_Review",
+      "frontend_entry": "/workspace/tasks",
+      "task_detail_template": "/workspace/tasks/:taskId",
+      "label_position_blender": [
+        7.0,
+        7.0,
+        3.799999952316284
+      ],
+      "pivot_blender": [
+        7.0,
+        5.449999809265137,
+        0.23499999940395355
+      ],
+      "note": "Select task before opening task detail; no automatic approval"
+    },
+    {
+      "object_id": "HitBase_Theater",
+      "visible_base_id": "Sensor_Theater",
+      "region_id": "Region_Theater",
+      "workstation_id": "Workstation_Theater",
+      "region_name": "观众试映",
+      "label_anchor_id": "LabelAnchor_Theater",
+      "interaction_anchor_id": "Anchor_Theater",
+      "frontend_entry": "/workspace/tasks",
+      "task_detail_template": "/workspace/tasks/:taskId",
+      "label_position_blender": [
+        13.0,
+        0.0,
+        6.0
+      ],
+      "pivot_blender": [
+        8.5,
+        -2.0,
+        0.23499999940395355
+      ],
+      "note": "Select task before opening task detail; no automatic approval"
+    },
+    {
+      "object_id": "HitBase_Analysis",
+      "visible_base_id": "Sensor_Analysis",
+      "region_id": "Region_Analysis",
+      "workstation_id": "Workstation_Analysis",
+      "region_name": "数据分析",
+      "label_anchor_id": "LabelAnchor_Analysis",
+      "interaction_anchor_id": "Anchor_Analysis",
+      "frontend_entry": "/workspace/analytics",
+      "task_detail_template": "/workspace/tasks/:taskId",
+      "label_position_blender": [
+        17.0,
+        6.0,
+        3.799999952316284
+      ],
+      "pivot_blender": [
+        17.0,
+        4.449999809265137,
+        0.23499999940395355
+      ],
+      "note": "Select task before opening task detail; no automatic approval"
+    },
+    {
+      "object_id": "HitBase_Delivery",
+      "visible_base_id": "Sensor_Delivery",
+      "region_id": "Region_Delivery",
+      "workstation_id": "Workstation_Delivery",
+      "region_name": "展示评价",
+      "label_anchor_id": "LabelAnchor_Delivery",
+      "interaction_anchor_id": "Anchor_Delivery",
+      "frontend_entry": "/workspace/tasks",
+      "task_detail_template": "/workspace/tasks/:taskId",
+      "label_position_blender": [
+        2.0,
+        -7.0,
+        3.4000000953674316
+      ],
+      "pivot_blender": [
+        3.5500001907348633,
+        -7.000000476837158,
+        0.23499999940395355
+      ],
+      "note": "Select task before opening task detail; no automatic approval"
+    }
+  ]
+}

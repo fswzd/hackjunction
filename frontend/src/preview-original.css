@@ -1,0 +1,188 @@
+@import "@fontsource-variable/inter";
+@import "tailwindcss";
+
+/* Display face for the brand lockup and the landing headlines. Subset to the
+   characters actually used in the UI so it ships as ~250 kB instead of 6 MB. */
+@font-face {
+  font-family: "ZCOOL XiaoWei";
+  src: url("./assets/fonts/zcool-xiaowei-subset.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --color-ink: #151513;
+  --color-surface: #1d1d19;
+  --color-raised: #272722;
+  --color-line: #3b3a32;
+  --color-text: #eeeade;
+  --color-muted: #aaa79b;
+  --color-blue: #c7a78b;
+  --color-cyan: #b1bca4;
+  --color-violet: #bca8b5;
+  --color-amber: #c7a373;
+  --color-green: #a8b995;
+  --color-red: #d18f7d;
+
+  --font-sans:
+    "Inter Variable", "Inter", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", system-ui, sans-serif;
+  --font-display:
+    "Inter Variable", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+
+  /* Slightly larger UI scale across the workspace. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.55rem;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.7rem;
+}
+
+/* Readability floor for the dense micro-copy utilities used across panels.
+   These rules are unlayered, so they win over the generated utilities. */
+.text-\[8px\] {
+  font-size: 11px;
+}
+
+.text-\[9px\] {
+  font-size: 12px;
+}
+
+.text-\[10px\] {
+  font-size: 12px;
+}
+
+.text-\[11px\] {
+  font-size: 13px;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-blue) 32%, transparent);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 3px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2b3343;
+  border: 3px solid var(--color-ink);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a4457;
+}
+
+@utility hairline {
+  border: 1px solid var(--color-line);
+}
+
+@utility surface {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+}
+
+@utility raised {
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+}
+
+@utility inner-grid {
+  background-image: radial-gradient(ellipse at top left, rgba(199,167,139,.035), transparent 65%);
+}
+
+@utility text-balance {
+  text-wrap: balance;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.45s ease both;
+}
+
+.animate-soft-pulse {
+  animation: soft-pulse 2.6s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 18s linear infinite;
+}
+
+.scroll-mask {
+  mask-image: linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Editorial studio: quiet surfaces, generous typography, a restrained brand. */
+.studio-heading { font-family: "Songti SC", "STSong", "Noto Serif CJK SC", Georgia, serif; font-weight: 400; letter-spacing: -.045em; }
+.studio-brand { font-family: "ZCOOL XiaoWei", "Songti SC", "STSong", Georgia, serif; font-size: 24px; letter-spacing: .1em; line-height: 1.1; }
+.studio-subtitle { color: var(--color-muted); font-size: 12px; letter-spacing: .12em; line-height: 1.5; }
+.studio-intro { border-bottom:1px solid var(--color-line); padding-bottom:28px; margin-bottom:30px; }
+.studio-intro h1 { font-size:clamp(30px,3vw,46px); line-height:1.4; }
+.studio-intro::after { content:"创作 / 审稿 / 试映 / 交付"; display:block; margin-top:24px; color:var(--color-muted); font-size:12px; letter-spacing:.18em; }
+nav[aria-label="主导航"] a { border-radius:2px; height:44px; }
+nav[aria-label="主导航"] a[aria-current="page"] { background:#c7a78b12; border-left:2px solid #c7a78b; }
