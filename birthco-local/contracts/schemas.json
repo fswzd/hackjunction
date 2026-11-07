@@ -2898,12 +2898,54 @@
         "minLength": 1,
         "title": "Name",
         "type": "string"
+      },
+      "creator_stage": {
+        "default": "starting",
+        "enum": [
+          "starting",
+          "operating",
+          "established"
+        ],
+        "title": "Creator Stage",
+        "type": "string"
       }
     },
     "required": [
       "name"
     ],
     "title": "AccountCreate",
+    "type": "object"
+  },
+  "AccountUpdate": {
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "maxLength": 1000,
+        "minLength": 1,
+        "title": "Name",
+        "type": "string"
+      },
+      "creator_stage": {
+        "enum": [
+          "starting",
+          "operating",
+          "established"
+        ],
+        "title": "Creator Stage",
+        "type": "string"
+      },
+      "expected_row_version": {
+        "minimum": 0,
+        "title": "Expected Row Version",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "name",
+      "creator_stage",
+      "expected_row_version"
+    ],
+    "title": "AccountUpdate",
     "type": "object"
   },
   "MemoryCreate": {
@@ -6075,11 +6117,21 @@
         "minimum": 0,
         "title": "Row Version",
         "type": "integer"
+      },
+      "creator_stage": {
+        "enum": [
+          "starting",
+          "operating",
+          "established"
+        ],
+        "title": "Creator Stage",
+        "type": "string"
       }
     },
     "required": [
       "account_id",
       "name",
+      "creator_stage",
       "row_version"
     ],
     "title": "AccountRead",

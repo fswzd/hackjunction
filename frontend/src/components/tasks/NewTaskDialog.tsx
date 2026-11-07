@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { useWorkspace } from "@/store/workspace";
+import { creatorStageMeta } from "@/domain/profile";
 import { cn } from "@/lib/format";
 
 const FORMATS = ["短视频", "图文", "长视频", "播客"];
@@ -24,7 +25,9 @@ export function NewTaskDialog() {
   const openNewTask = useWorkspace((state) => state.openNewTask);
   const createTask = useWorkspace((state) => state.createTask);
   const projects = useWorkspace((state) => state.snapshot?.projects ?? []);
+  const profile = useWorkspace((state) => state.snapshot?.profile);
   const mode = useWorkspace((state) => state.mode);
+  const stage = creatorStageMeta(profile?.creatorStage);
   const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
@@ -138,6 +141,13 @@ export function NewTaskDialog() {
           </Button>
         </div>
 
+        <div className="flex items-start gap-2 rounded-xl border border-line bg-raised/40 px-3.5 py-2.5">
+          <span className="mt-0.5 shrink-0 rounded-full border border-blue/30 bg-blue/10 px-2 py-0.5 text-[10px] font-medium text-blue">
+            {stage.label}
+          </span>
+          <p className="text-[11px] leading-5 text-muted">{stage.hint}</p>
+        </div>
+
         <label className="block">
           <span className="mb-1.5 block text-xs font-medium text-text">
             任务标题
@@ -165,7 +175,7 @@ export function NewTaskDialog() {
           />
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1.5 block text-xs font-medium text-text">
               目标受众
@@ -196,7 +206,7 @@ export function NewTaskDialog() {
           </label>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <fieldset>
             <legend className="mb-1.5 text-xs font-medium text-text">
               内容形式

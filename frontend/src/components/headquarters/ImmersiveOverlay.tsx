@@ -39,8 +39,8 @@ export function ImmersiveOverlay() {
       />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between p-5">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.24em] text-muted">
-            众幕 AI · Immersive Headquarters
+          <p className="text-[10px] tracking-[0.16em] text-muted">
+            众幕 AI · 协作现场
           </p>
           <h2 className="mt-1 text-balance text-xl font-semibold tracking-tight text-text">
             {snapshot.profile?.workspaceName || "我的内容工作室"}

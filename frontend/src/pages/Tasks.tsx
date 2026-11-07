@@ -152,7 +152,7 @@ export function Tasks() {
   return (
     <div className="space-y-5">
       <SectionHeader
-        eyebrow="Tasks"
+        eyebrow="任务"
         title="任务中心"
         description="从发起到审批的完整闭环。状态来自适配层，不因动画自动完成。"
         action={
@@ -251,7 +251,7 @@ export function Tasks() {
       </div>
 
       {view === "board" ? (
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {board.map((column) => (
             <section key={column.key} className="rounded-2xl border border-line bg-surface/60 p-3">
               <header className="mb-3 flex items-center gap-2 px-1">

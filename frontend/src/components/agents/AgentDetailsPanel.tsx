@@ -76,8 +76,8 @@ export function AgentDetailsPanel({
               <h2 className="truncate text-base font-semibold">{agent.name}</h2>
               <AgentStatusBadge status={agent.status} />
             </div>
-            <p className="mt-0.5 text-[11px] uppercase tracking-[0.14em] text-muted">
-              {agent.role}
+            <p className="mt-0.5 text-[11px] tracking-[0.1em] text-muted">
+              {meta.capabilities.slice(0, 2).join(" · ")}
             </p>
           </div>
           <button

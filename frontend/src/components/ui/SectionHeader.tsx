@@ -23,7 +23,7 @@ export function SectionHeader({
     >
       <div>
         {eyebrow ? (
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted">
+          <p className="mb-2 text-[11px] font-medium tracking-[0.14em] text-muted">
             {eyebrow}
           </p>
         ) : null}

@@ -20,7 +20,7 @@ export function Avatar({
       style={{
         width: size,
         height: size,
-        fontSize: Math.max(11, size * 0.34),
+        fontSize: Math.max(12, size * 0.34),
         color: accent,
         borderColor: `color-mix(in srgb, ${accent} 35%, transparent)`,
         backgroundColor: `color-mix(in srgb, ${accent} 12%, transparent)`,

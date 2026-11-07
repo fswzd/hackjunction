@@ -185,11 +185,16 @@ class Repository:
     def __init__(self, db_path: Path | str):
         self.db_path = Path(db_path)
 
-    def create_account(self, name: str) -> str:
+    def create_account(self, name: str, creator_stage: str = "starting") -> str:
+        if creator_stage not in {"starting", "operating", "established"}:
+            raise ValueError("invalid creator_stage")
         account_id = _id("a_")
         with connect(self.db_path) as db:
             with immediate(db):
-                db.execute("INSERT INTO accounts(id,name) VALUES(?,?)", (account_id, name))
+                db.execute(
+                    "INSERT INTO accounts(id,name,creator_stage) VALUES(?,?,?)",
+                    (account_id, name, creator_stage),
+                )
         return account_id
 
     def create_task(self, task: CreateTask, *, mode: str = "mock", idempotency_key: str | None = None) -> dict:

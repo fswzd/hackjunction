@@ -130,7 +130,7 @@ function AgentRow({ agent }: { agent: AgentVM }) {
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium">{agent.name}</p>
         <p className="truncate text-[10px] text-muted">
-          {agent.activeTaskTitle ?? meta.role}
+          {agent.activeTaskTitle ?? meta.capabilities[0]}
         </p>
       </div>
       <AgentStatusBadge status={agent.status} />
@@ -166,7 +166,7 @@ export function Overview() {
     <div className="space-y-6">
       <SectionHeader
         className="studio-intro"
-        eyebrow={`STUDIO JOURNAL / ${formatDay(new Date().toISOString())}`}
+        eyebrow={`${formatDay(new Date().toISOString())} · 工作台`}
         title={`${greeting}，${profile?.creatorName ?? "创作者"}`}
         description={`这里是「${
           profile?.workspaceName ?? "我的内容工作室"
@@ -213,11 +213,11 @@ export function Overview() {
           selectedAgentId={selectedAgentId}
           onSelectAgent={selectAgent}
           onToggleImmersive={() => setImmersive(true)}
-          className="h-[340px] w-full sm:h-[420px] lg:h-[460px]"
+          className="h-[400px] w-full sm:h-[500px] lg:h-[560px]"
         />
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3">
           <p className="text-[10px] leading-5 text-muted">
-            点击工位或角色标签，查看当前任务与产物
+            点击工位查看角色 · 双击画面放大 · ⌘ + 滚轮缩放
           </p>
           <button
             type="button"
@@ -229,7 +229,7 @@ export function Overview() {
         </div>
       </section>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           icon={<Users size={15} />}
           label="在线员工"
@@ -260,7 +260,7 @@ export function Overview() {
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="space-y-4 xl:col-span-2">
           <Card>
             <CardHeader>
@@ -320,7 +320,7 @@ export function Overview() {
             </CardHeader>
             <CardBody>
               {completed.length ? (
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {completed.slice(0, 4).map((task) => {
                     const status = TASK_STATUS_META[task.status];
                     return (

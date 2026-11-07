@@ -26,6 +26,7 @@ import type {
   TaskVM,
   WorkspaceSnapshot,
 } from "@/domain/types";
+import { creatorStageMeta, normalizeProfile } from "@/domain/profile";
 import type { WorkspaceAdapter } from "./types";
 
 /** v3 invalidates snapshots produced by the old four-role model. */
@@ -619,6 +620,7 @@ function readSnapshot(): WorkspaceSnapshot {
     return {
       ...parsed,
       agents: derivedAgents(parsed.tasks, parsed.agents),
+      profile: normalizeProfile(parsed.profile),
     };
   } catch {
     return seedSnapshot();
@@ -666,7 +668,7 @@ export class MockWorkspaceAdapter implements WorkspaceAdapter {
     const snapshot = readSnapshot();
     return writeSnapshot({
       ...snapshot,
-      profile,
+      profile: normalizeProfile(profile),
       updatedAt: iso(),
     });
   }
@@ -674,6 +676,7 @@ export class MockWorkspaceAdapter implements WorkspaceAdapter {
   async createTask(input: CreateTaskInput): Promise<WorkspaceSnapshot> {
     const snapshot = readSnapshot();
     const now = iso();
+    const stage = creatorStageMeta(snapshot.profile?.creatorStage);
     const route = routeSteps({ preview: input.previewRequested });
     const task = makeTask({
       id: makeId("t"),
@@ -693,8 +696,13 @@ export class MockWorkspaceAdapter implements WorkspaceAdapter {
         tone: input.tone,
       },
       events: [
-        event("created", "任务已创建，运营官开始整理 Brief。", "operations_officer", now),
-        event("stage", "Brief 规划进行中。", "operations_officer", now),
+        event(
+          "created",
+          `任务已创建，运营官开始整理 Brief。当前账号阶段：${stage.label}。`,
+          "operations_officer",
+          now,
+        ),
+        event("stage", stage.hint, "operations_officer", now),
       ],
       createdAt: now,
       updatedAt: now,

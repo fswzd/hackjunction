@@ -11,6 +11,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import type { Profile } from "@/domain/types";
+import { CREATOR_STAGES, creatorStageMeta } from "@/domain/profile";
 import { cn } from "@/lib/format";
 import { useWorkspace } from "@/store/workspace";
 import { Button } from "@/components/ui/Button";
@@ -84,6 +85,7 @@ function Row({
 const EMPTY: Profile = {
   creatorName: "",
   workspaceName: "",
+  creatorStage: "starting",
   industry: "",
   niche: "",
   audience: "",
@@ -162,12 +164,12 @@ export function Settings() {
   return (
     <div className="space-y-5">
       <SectionHeader
-        eyebrow="Settings"
+        eyebrow="设置"
         title="设置"
         description="工作空间画像、数据来源与体验偏好。所有演示数据只保存在这台设备的浏览器里。"
       />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <Card>
             <CardHeader>
@@ -180,7 +182,7 @@ export function Settings() {
               <Sparkles size={14} className="text-violet" />
             </CardHeader>
             <CardBody className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-1.5 block text-[11px] font-medium">
                     创作者名字
@@ -208,6 +210,37 @@ export function Settings() {
                   />
                 </label>
               </div>
+              <fieldset>
+                <legend className="mb-1.5 block text-[11px] font-medium">
+                  账号阶段
+                </legend>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {CREATOR_STAGES.map((stage) => (
+                    <button
+                      key={stage.id}
+                      type="button"
+                      onClick={() => update({ creatorStage: stage.id })}
+                      aria-pressed={form.creatorStage === stage.id}
+                      className={cn(
+                        "rounded-xl border p-3 text-left transition",
+                        form.creatorStage === stage.id
+                          ? "border-blue/50 bg-blue/10 text-text"
+                          : "border-line bg-raised text-muted hover:border-[#43506a] hover:text-text",
+                      )}
+                    >
+                      <span className="block text-xs font-medium">
+                        {stage.label}
+                      </span>
+                      <span className="mt-1 block text-[10px] leading-5">
+                        {stage.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-[10px] leading-5 text-muted">
+                  {creatorStageMeta(form.creatorStage).hint}
+                </p>
+              </fieldset>
               <label className="block">
                 <span className="mb-1.5 block text-[11px] font-medium">
                   创作领域
@@ -245,8 +278,8 @@ export function Settings() {
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[10px] leading-5 text-muted">
                   {mode === "demo"
-                    ? "当前保存到 localStorage。画像接口尚未在后端提供，接入后会改为写入数据库。"
-                    : "真实接口模式下画像接口尚未接入，仍使用本地持久化。"}
+                    ? "当前保存到 localStorage；演示模式不会写后端。"
+                    : "真实接口模式：名字、工作空间与账号阶段会写入后端 accounts 表；其他画像字段仍保存在本地。"}
                 </p>
                 <Button
                   variant="primary"
@@ -271,7 +304,7 @@ export function Settings() {
               <Database size={14} className="text-cyan" />
             </CardHeader>
             <CardBody className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => void switchMode("demo")}
@@ -411,6 +444,10 @@ export function Settings() {
             </CardHeader>
             <CardBody className="py-1">
               <Row label="模式" value={mode === "demo" ? "演示" : "真实接口"} />
+              <Row
+                label="账号阶段"
+                value={creatorStageMeta(snapshot.profile?.creatorStage).label}
+              />
               <Row label="员工" value={`${snapshot.agents.length} 位`} />
               <Row label="任务" value={`${snapshot.tasks.length} 个`} />
               <Row label="资产" value={`${snapshot.assets.length} 份`} />

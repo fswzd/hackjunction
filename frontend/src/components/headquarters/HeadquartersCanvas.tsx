@@ -8,6 +8,7 @@ export interface HeadquartersCanvasProps {
   onSelectAgent: (id: AgentId | null) => void;
   immersive: boolean;
   reducedMotion: boolean;
+  userZoom: number;
   onReady: () => void;
 }
 
@@ -21,6 +22,7 @@ export function HeadquartersCanvas({
   onSelectAgent,
   immersive,
   reducedMotion,
+  userZoom,
   onReady,
 }: HeadquartersCanvasProps) {
   return (
@@ -32,14 +34,15 @@ export function HeadquartersCanvas({
         near: -100,
         far: 200,
       }}
-      dpr={[1, 1.6]}
+      dpr={[1, 2]}
       gl={{
         antialias: true,
         powerPreference: "default",
         alpha: false,
       }}
       onCreated={({ gl }) => {
-        gl.setClearColor("#0b0e15");
+        gl.setClearColor("#1c1915");
+        gl.toneMappingExposure = 1.12;
         onReady();
       }}
       onPointerMissed={() => onSelectAgent(null)}
@@ -51,6 +54,7 @@ export function HeadquartersCanvas({
         onSelectAgent={onSelectAgent}
         immersive={immersive}
         reducedMotion={reducedMotion}
+        userZoom={userZoom}
       />
     </Canvas>
   );

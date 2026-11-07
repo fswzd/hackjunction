@@ -466,6 +466,141 @@
             }
           }
         }
+      },
+      "put": {
+        "operationId": "put_accounts_account_id",
+        "x-owner": "A02c",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSuccess_AccountRead_"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountUpdate"
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/tasks": {
@@ -7668,12 +7803,54 @@
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "creator_stage": {
+            "default": "starting",
+            "enum": [
+              "starting",
+              "operating",
+              "established"
+            ],
+            "title": "Creator Stage",
+            "type": "string"
           }
         },
         "required": [
           "name"
         ],
         "title": "AccountCreate",
+        "type": "object"
+      },
+      "AccountUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "creator_stage": {
+            "enum": [
+              "starting",
+              "operating",
+              "established"
+            ],
+            "title": "Creator Stage",
+            "type": "string"
+          },
+          "expected_row_version": {
+            "minimum": 0,
+            "title": "Expected Row Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "creator_stage",
+          "expected_row_version"
+        ],
+        "title": "AccountUpdate",
         "type": "object"
       },
       "MemoryCreate": {
@@ -9112,11 +9289,21 @@
             "minimum": 0,
             "title": "Row Version",
             "type": "integer"
+          },
+          "creator_stage": {
+            "enum": [
+              "starting",
+              "operating",
+              "established"
+            ],
+            "title": "Creator Stage",
+            "type": "string"
           }
         },
         "required": [
           "account_id",
           "name",
+          "creator_stage",
           "row_version"
         ],
         "title": "AccountRead",

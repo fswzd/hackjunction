@@ -148,7 +148,7 @@ export function Assets() {
   return (
     <div className="space-y-5">
       <SectionHeader
-        eyebrow="Assets"
+        eyebrow="资产"
         title="素材库"
         description="所有被批准的内容与已产出的过程材料。演示模式下保存在本地浏览器。"
       />
@@ -196,7 +196,7 @@ export function Assets() {
       </div>
 
       {assets.length ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {assets.map((asset) => (
             <AssetCard
               key={asset.id}
@@ -263,7 +263,7 @@ export function Assets() {
       >
         {active ? (
           <div className="rounded-xl border border-line bg-ink/50 p-4">
-            <pre className="whitespace-pre-wrap break-words font-sans text-[12px] leading-7 text-text/90">
+            <pre className="whitespace-pre-wrap break-words font-sans text-[13px] leading-7 text-text/90">
               {active.body}
             </pre>
           </div>

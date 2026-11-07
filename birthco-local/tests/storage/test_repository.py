@@ -4,7 +4,7 @@ import pytest
 
 from backend.domain.errors import DomainError
 from backend.domain.schemas import CreateTask
-from backend.storage.db import connect, migrate
+from backend.storage.db import VERSION, connect, migrate
 from backend.storage.repository import Repository, Transition, ConfirmBrief
 from backend.manage import backup, reconcile
 
@@ -18,8 +18,11 @@ def test_migration_applies_foreign_keys_and_immutability(tmp_path):
     with connect(path) as db:
         assert db.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         assert db.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal"
-        assert db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == 1
+        assert db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == VERSION
         assert db.execute("SELECT count(*) FROM sqlite_master WHERE type='table'").fetchone()[0] >= 35
+        assert "creator_stage" in {
+            row[1] for row in db.execute("PRAGMA table_info(accounts)")
+        }
         with pytest.raises(sqlite3.IntegrityError):
             db.execute("INSERT INTO runs(id,task_id,kind,state,phase,limits_json,created_at,updated_at) VALUES('r','missing','content','QUEUED','planning','{}','x','x')")
 

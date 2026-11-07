@@ -14,6 +14,7 @@ import type {
   BackendStep,
   BackendTaskState,
   CreateTaskInput,
+  CreatorStage,
   Decision,
   DecisionOptions,
   PendingAction,
@@ -28,6 +29,11 @@ import type {
   WorkspaceSnapshot,
 } from "@/domain/types";
 import { ApiNotWiredError } from "@/domain/types";
+import {
+  creatorStageMeta,
+  normalizeCreatorStage,
+  normalizeProfile,
+} from "@/domain/profile";
 import type { WorkspaceAdapter } from "./types";
 
 const PROFILE_KEY = "creator-os.profile.v2";
@@ -128,6 +134,7 @@ interface SessionInfo {
 interface Account {
   account_id: string;
   name: string;
+  creator_stage: CreatorStage;
   row_version: number;
 }
 
@@ -152,7 +159,7 @@ const BACKEND_STATES: BackendTaskState[] = [
 function readProfile(): Profile | null {
   try {
     const raw = window.localStorage.getItem(PROFILE_KEY);
-    return raw ? (JSON.parse(raw) as Profile) : null;
+    return raw ? normalizeProfile(JSON.parse(raw) as Profile) : null;
   } catch {
     return null;
   }
@@ -160,7 +167,10 @@ function readProfile(): Profile | null {
 
 function writeProfile(profile: Profile): void {
   try {
-    window.localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    window.localStorage.setItem(
+      PROFILE_KEY,
+      JSON.stringify(normalizeProfile(profile)),
+    );
   } catch {
     /* profile persistence is best-effort */
   }
@@ -612,6 +622,7 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
         headers: this.writeHeaders(),
         body: JSON.stringify({
           name: readProfile()?.workspaceName ?? "本地创作者",
+          creator_stage: readProfile()?.creatorStage ?? "starting",
         }),
       },
     );
@@ -620,12 +631,13 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
 
   async load(): Promise<WorkspaceSnapshot> {
     let tasks: TaskVM[] = [];
+    let account: Account | undefined;
     try {
       await this.ensureSession();
       const accounts = await this.request<{ data: Account[] }>(
         "/api/v1/accounts",
       );
-      const account = accounts.data?.[0];
+      account = accounts.data?.[0];
       if (account) {
         const titleCache = readTitleCache();
         const list = await this.request<{ data: BackendTaskSummary[] }>(
@@ -660,6 +672,25 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
     }
 
     const now = new Date().toISOString();
+    const localProfile = readProfile();
+    // The account stage is backend-owned; hydrate it so a second browser or a
+    // cleared localStorage does not silently fall back to "starting".
+    const profile =
+      localProfile && account
+        ? {
+            ...localProfile,
+            creatorStage: normalizeCreatorStage(
+              account.creator_stage ?? localProfile.creatorStage,
+            ),
+          }
+        : localProfile;
+    if (
+      profile &&
+      localProfile &&
+      profile.creatorStage !== localProfile.creatorStage
+    ) {
+      writeProfile(profile);
+    }
     return {
       mode: "api",
       agents: deriveAgents(tasks),
@@ -677,13 +708,50 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
         },
       ],
       assets: [],
-      profile: readProfile(),
+      profile,
       updatedAt: now,
     };
   }
 
   async saveProfile(profile: Profile): Promise<WorkspaceSnapshot> {
-    writeProfile(profile);
+    const normalized = normalizeProfile(profile) ?? profile;
+    writeProfile(normalized);
+    try {
+      await this.ensureSession();
+      const accounts = await this.request<{ data: Account[] }>(
+        "/api/v1/accounts",
+      );
+      const existing = accounts.data?.[0];
+      if (existing) {
+        await this.request(
+          `/api/v1/accounts/${encodeURIComponent(existing.account_id)}`,
+          {
+            method: "PUT",
+            headers: this.writeHeaders(),
+            body: JSON.stringify({
+              name: normalized.workspaceName || existing.name,
+              creator_stage: normalized.creatorStage,
+              expected_row_version: existing.row_version,
+            }),
+          },
+        );
+      } else {
+        await this.request("/api/v1/accounts", {
+          method: "POST",
+          headers: this.writeHeaders(),
+          body: JSON.stringify({
+            name: normalized.workspaceName || "本地创作者",
+            creator_stage: normalized.creatorStage,
+          }),
+        });
+      }
+    } catch (error) {
+      throw new Error(
+        `画像已保存在本地，但同步到后端失败：${
+          error instanceof Error ? error.message : "未知错误"
+        }`,
+      );
+    }
     return this.load();
   }
 
@@ -693,10 +761,12 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
       const account = await this.ensureAccount();
       const title = input.title.trim();
       const objective = `${title}：${input.idea.trim()}`.slice(0, 1000);
+      const stage = creatorStageMeta(readProfile()?.creatorStage);
       // CreateTask has no duration/format fields (format is fixed to "text"),
       // so carry them as explicit creative constraints in requirements.
       const requirementText = [
         input.idea.trim(),
+        `账号阶段：${stage.label}`,
         input.format ? `内容形式：${input.format}` : "",
         input.duration ? `目标时长 / 篇幅：${input.duration}` : "",
       ]

@@ -404,8 +404,18 @@ class OperatorUnlock(Model):
     token: Short
 
 
+CreatorStage = Literal["starting", "operating", "established"]
+
+
 class AccountCreate(Model):
     name: Short
+    creator_stage: CreatorStage = "starting"
+
+
+class AccountUpdate(Model):
+    name: Short
+    creator_stage: CreatorStage
+    expected_row_version: int = Field(ge=0)
 
 
 class MemoryCreate(Model):
@@ -650,6 +660,7 @@ class ArtifactRead(Model):
 class AccountRead(Model):
     account_id: Id
     name: Short
+    creator_stage: CreatorStage
     row_version: int = Field(ge=0)
 
 

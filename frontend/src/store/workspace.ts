@@ -38,6 +38,8 @@ interface WorkspaceState {
   toast: Toast | null;
   init: () => Promise<void>;
   reload: () => Promise<void>;
+  /** Silent API-mode refresh: keeps the last good snapshot on transient errors. */
+  refresh: () => Promise<void>;
   setMode: (mode: "demo" | "api") => Promise<void>;
   completeOnboarding: (profile: Profile) => Promise<void>;
   createTask: (input: CreateTaskInput) => Promise<void>;
@@ -110,6 +112,16 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       set({ status: "ready", snapshot, error: null });
     } catch (error) {
       set({ status: "error", error: errorMessage(error) });
+    }
+  },
+
+  refresh: async () => {
+    if (get().mode !== "api") return;
+    try {
+      const snapshot = await adapter.load();
+      set({ snapshot });
+    } catch {
+      /* polling must not replace a usable workspace with an error screen */
     }
   },
 
