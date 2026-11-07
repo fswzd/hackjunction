@@ -16,6 +16,7 @@ export function AppShell() {
   const advanceOldest = useWorkspace((state) => state.advanceOldest);
   const refresh = useWorkspace((state) => state.refresh);
   const selectedAgentId = useWorkspace((state) => state.selectedAgentId);
+  const immersive = useWorkspace((state) => state.immersive);
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -77,7 +78,7 @@ export function AppShell() {
           </div>
         </main>
       </div>
-      {selectedAgentId ? <AgentDetailsPanel /> : null}
+      {selectedAgentId && !immersive ? <AgentDetailsPanel /> : null}
       <NewTaskDialog />
       <Toast />
       <ImmersiveOverlay />

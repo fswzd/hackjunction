@@ -199,6 +199,107 @@ export default function CourtyardCanvas({
     const ray = new T.Raycaster();
     const pointer = new T.Vector2();
     const ground = new T.Plane(new T.Vector3(0, 1, 0), -0.23);
+    // ---- 光标流光：十字后面的细粒子拖尾（在十字之后、小人身前） ----
+    const TRAIL_MAX = 900;
+    const trailPos = new Float32Array(TRAIL_MAX * 3);
+    const trailVel = new Float32Array(TRAIL_MAX * 3);
+    const trailAlpha = new Float32Array(TRAIL_MAX);
+    const trailLife = new Float32Array(TRAIL_MAX);
+    const trailSpan = new Float32Array(TRAIL_MAX);
+    const trailGeo = new T.BufferGeometry();
+    const trailPosAttr = new T.BufferAttribute(trailPos, 3).setUsage(T.DynamicDrawUsage);
+    const trailAlphaAttr = new T.BufferAttribute(trailAlpha, 1).setUsage(T.DynamicDrawUsage);
+    trailGeo.setAttribute("position", trailPosAttr);
+    trailGeo.setAttribute("aAlpha", trailAlphaAttr);
+    const trailMat = new T.ShaderMaterial({
+      uniforms: {
+        uColor: { value: new T.Color("#eaf3ff") },
+        uSize: { value: 2.2 },
+        uDpr: { value: Math.min(devicePixelRatio, 2) },
+      },
+      vertexShader: `attribute float aAlpha; varying float vA; uniform float uSize; uniform float uDpr;
+void main(){ vA=aAlpha; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_PointSize=uSize*uDpr*(0.45+0.85*aAlpha); gl_Position=projectionMatrix*mv; }`,
+      fragmentShader: `uniform vec3 uColor; varying float vA;
+void main(){ vec2 c=gl_PointCoord-0.5; float d=length(c); if(d>0.5) discard; float a=smoothstep(0.5,0.0,d); gl_FragColor=vec4(uColor,a*vA); }`,
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+      blending: T.AdditiveBlending,
+    });
+    const trail = new T.Points(trailGeo, trailMat);
+    trail.frustumCulled = false;
+    trail.renderOrder = 6;
+    scene.add(trail);
+
+    // 光标落点的微光（让流光有个“源头”，密度看起来更大）
+    const cursorGlowMat = new T.ShaderMaterial({
+      uniforms: { uOpacity: { value: 0 } },
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+      blending: T.AdditiveBlending,
+      vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader: `uniform float uOpacity; varying vec2 vUv; void main(){ float r=length(vUv-0.5)*2.0; float a=pow(max(0.0,1.0-r),2.6)*uOpacity; gl_FragColor=vec4(0.86,0.93,1.0,a); }`,
+    });
+    const cursorGlow = new T.Mesh(new T.PlaneGeometry(0.95, 0.95), cursorGlowMat);
+    cursorGlow.rotation.x = -Math.PI / 2;
+    cursorGlow.position.y = 0.26;
+    cursorGlow.renderOrder = 5;
+    cursorGlow.visible = false;
+    scene.add(cursorGlow);
+    const trailLast = new T.Vector3();
+    let trailReady = false;
+    let trailHead = 0;
+
+    function emitTrail(
+      at: { x: number; z: number },
+      dirX: number,
+      dirZ: number,
+      count: number,
+    ) {
+      for (let k = 0; k < count; k++) {
+        const i = trailHead++ % TRAIL_MAX;
+        const ang = Math.random() * Math.PI * 2;
+        const rad = Math.pow(Math.random(), 0.65) * 0.22;
+        trailPos[i * 3] = at.x + Math.cos(ang) * rad;
+        trailPos[i * 3 + 1] = 0.25 + Math.random() * 0.26;
+        trailPos[i * 3 + 2] = at.z + Math.sin(ang) * rad;
+        trailVel[i * 3] =
+          -dirX * (0.2 + Math.random() * 0.55) + (Math.random() - 0.5) * 0.22;
+        trailVel[i * 3 + 1] = 0.12 + Math.random() * 0.26;
+        trailVel[i * 3 + 2] =
+          -dirZ * (0.2 + Math.random() * 0.55) + (Math.random() - 0.5) * 0.22;
+        // 流光要短：存活时间压到 0.18–0.34s，密度靠发射量堆
+        trailSpan[i] = 0.2 + Math.random() * 0.2;
+        trailLife[i] = trailSpan[i];
+        trailAlpha[i] = 0.95;
+      }
+    }
+
+    function updateTrail(dt: number) {
+      for (let i = 0; i < TRAIL_MAX; i++) {
+        if (trailLife[i] <= 0) {
+          trailAlpha[i] = 0;
+          continue;
+        }
+        trailLife[i] -= dt;
+        if (trailLife[i] <= 0) {
+          trailAlpha[i] = 0;
+          continue;
+        }
+        const damp = Math.max(0, 1 - dt * 3.6);
+        trailVel[i * 3] *= damp;
+        trailVel[i * 3 + 1] *= damp;
+        trailVel[i * 3 + 2] *= damp;
+        trailPos[i * 3] += trailVel[i * 3] * dt;
+        trailPos[i * 3 + 1] += trailVel[i * 3 + 1] * dt;
+        trailPos[i * 3 + 2] += trailVel[i * 3 + 2] * dt;
+        const k = trailLife[i] / trailSpan[i];
+        trailAlpha[i] = k * k * 0.95;
+      }
+      trailPosAttr.needsUpdate = true;
+      trailAlphaAttr.needsUpdate = true;
+    }
     let lastTarget = "";
     let lastMove = 0;
     let rushMode = false;
@@ -327,13 +428,26 @@ export default function CourtyardCanvas({
 
     function rushTo(region: RegionId) {
       if (!user) return;
-      const ring = rings.find((r) => r.userData.region === region);
+      const ring = rings.find(
+        (r) => r.userData.region === region && !r.userData.outer,
+      );
       if (!ring) return;
       const [cx, cz] = cellAt(ring.userData.center as T.Vector3);
       const near = nearestWalkable(cx, cz);
       if (!near) return;
       rushMode = true;
       navigate(point(near[0], near[1]));
+    }
+
+    // 悬停圆圈 / 标签时的冲刺：短时间内不重复寻路，避免抖动
+    let lastSprint = 0;
+    let lastSprintRegion: RegionId | null = null;
+    function sprintTo(region: RegionId) {
+      const now = performance.now();
+      if (region === lastSprintRegion && now - lastSprint < 320) return;
+      lastSprintRegion = region;
+      lastSprint = now;
+      rushTo(region);
     }
 
     new GLTFLoader().load(
@@ -592,6 +706,7 @@ export default function CourtyardCanvas({
             uniforms: { uColor: { value: col.clone() }, uOpacity: { value: 0.34 } },
             transparent: true,
             depthWrite: false,
+            side: T.DoubleSide,
             blending: T.AdditiveBlending,
             vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
             fragmentShader: `uniform vec3 uColor; uniform float uOpacity; varying vec2 vUv; void main(){ float r=length(vUv-0.5)*2.0; float a=pow(max(0.0,1.0-r),3.2)*uOpacity; gl_FragColor=vec4(uColor,a); }`,
@@ -646,6 +761,9 @@ export default function CourtyardCanvas({
         camera.zoom = baseZoom;
         camera.updateProjectionMatrix();
         syncLabels();
+        // 沉浸模式整屏挂载时容器尺寸会晚一拍，补两次投影，保证标签一进来就在
+        window.setTimeout(() => !disposed && syncLabels(), 220);
+        window.setTimeout(() => !disposed && syncLabels(), 900);
       },
       undefined,
       (err) => {
@@ -683,6 +801,8 @@ export default function CourtyardCanvas({
       path = [];
       lastTarget = "";
       rushMode = false;
+      cursorGlow.visible = false;
+      trailReady = false;
       renderer.domElement.style.cursor = "grabbing";
       window.addEventListener("pointerup", onUp);
     };
@@ -708,28 +828,75 @@ export default function CourtyardCanvas({
         syncLabels();
         return;
       }
-      if (e.target !== renderer.domElement) {
-        const t = e.target as HTMLElement;
-        if (!t?.closest || !t.closest(".courtyard-label")) path = [];
+      // 悬停在文字标签上：小人全速冲向该工位（鼠标停着也在跑）
+      const labelHit = (e.target as HTMLElement | null)?.closest?.(
+        ".courtyard-label",
+      ) as HTMLElement | null;
+      if (labelHit) {
+        cursorGlow.visible = false;
+        const region = labelHit.dataset.region as RegionId | undefined;
+        if (region) {
+          hover = region;
+          sprintTo(region);
+        }
         return;
       }
+      if (e.target !== renderer.domElement) return;
       const r = renderer.domElement.getBoundingClientRect();
       pointer.set(
         ((e.clientX - r.left) / r.width) * 2 - 1,
         -((e.clientY - r.top) / r.height) * 2 + 1,
       );
       ray.setFromCamera(pointer, camera);
-      const hits = ray.intersectObjects(rings);
-      hover = (hits[0]?.object.userData.region as RegionId) || null;
+      // 圆环是空心环，正中心射线会穿过去；把底晕圆盘也算进来，做到“圈内即可”
+      const hits = ray.intersectObjects(rings.concat(discs));
+      const hitRegion = (hits[0]?.object.userData.region as RegionId) || null;
+      hover = hitRegion;
       renderer.domElement.style.cursor = hover ? "pointer" : "crosshair";
-      if (hover) {
-        path = [];
+
+      // 命中工位圆圈：全速冲过去，而不是停在原地
+      if (hitRegion) {
+        cursorGlow.visible = false;
+        sprintTo(hitRegion);
         return;
       }
-      if (performance.now() - lastMove < 100) return;
-      lastMove = performance.now();
+
       const p = new T.Vector3();
-      if (ray.ray.intersectPlane(ground, p)) {
+      const onGround = ray.ray.intersectPlane(ground, p);
+      if (onGround) {
+        cursorGlow.visible = true;
+        cursorGlow.position.set(p.x, 0.26, p.z);
+      }
+
+      // 流光不受寻路节流限制，每个 pointermove 都吐粒子
+      if (onGround) {
+        if (trailReady) {
+          const dx = p.x - trailLast.x;
+          const dz = p.z - trailLast.z;
+          const len = Math.hypot(dx, dz);
+          if (len > 0.0015) {
+            // 粒子沿鼠标这一段轨迹均匀铺开：密度大、个体小、拖尾短
+            const n = Math.min(48, 20 + Math.round(len * 40));
+            const ux = dx / len;
+            const uz = dz / len;
+            for (let s = 0; s < n; s++) {
+              const f = (s + Math.random()) / n;
+              const px = trailLast.x + dx * f;
+              const pz = trailLast.z + dz * f;
+              emitTrail({ x: px, z: pz }, ux, uz, 1);
+            }
+            trailLast.copy(p);
+          }
+        } else {
+          trailLast.copy(p);
+          trailReady = true;
+        }
+      }
+
+      if (performance.now() - lastMove < 70) return;
+      lastMove = performance.now();
+      rushMode = false;
+      if (onGround) {
         const key = cellAt(p).join(",");
         if (key !== lastTarget) {
           lastTarget = key;
@@ -742,15 +909,17 @@ export default function CourtyardCanvas({
       path = [];
       lastTarget = "";
       hover = null;
+      cursorGlow.visible = false;
     };
     const onDblClick = () => {
       resetView();
-      api.current?.setZoom(1);
     };
 
     el.addEventListener("pointerdown", onDown);
-    el.addEventListener("pointermove", onMove);
-    el.addEventListener("pointerleave", onLeave);
+    // 悬停/离开挂在整块舞台上：这样鼠标在文字标签上也能触发「跟着跑」
+    const stageEl = el.parentElement ?? el;
+    stageEl.addEventListener("pointermove", onMove);
+    stageEl.addEventListener("pointerleave", onLeave);
     el.addEventListener("dblclick", onDblClick);
 
     // ---- 渲染循环 ----
@@ -768,7 +937,7 @@ export default function CourtyardCanvas({
         v.y = 0;
         if (v.length() < 0.06) path.shift();
         else {
-          const spd = rushMode ? 16 : 6.5;
+          const spd = rushMode ? 30 : 7;
           user.position.add(
             v
               .normalize()
@@ -782,6 +951,10 @@ export default function CourtyardCanvas({
         user.position.y =
           0.23 + (!reducedMotion && moving ? Math.sin(now * 0.018) * 0.035 : 0);
 
+      updateTrail(dt);
+      const glowTarget = cursorGlow.visible ? 0.62 : 0;
+      const gm = cursorGlowMat.uniforms.uOpacity;
+      gm.value += (glowTarget - gm.value) * Math.min(dt * 9, 1);
       const zoomComp = Math.min(1.85, Math.max(1, 1 / camera.zoom));
       const agentsById = new Map(live.current.agents.map((a) => [a.id, a]));
       REGIONS.forEach((region, i) => {
@@ -850,8 +1023,8 @@ export default function CourtyardCanvas({
       ro.disconnect();
       window.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointerdown", onDown);
-      el.removeEventListener("pointermove", onMove);
-      el.removeEventListener("pointerleave", onLeave);
+      stageEl.removeEventListener("pointermove", onMove);
+      stageEl.removeEventListener("pointerleave", onLeave);
       el.removeEventListener("dblclick", onDblClick);
       renderer.dispose();
       renderer.domElement.remove();
@@ -868,8 +1041,9 @@ export default function CourtyardCanvas({
   return (
     <div className={"courtyard-stage" + (immersive ? " is-immersive" : "")}>
       <div ref={host} className="courtyard-host" />
-      {!immersive &&
-        labels.map(({ region, x, y }) => {
+      {labels
+        .filter((l) => l.x > -4000)
+        .map(({ region, x, y }) => {
           const i = REGIONS.indexOf(region);
           const agent = agents.find((a) => a.id === REGION_AGENT[region]);
           const status = agent ? STATUS_META[agent.status] : null;
@@ -879,6 +1053,7 @@ export default function CourtyardCanvas({
             <button
               key={region}
               type="button"
+              data-region={region}
               className={"courtyard-label" + (selected ? " is-selected" : "")}
               style={
                 {

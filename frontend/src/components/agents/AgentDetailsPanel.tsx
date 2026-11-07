@@ -38,25 +38,20 @@ export function AgentDetailsPanel({
 
   return (
     <>
-      {panelOpen && !floating ? (
-        <button
-          type="button"
-          aria-label="关闭员工详情"
-          onClick={() => selectAgent(null)}
-          className="fixed inset-0 z-40 bg-ink/60 backdrop-blur-sm lg:hidden"
-        />
-      ) : null}
       <aside
         aria-label={`${agent.name} 详情`}
         className={cn(
-          "flex w-full flex-col overflow-hidden border-line bg-surface",
+          "flex flex-col overflow-hidden border border-line bg-surface",
           floating
-            ? "relative max-h-[calc(100vh-9rem)] w-[min(92vw,380px)] rounded-2xl border shadow-[0_30px_100px_-20px_rgba(0,0,0,0.9)]"
+            ? "relative max-h-[calc(100vh-11rem)] w-[min(92vw,380px)] rounded-2xl shadow-[0_30px_100px_-20px_rgba(0,0,0,0.9)]"
             : cn(
-                "fixed inset-y-0 right-0 z-50 border-l transition-transform duration-300 lg:static lg:z-auto lg:w-[380px] lg:shrink-0",
+                // 卡片式浮层：不再从顶部拉到底部，也不会挤压页面布局
+                "fixed inset-x-3 bottom-3 top-[4.75rem] z-50 rounded-2xl bg-surface/95 shadow-[0_30px_100px_-20px_rgba(0,0,0,0.9)] backdrop-blur",
+                "sm:inset-x-auto sm:right-4 sm:top-[4.75rem] sm:bottom-auto sm:max-h-[min(660px,calc(100vh-6.5rem))] sm:w-[380px]",
+                "transition-[opacity,transform] duration-200",
                 panelOpen
-                  ? "translate-x-0"
-                  : "translate-x-full lg:hidden",
+                  ? "translate-y-0 opacity-100"
+                  : "pointer-events-none translate-y-2 opacity-0",
               ),
         )}
       >

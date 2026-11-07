@@ -65,6 +65,33 @@ export function ImmersiveOverlay() {
           <AgentDetailsPanel floating />
         </div>
       ) : null}
+
+      {/* 操作提示框：进入现场后一直可见 */}
+      <div className="pointer-events-none absolute bottom-16 left-4 z-40 hidden sm:block">
+        <div className="rounded-xl border border-line/80 bg-[#0d0b16]/85 px-3.5 py-2.5 shadow-[0_18px_50px_-24px_rgba(0,0,0,0.9)] backdrop-blur">
+          <p className="text-[9px] uppercase tracking-[0.22em] text-muted/80">
+            操作提示
+          </p>
+          <ul className="mt-1.5 grid gap-1 text-[11px] leading-4 text-text/85">
+            <li>
+              <span className="text-blue">鼠标移动</span> · 小人跟着走
+            </li>
+            <li>
+              <span className="text-blue">悬停工位圆圈 / 标签</span> · 全速冲刺
+            </li>
+            <li>
+              <span className="text-blue">左键拖拽</span> · 旋转视角
+            </li>
+            <li>
+              <span className="text-blue">滚轮</span> · 缩放 ·{" "}
+              <span className="text-blue">双击</span> · 复位
+            </li>
+            <li>
+              <span className="text-blue">点击工位或标签</span> · 查看角色
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }

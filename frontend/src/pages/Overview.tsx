@@ -217,7 +217,7 @@ export function Overview() {
         />
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3">
           <p className="text-[10px] leading-5 text-muted">
-            点击工位查看角色 · 双击画面放大 · ⌘ + 滚轮缩放
+            点击工位查看角色 · 拖拽可旋转 · 滚轮可缩放 · 双击复位
           </p>
           <button
             type="button"

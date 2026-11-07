@@ -94,10 +94,10 @@ export function Headquarters3D({
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
-    // Ctrl/⌘ + wheel is the familiar zoom gesture, and preventing the page
-    // zoom needs a non-passive native listener.
+    // Wheel zooms the scene (ctrl/⌘ still works, plain wheel too, since the
+    // in-card hint now promises 滚轮缩放). Non-passive listener so preventDefault
+    // can stop the page from scrolling while the cursor is over the scene.
     const onWheel = (event: WheelEvent) => {
-      if (!event.metaKey && !event.ctrlKey) return;
       event.preventDefault();
       nudgeZoom(event.deltaY > 0 ? 0.9 : 1.11);
     };
@@ -124,7 +124,7 @@ export function Headquarters3D({
       )}
       onDoubleClick={(event) => {
         if ((event.target as HTMLElement).closest("button")) return;
-        setUserZoom((current) => (current > 1.05 ? 1 : 1.8));
+        setUserZoom(1);
       }}
     >
       {showHeader && !immersive ? (
@@ -215,6 +215,13 @@ export function Headquarters3D({
           />
         </Suspense>
       </SceneErrorBoundary>
+
+      {/* 场景操作提示：拖拽可旋转 / 滚轮可缩放 */}
+      {!immersive ? (
+        <div className="pointer-events-none absolute bottom-14 left-3 z-20 rounded-md border border-line/70 bg-[#0d0b16]/75 px-2 py-1 text-[10px] tracking-[0.06em] text-muted backdrop-blur">
+          拖拽可旋转 · 滚轮可缩放 · 双击复位
+        </div>
+      ) : null}
 
       {/* Keyboard-accessible equivalent of the 3D hotspots */}
       <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#07050c] via-[#07050c]/85 to-transparent px-3 pb-3 pt-8">
