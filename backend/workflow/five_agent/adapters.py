@@ -249,25 +249,35 @@ def gen_request_analysis(call: AgentCall, resolver: TaskResolver) -> dict:
 
 def gen_review(call: AgentCall, resolver: TaskResolver, overall: str = "pass",
                fixable: bool = True) -> dict:
+    """开发 Mock（队员替身）：产出流程夹具，不代表内容质量（证据分级 [Mock 流程]）。
+
+    F-04: issue/claim/evidence 的 location 全部取自冻结版本的真实段落 ID
+    （titles/cover 之外），引用不存在段落的审稿在这里就不可能产生。
+    """
     brief = resolver.brief(call.input["brief_ref"])
     version = resolver.version(call.input["version_ref"])
+    segments = version["payload"].get("segments") or []
+    locations = [s["segment_id"] for s in segments]
+    anchor = locations[0] if locations else "cover"        # 首段（默认 hook）
+    body_anchor = next((sid for s, sid in zip(segments, locations)
+                        if s.get("kind") == "body"), anchor)
     issues = []
     if overall != "pass":
         issues = [{
             "id": "iss_review_1", "severity": "blocking" if overall == "revise" else "advisory",
-            "location": "seg_body_1", "reason": "关键承诺缺少材料依据，读者会怀疑",
+            "location": body_anchor, "reason": "关键承诺缺少材料依据，读者会怀疑",
             "requested_change": "为该段补充材料引用或收窄承诺",
         }]
     data = {
         "issues": issues,
         "requirement_checks": [
-            {"requirement_id": r["id"], "result": "met", "evidence_refs": ["seg_body_1"]}
+            {"requirement_id": r["id"], "result": "met", "evidence_refs": [body_anchor]}
             for r in brief["payload"]["requirements"]
         ],
         "claim_checks": [{
-            "claim": version["payload"]["segments"][0]["text"][:60] if version["payload"].get("segments") else "（无正文）",
-            "location": "seg_hook_1", "source_ref": version["payload"]["segments"][0]["source_refs"][0]
-            if version["payload"].get("segments") and version["payload"]["segments"][0]["source_refs"] else None,
+            "claim": segments[0]["text"][:60] if segments else "（无正文）",
+            "location": anchor,
+            "source_ref": segments[0]["source_refs"][0] if segments and segments[0]["source_refs"] else None,
             "assessment": "supported",
         }],
         "overall": overall,
