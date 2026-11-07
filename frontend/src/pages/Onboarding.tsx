@@ -10,6 +10,7 @@ import {
 import { useWorkspace } from "@/store/workspace";
 import { Button } from "@/components/ui/Button";
 import { BrandMark } from "@/components/brand/BrandMark";
+import { AccountConnect } from "@/components/accounts/AccountConnect";
 import { cn } from "@/lib/format";
 
 const INDUSTRIES = [
@@ -369,6 +370,12 @@ export function Onboarding() {
                       {creatorStageMeta(form.creatorStage).hint}
                     </p>
                   </fieldset>
+
+                  {form.creatorStage !== "starting" ? (
+                    <div className="rounded-xl border border-line bg-raised/40 p-4">
+                      <AccountConnect />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 

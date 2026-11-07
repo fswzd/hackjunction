@@ -25,7 +25,9 @@ python tools/run_account_intake.py status
 
 `notes.json` 格式与抖音 `videos.json` 相同（`platform_video_id` 填笔记 ID）。
 
-API 同一套：`POST /api/v1/accounts/external`（`platform: "xiaohongshu"`）、`.../import`、`GET .../videos`。
+API 同一套：`POST /api/v1/accounts/external`（`platform: "xiaohongshu"`）、`POST .../login`（扫码登录后自动抓实绩入经验库）、
+`GET .../status` / `GET .../experience`（登录状态与经验库聚合）、`.../import`、`GET .../videos`。
+前端入口同抖音：引导页选「已在做账号 / 已是成熟账号」后出现接入面板，或设置页 →「平台账号 · 经验库」。
 
 ## 诚实边界
 

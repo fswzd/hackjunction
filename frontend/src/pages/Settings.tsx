@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { AccountConnect } from "@/components/accounts/AccountConnect";
 
 function Switch({
   checked,
@@ -296,6 +297,21 @@ export function Settings() {
           <Card>
             <CardHeader>
               <div>
+                <h2 className="text-sm font-semibold">平台账号 · 经验库</h2>
+                <p className="mt-0.5 text-[11px] text-muted">
+                  接入已有抖音 / 小红书账号，实绩入库作为后续分析的经验库
+                </p>
+              </div>
+              <Database size={14} className="text-green" />
+            </CardHeader>
+            <CardBody>
+              <AccountConnect />
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div>
                 <h2 className="text-sm font-semibold">数据与连接</h2>
                 <p className="mt-0.5 text-[11px] text-muted">
                   真实业务闭环优先：先看后端已提供的读写能力
@@ -376,6 +392,11 @@ export function Settings() {
                 <Row
                   label="修订意见"
                   value="POST /feedback (edit_request) · 已接入"
+                  accent="#8FD6A8"
+                />
+                <Row
+                  label="平台账号接入（抖音 / 小红书）"
+                  value="POST accounts/external · login · import · experience · 已接入"
                   accent="#8FD6A8"
                 />
                 <Row
