@@ -1,5 +1,5 @@
 <#
-一键启动：加载 .env → 数据库迁移 → Flask API (127.0.0.1:5001) → 前端 Vite (127.0.0.1:4173)
+一键启动：数据库迁移 → Flask API (127.0.0.1:5001) → 前端 Vite (127.0.0.1:4173)
 
 用法（PowerShell，在仓库根执行）：
   .\start.ps1                  # 全量启动
@@ -20,23 +20,7 @@ param(
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# ---------- 1) 加载 .env（已有环境变量优先，不覆盖） ----------
-foreach ($envFile in @("$root\.env", "$root\birthco-local\.env")) {
-  if (Test-Path $envFile) {
-    Get-Content $envFile | ForEach-Object {
-      $line = $_.Trim()
-      if ($line -and -not $line.StartsWith("#") -and $line.Contains("=")) {
-        $parts = $line.Split("=", 2)
-        $key = $parts[0].Trim()
-        $val = $parts[1].Trim().Trim('"').Trim("'")
-        if ($key -and -not [Environment]::GetEnvironmentVariable($key)) {
-          [Environment]::SetEnvironmentVariable($key, $val)
-        }
-      }
-    }
-    Write-Host "[env] 已加载 $envFile"
-  }
-}
+# ---------- 1) 环境（只用进程环境变量；不读取任何 .env 文件） ----------
 if ($DataDir) { $env:BIRTHCO_DATA_DIR = $DataDir }
 if (-not $env:BIRTHCO_DATA_DIR) { $env:BIRTHCO_DATA_DIR = Join-Path $root "birthco-local\data" }
 if (-not $env:BIRTHCO_PORT) { $env:BIRTHCO_PORT = "5001" }

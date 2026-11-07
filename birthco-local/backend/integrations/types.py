@@ -6,7 +6,7 @@ from pydantic import Field
 from backend.domain.schemas import Model
 
 PLATFORMS = ("douyin", "xiaohongshu")
-SESSION_STATUSES = ("none", "pending_adapter_setup", "logged_in", "expired")
+SESSION_STATUSES = ("none", "pending_adapter_setup", "logging_in", "logged_in", "expired")
 
 
 class TopComment(Model):

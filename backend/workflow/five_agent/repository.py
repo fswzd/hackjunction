@@ -19,6 +19,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from backend.domain.schemas import MaterialInput
+from pydantic import ValidationError
+
 from .contracts import canonical_json, sha256_hex
 
 
@@ -191,10 +194,64 @@ class Repository:
             raise ConflictError("task row_version CAS failed")
         return expected + 1
 
-    def add_material(self, task_id: str, material_id: str, text: str, kind: str = "text") -> dict:
+    def add_material(self, task_id: str, material_id: str, text: str, kind: str = "source_text") -> dict:
+        kind = self._material_kind(material_id, text, kind)
         self._exec("INSERT INTO materials (id, task_id, kind, text, created_at) VALUES (?,?,?,?,?)",
                    (material_id, task_id, kind, text, _now()))
         return {"id": material_id, "kind": kind, "text": text}
+
+    @staticmethod
+    def _material_kind(material_id: str, text: str, kind: str) -> str:
+        # Old callers and rows used "text". It is ordinary source material.
+        try:
+            return MaterialInput(kind="source_text" if kind == "text" else kind,
+                                 label=material_id, text=text, authorized=True).kind
+        except ValidationError:
+            raise DomainError("invalid material kind, label or text", "SCHEMA_INVALID") from None
+
+    def apply_supplement(self, task_id: str, run_id: str, gate_id: str, payload: dict) -> None:
+        """Store one approved supplement and its receipt atomically."""
+        materials = payload.get("materials", [])
+        answers = payload.get("answers", [])
+        appended = payload.get("user_input_append")
+        if not isinstance(answers, list) or len(answers) > 20 or any(
+                not isinstance(a, str) or not a.strip() or len(a) > 1000 for a in answers):
+            raise DomainError("invalid supplement answers", "SCHEMA_INVALID")
+        if appended is not None and (not isinstance(appended, str) or len(appended) > 20000):
+            raise DomainError("invalid supplement text", "SCHEMA_INVALID")
+        if not isinstance(materials, list) or len(materials) > 20 or any(
+                not isinstance(m, dict) or not {"id", "text"} <= set(m) or m.get("authorized", True) is not True
+                for m in materials):
+            raise DomainError("invalid or unauthorized supplement material", "SCOPE_DENIED")
+        material_rows = [(m["id"], task_id, self._material_kind(m["id"], m["text"], m.get("kind", "source_text")),
+                          m["text"], _now()) for m in materials]
+        with self._lock:
+            try:
+                self._conn.execute("BEGIN IMMEDIATE")
+                receipts = self._conn.execute(
+                    "SELECT payload_json FROM task_events WHERE run_id=? AND kind='input_supplied'", (run_id,))
+                if any(json.loads(row["payload_json"]).get("gate_id") == gate_id for row in receipts):
+                    self._conn.commit()
+                    return
+                row = self._conn.execute("SELECT payload_json FROM tasks WHERE id=?", (task_id,)).fetchone()
+                if row is None:
+                    raise NotFoundError(f"task {task_id}")
+                task_payload = json.loads(row["payload_json"])
+                task_payload.setdefault("answers", []).extend(answers)
+                if appended:
+                    task_payload["user_input"] = task_payload.get("user_input", "") + "\n" + appended
+                self._conn.executemany("INSERT INTO materials (id,task_id,kind,text,created_at) VALUES (?,?,?,?,?)",
+                                       material_rows)
+                self._conn.execute("UPDATE tasks SET payload_json=?, row_version=row_version+1 WHERE id=?",
+                                   (json.dumps(task_payload, ensure_ascii=False), task_id))
+                receipt = {"gate_id": gate_id, "answers": answers, "materials": [m["id"] for m in materials]}
+                self._conn.execute(
+                    "INSERT INTO task_events (task_id,run_id,kind,payload_json,created_at) VALUES (?,?,?,?,?)",
+                    (task_id, run_id, "input_supplied", json.dumps(receipt, ensure_ascii=False), _now()))
+                self._conn.commit()
+            except Exception:
+                self._conn.rollback()
+                raise
 
     def save_task_payload(self, task_id: str, payload: dict) -> dict:
         self._exec("UPDATE tasks SET payload_json=?, row_version=row_version+1 WHERE id=?",

@@ -69,17 +69,9 @@ def build_create_task(input_payload: dict, *, account_id: str,
         requirements = [{"id": r["id"], "text": r["text"]} for r in structured_reqs]
     else:
         requirements = [dict(r) for r in PLACEHOLDER_REQUIREMENT]
-    kind_map = {}
     legal_kinds = {"user_supplied_experience", "source_text", "existing_draft"}
-    for i, row in enumerate(materials):
-        # repository rows may carry unrelated kind labels (e.g. "text"); only the
-        # production MaterialInput enum is meaningful here
-        kind = row.get("kind") if row.get("kind") in legal_kinds else None
-        if kind is None:
-            kind = "existing_draft" if (input_mode == "existing_draft" and i == 0) else "source_text"
-        kind_map[row["id"]] = kind
     material_inputs = [MaterialInput(
-        kind=kind_map[row["id"]],
+        kind=row["kind"] if row.get("kind") in legal_kinds else "source_text",
         label=(row.get("label") or row["id"])[:1000],
         text=row["text"],
         source_url=row.get("source_url"),
@@ -202,8 +194,8 @@ class OperatorTeamAdapter:
                 payload, account_id=account_id, materials=rows)
         except BridgePreSendFailure as exc:
             return _error_result(call_dict, str(exc))
-        except Exception as exc:  # pydantic/构造失败：请求未发出，确定性拒单
-            return _error_result(call_dict, f"bridge input invalid: {exc}")
+        except (ValueError, KeyError, TypeError):
+            return _error_result(call_dict, "bridge input invalid")
         memory_notes: list[str] = []
         if self.memory is not None:
             # 三轮迭代检索（≤3）：记忆以未复核数据注入，绝不进 system 指令区

@@ -1,14 +1,14 @@
 {
   "evidence_kind": "mock_flow_end_to_end",
   "mode": "mock_dev_no_live_model_no_teammate_code_no_real_user",
-  "observed_at": "2026-11-07T07:58:29.055611+00:00",
+  "observed_at": "2026-11-07T09:44:02.561896+00:00",
   "command": "python run_mock_demo.py",
   "cwd": "E:\\hackjunction\\hackjunction",
   "exit_code": 0,
   "trace": [
     {
       "step": "start_content_run",
-      "run_id": "run_demo_task_content_716a6a2c",
+      "run_id": "run_demo_task_content_78af1328",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -24,7 +24,7 @@
     },
     {
       "step": "confirm_brief",
-      "run_id": "run_demo_task_content_716a6a2c",
+      "run_id": "run_demo_task_content_78af1328",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -40,7 +40,7 @@
     },
     {
       "step": "accept_delivery",
-      "run_id": "run_demo_task_content_716a6a2c",
+      "run_id": "run_demo_task_content_78af1328",
       "status": "READY",
       "terminal": "READY",
       "pending_gates": [],
@@ -54,7 +54,7 @@
     },
     {
       "step": "start_preview_run",
-      "run_id": "run_demo_task_preview_1b90a025",
+      "run_id": "run_demo_task_preview_c723c60e",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -70,7 +70,7 @@
     },
     {
       "step": "preview_run",
-      "run_id": "run_demo_task_preview_1b90a025",
+      "run_id": "run_demo_task_preview_c723c60e",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -86,7 +86,7 @@
     },
     {
       "step": "select_findings",
-      "run_id": "run_demo_task_preview_1b90a025",
+      "run_id": "run_demo_task_preview_c723c60e",
       "status": "READY",
       "terminal": "READY",
       "pending_gates": [],
@@ -100,7 +100,7 @@
     },
     {
       "step": "start_revision_run",
-      "run_id": "run_demo_task_revision_76ae0cc7",
+      "run_id": "run_demo_task_revision_489610ac",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -116,7 +116,7 @@
     },
     {
       "step": "accept_revision",
-      "run_id": "run_demo_task_revision_76ae0cc7",
+      "run_id": "run_demo_task_revision_489610ac",
       "status": "READY",
       "terminal": "READY",
       "pending_gates": [],
@@ -130,7 +130,7 @@
     }
   ],
   "runs": {
-    "run_demo_task_content_716a6a2c": {
+    "run_demo_task_content_78af1328": {
       "kind": "content",
       "status": "READY",
       "calls": [
@@ -154,7 +154,7 @@
         }
       ],
       "usage": {
-        "run_id": "run_demo_task_content_716a6a2c",
+        "run_id": "run_demo_task_content_78af1328",
         "calls_reserved": 3,
         "normal_calls": 3,
         "tech_retries": 0,
@@ -163,7 +163,7 @@
         "unknown_usage_calls": 0
       }
     },
-    "run_demo_task_preview_1b90a025": {
+    "run_demo_task_preview_c723c60e": {
       "kind": "preview",
       "status": "READY",
       "calls": [
@@ -217,7 +217,7 @@
         }
       ],
       "usage": {
-        "run_id": "run_demo_task_preview_1b90a025",
+        "run_id": "run_demo_task_preview_c723c60e",
         "calls_reserved": 8,
         "normal_calls": 8,
         "tech_retries": 0,
@@ -226,7 +226,7 @@
         "unknown_usage_calls": 1
       }
     },
-    "run_demo_task_revision_76ae0cc7": {
+    "run_demo_task_revision_489610ac": {
       "kind": "revision",
       "status": "READY",
       "calls": [
@@ -244,7 +244,7 @@
         }
       ],
       "usage": {
-        "run_id": "run_demo_task_revision_76ae0cc7",
+        "run_id": "run_demo_task_revision_489610ac",
         "calls_reserved": 2,
         "normal_calls": 2,
         "tech_retries": 0,
@@ -256,7 +256,7 @@
   },
   "versions": {
     "v1": {
-      "id": "ver_bcd6382411b988c97e2360b1",
+      "id": "ver_a7a03361cb2daf529958d408",
       "status": "accepted",
       "content_hash": "3119c9f39f4236daefa4ef503bc9b09ee0c7de3339a11ed30422457a5fa6e87b",
       "titles": [
@@ -270,9 +270,9 @@
       ]
     },
     "v2": {
-      "id": "ver_dda618d470baf1deba951e15",
+      "id": "ver_582fb3196464d79cab0fab09",
       "status": "accepted",
-      "base_version_id": "ver_bcd6382411b988c97e2360b1",
+      "base_version_id": "ver_a7a03361cb2daf529958d408",
       "content_hash": "9cf5e23585a97aaa4e15264f1fefcd59a5976c9576e43299756aac65a5d7068b",
       "change_log": [
         {
@@ -288,7 +288,7 @@
     "v1_preserved": true
   },
   "preview": {
-    "preview_id": "preview_cfae3619e2fdc3ae4d7c2e0a",
+    "preview_id": "preview_c34c566cca559dbb218ecefa",
     "metrics": {
       "started": 3,
       "completed": 1,
@@ -300,9 +300,9 @@
         "id": "find_1",
         "segment_id": "cover_v1",
         "observation_refs": [
-          "evt_sess_bf56108fe6d20d951a444142_0",
-          "evt_sess_40a96080de86cbe67aaa6cf8_0",
-          "evt_sess_0fb810e3a5010d8d35d8ad76_0"
+          "evt_sess_6972d27feed40a56af95322b_0",
+          "evt_sess_fd4fdf175c24132d87894039_0",
+          "evt_sess_a4aac03b9a713f4305b7fa8e_0"
         ],
         "interpretation": "本次模拟中该段退出 1/3；只描述模拟事件，不证明真实受众因内容离开。",
         "alternative_explanation": "退出可能是预设测试fixture、persona偏好或信息不足，不能据此确认内容是原因。",
@@ -312,7 +312,7 @@
         "id": "find_2",
         "segment_id": "seg_hook_1",
         "observation_refs": [
-          "evt_sess_40a96080de86cbe67aaa6cf8_1"
+          "evt_sess_fd4fdf175c24132d87894039_1"
         ],
         "interpretation": "本次模拟中该段退出 0/1；只描述模拟事件，不证明真实受众因内容离开。",
         "alternative_explanation": "退出可能是预设测试fixture、persona偏好或信息不足，不能据此确认内容是原因。",

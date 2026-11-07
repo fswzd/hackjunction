@@ -14,6 +14,7 @@ import uuid
 from langgraph.types import Command
 
 from .adapters import AdapterRouter
+from .experiment_ledger import history_for_preview
 from .gateway import AgentGateway, GatewayError
 from .graph import build_graph
 from .graphstate import FiveAgentState, Services
@@ -30,7 +31,11 @@ class RunConflict(DomainError):
 
 class OrchestrationDriver:
     def __init__(self, repo: Repository, router: AdapterRouter | None = None,
-                 mode: str = "mock", account_id: str = "account1"):
+                 mode: str = "mock", account_id: str = "account1",
+                 max_input_rounds: int | None = 3):
+        if max_input_rounds is not None and (type(max_input_rounds) is not int or max_input_rounds < 0):
+            raise ValueError("max_input_rounds must be a nonnegative integer or None")
+        self.max_input_rounds = max_input_rounds
         self.repo = repo
         self.mode = mode
         self.account_id = account_id
@@ -43,7 +48,7 @@ class OrchestrationDriver:
     # ------------------------------------------------------------------ plumbing
     def _services(self) -> Services:
         return Services(repo=self.repo, gateway=self.gateway, router=self.router,
-                        account_id=self.account_id)
+                        account_id=self.account_id, max_input_rounds=self.max_input_rounds)
 
     def _compiled(self, run_kind: str):
         if run_kind not in self._graphs:
@@ -73,14 +78,16 @@ class OrchestrationDriver:
             "brief_ref": None, "version_ref": None, "rule_ref": None, "review_ref": None,
             "gate_ref": None, "preview_ref": None, "revision_ref": None, "cursor_ref": None,
             "artifact_batch_ref": None, "error_ref": None,
-            "route_decision": "", "repair_count": 0, "terminal": None,
+            "route_decision": "", "repair_count": 0, "terminal": None, "input_round": 0,
         }
         state.update(overrides)
         return state
 
     def _invoke(self, run_id: str, run_kind: str, payload: FiveAgentState | Command) -> dict:
         graph = self._compiled(run_kind)
-        config = {"configurable": {"thread_id": run_id}, "recursion_limit": 100}
+        # Each audience call traverses project, step, commit and advance.
+        limit = 100 + 4 * BUDGETS["preview"].max_normal_calls if run_kind == "preview" else 100
+        config = {"configurable": {"thread_id": run_id}, "recursion_limit": limit}
         self._acquire_slot(run_id)
         self.repo.set_run_status(run_id, "RUNNING")
         try:
@@ -108,8 +115,8 @@ class OrchestrationDriver:
     def create_task(self, task_id: str, payload: dict, account_id: str | None = None) -> dict:
         return self.repo.create_task(task_id, account_id or self.account_id, payload)
 
-    def add_material(self, task_id: str, material_id: str, text: str) -> dict:
-        return self.repo.add_material(task_id, material_id, text)
+    def add_material(self, task_id: str, material_id: str, text: str, kind: str = "source_text") -> dict:
+        return self.repo.add_material(task_id, material_id, text, kind)
 
     # -------------------------------------------------------------------- runs
     def start_content_run(self, task_id: str, user_input: str = "", input_mode: str = "idea") -> dict:
@@ -149,8 +156,14 @@ class OrchestrationDriver:
         result = self._invoke(run_id, "preview", state)
         return self.snapshot(run_id, result)
 
+    def preview_history(self, preview_id: str) -> list[dict]:
+        return history_for_preview(self.repo, self.account_id, preview_id)
+
     def start_revision_run(self, task_id: str, revision_request_id: str) -> dict:
-        request = self.repo.get_artifact(revision_request_id)["payload"]
+        artifact = self.repo.get_artifact(revision_request_id)
+        if artifact["task_id"] != task_id or artifact["kind"] != "revision_request":
+            raise ConflictError("revision request belongs to another task")
+        request = artifact["payload"]
         base = self.repo.get_version(request["base_version_id"])
         if base["task_id"] != task_id:
             raise ConflictError("base version belongs to another task")
@@ -159,7 +172,10 @@ class OrchestrationDriver:
             raise ConflictError("revision base is not current head")  # base CAS
         run_id = self._new_run_id(task_id, "revision")
         self.repo.create_run(run_id, task_id, "revision")
-        state = self._base_state(task_id, run_id, "revision",
+        bindings = self.repo.find_artifacts(task_id, "version_brief")
+        brief_ref = next((row["payload"]["brief_ref"] for row in bindings
+                          if row["payload"]["version_id"] == base["id"]), None)
+        state = self._base_state(task_id, run_id, "revision", brief_ref=brief_ref,
                                  version_ref={"id": base["id"], "sha256": base["content_hash"]},
                                  revision_ref={"id": revision_request_id,
                                                "sha256": object_hash(request)})
@@ -175,7 +191,9 @@ class OrchestrationDriver:
         if run["status"] in ("CANCELLED",):
             raise RunConflict("cancelled run cannot be reinvoked")
         state = self._base_state(run["task_id"], run_id, run["kind"],
-                                 resume_step=run["resume_step"] or "start")
+                                 resume_step=run["resume_step"] or "start",
+                                 input_round=sum(e["run_id"] == run_id for e in
+                                                 self.repo.list_events(run["task_id"], "input_supplied")))
         state.update(state_overrides or {})
         result = self._invoke(run_id, run["kind"], state)
         return self.snapshot(run_id, result)

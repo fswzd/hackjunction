@@ -1,6 +1,5 @@
 """Generate JSON Schema, OpenAPI and TypeScript from the application models."""
 import argparse
-import importlib.util
 import inspect
 import json
 from pathlib import Path
@@ -9,16 +8,21 @@ from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.dont_write_bytecode = True
-spec = importlib.util.spec_from_file_location("application_models", ROOT / "backend/domain/schemas.py")
-m = importlib.util.module_from_spec(spec)
-sys.modules[spec.name] = m
-spec.loader.exec_module(m)
+sys.path.insert(0, str(ROOT))
+from backend.domain import schemas as m
+from backend.simulation import analysis_data, audience_session
 
 
 def outputs():
     models = {n: c for n, c in vars(m).items() if inspect.isclass(c) and issubclass(c, BaseModel) and c.__module__ == m.__name__ and n not in {"Model", "Envelope", "ApiSuccess", "ToolResult"}}
     models.update({"Role_" + role.replace("-", "_"): cls for role, cls in m.ROLE_MODELS.items()})
     models.update({"Tool_" + tool: cls for tool, cls in m.TOOL_MODELS.items()})
+    # These file-based contracts are defined at the simulation boundary, alongside
+    # the trace validators. They do not add Flask routes.
+    for module in (audience_session, analysis_data):
+        models.update({name: cls for name, cls in vars(module).items()
+                       if inspect.isclass(cls) and issubclass(cls, BaseModel)
+                       and cls.__module__ == module.__name__})
     # method,path,input type,output type,success code,owner
     routes = [
         ("get", "/api/v1/session", None, m.SessionRead, 200, "A02c"),

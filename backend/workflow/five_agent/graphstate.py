@@ -30,9 +30,11 @@ class FiveAgentState(TypedDict, total=False):
     cursor_ref: dict | None
     artifact_batch_ref: dict | None
     error_ref: dict | None
+    questions_ref: dict | None
     # program control
     route_decision: str
     repair_count: int
+    input_round: int
     terminal: str | None
 
 
@@ -57,3 +59,4 @@ class Services:
     router: Any          # AdapterRouter
     account_id: str = "account1"
     prompt_schema_version: str = "seven-agent.v0.1.prompt"
+    max_input_rounds: int | None = 3

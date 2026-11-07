@@ -3,9 +3,9 @@
 统一 live 后端：所有专家 agent 的真实模型调用经此适配器注入（方式 A），
 模型默认 `mimo-v2.6-pro`，端点默认 `https://api.xiaomimimo.com/anthropic`。
 
-传输安全与 qwen.py 同一姿态：DNS 只收公网地址、连接固定到解析出的 IP、
-TLS 校验原始主机名、单次 POST 白名单路径、无代理/重定向/自动重试、
-响应限 1 MiB、凭据只从环境（或仓库根 .env）读取且永不出现在错误信息里。
+传输安全姿态：DNS 只收公网地址、连接固定到解析出的 IP、TLS 校验原始主机名、
+单次 POST 白名单路径、无代理/重定向/自动重试、响应限 1 MiB、凭据只从进程环境
+读取（不落盘、不读取任何文件）且永不出现在错误信息里。
 """
 
 from __future__ import annotations
@@ -19,7 +19,6 @@ import re
 import socket
 import ssl
 import time
-from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
@@ -45,26 +44,6 @@ class _BeforeSendError(Exception):
 
 class _AfterSendError(Exception):
     pass
-
-
-def _load_env_file() -> None:
-    """Minimal .env loader: walk up from this file to the repo root for `.env`.
-
-    Existing environment variables always win; .env only fills the gaps.
-    """
-    for parent in Path(__file__).resolve().parents:
-        candidate = parent / ".env"
-        if candidate.is_file():
-            for line in candidate.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                key, _, value = line.partition("=")
-                key = key.strip()
-                value = value.strip().strip('"').strip("'")
-                if key and key not in os.environ:
-                    os.environ[key] = value
-            return
 
 
 def validate_base_url(base_url: str) -> tuple[str, int]:
@@ -194,7 +173,6 @@ class MiMoAdapter:
         configured_model_id: str | None = None,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
-        _load_env_file()
         self._api_key = api_key if api_key is not None else os.environ.get("MIMO_API_KEY")
         if not self._api_key or not self._api_key.strip():
             raise ModelConfigurationError("MIMO_API_KEY is required")

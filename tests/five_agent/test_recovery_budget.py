@@ -222,6 +222,8 @@ def test_preview_unknown_audience_keeps_incomplete_without_fake_exit():
 
 def test_live_mode_never_falls_back_to_mock():
     repo, driver = make_driver(mode="live")
+    # Keep this test offline even when a developer has a live key configured.
+    driver.router.reals["operations_officer"] = A.RealAdapterStub("operations_officer", ("prepare_brief",))
     new_task(driver)
     with pytest.raises(AgentUnavailable):
         driver.start_content_run("task1")  # prepare_brief hits the real stub -> AGENT_UNAVAILABLE

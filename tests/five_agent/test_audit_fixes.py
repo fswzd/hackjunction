@@ -130,7 +130,7 @@ def test_f03_per_agent_live_rollout():
     repo = Repository(":memory:")
     router = A.AdapterRouter(repo, mode="mock",
                              agent_modes={"traffic_scout": "live"})
-    assert isinstance(router.adapter_for("capture_opportunities"), A.RealAdapterStub), \
+    assert router.adapter_for("capture_opportunities").mode == "live", \
         "traffic_scout 可单独切 live"
     assert isinstance(router.adapter_for("prepare_brief"), A.MockAgent), \
         "其余角色保持 mock，不受牵连"
