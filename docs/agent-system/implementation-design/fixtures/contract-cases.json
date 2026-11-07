@@ -1,0 +1,803 @@
+{
+  "fixture_kind": "synthetic",
+  "scope": "structural only; database semantics tested separately after implementation",
+  "cases": [
+    {
+      "id": "operator_valid",
+      "schema": "Role_operator",
+      "valid": true,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "input_mode": "idea",
+          "objective": "教手机用户拍自然人像",
+          "audience": "手机摄影入门者",
+          "platform": "generic",
+          "format": "text",
+          "core_promise": "三步自然人像",
+          "requirements": [
+            {
+              "id": "REQ1",
+              "text": "说明窗边站位"
+            }
+          ],
+          "material_ids": [
+            "mat1"
+          ],
+          "open_questions": [],
+          "route": [
+            "draft",
+            "review",
+            "export"
+          ],
+          "length_rule": {
+            "minimum": null,
+            "maximum": null
+          },
+          "edit_scope": null
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "operator_invalid",
+      "schema": "Role_operator",
+      "valid": false,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "input_mode": "idea",
+          "objective": "教手机用户拍自然人像",
+          "audience": "手机摄影入门者",
+          "platform": "generic",
+          "format": "script",
+          "core_promise": "三步自然人像",
+          "requirements": [
+            {
+              "id": "REQ1",
+              "text": "说明窗边站位"
+            }
+          ],
+          "material_ids": [
+            "mat1"
+          ],
+          "open_questions": [],
+          "route": [
+            "draft",
+            "review",
+            "export"
+          ],
+          "length_rule": {
+            "minimum": null,
+            "maximum": null
+          },
+          "edit_scope": null
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "scout_valid",
+      "schema": "Role_scout",
+      "valid": true,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "opportunities": [
+            {
+              "id": "opp1",
+              "angle": "窗边光",
+              "audience_problem": "不会找光",
+              "account_fit": "已有经验",
+              "source_refs": [
+                "mat1"
+              ],
+              "evidence_date": null,
+              "hypothesis": "基于已有材料，当前热度未知"
+            }
+          ]
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "scout_invalid",
+      "schema": "Role_scout",
+      "valid": false,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "opportunities": "wrong"
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "director_valid",
+      "schema": "Role_director",
+      "valid": true,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "titles": [
+            "窗边拍自然人像",
+            "三步拍出松弛感",
+            "手机人像先找光"
+          ],
+          "cover_copy": "先找光，再聊天",
+          "segments": [
+            {
+              "segment_id": "s1",
+              "kind": "body",
+              "text": "侧对窗户，先看脸上的光。",
+              "source_refs": [
+                "mat1"
+              ]
+            },
+            {
+              "segment_id": "s3",
+              "kind": "body",
+              "text": "先聊天，再连拍，挑放松的一张。",
+              "source_refs": [
+                "mat1"
+              ]
+            }
+          ]
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "director_invalid",
+      "schema": "Role_director",
+      "valid": false,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "titles": "wrong",
+          "cover_copy": "先找光，再聊天",
+          "segments": [
+            {
+              "segment_id": "s1",
+              "kind": "body",
+              "text": "侧对窗户，先看脸上的光。",
+              "source_refs": [
+                "mat1"
+              ]
+            },
+            {
+              "segment_id": "s3",
+              "kind": "body",
+              "text": "先聊天，再连拍，挑放松的一张。",
+              "source_refs": [
+                "mat1"
+              ]
+            }
+          ]
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "editorial_reviewer_valid",
+      "schema": "Role_editorial_reviewer",
+      "valid": true,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "issues": [],
+          "requirement_checks": [
+            {
+              "requirement_id": "REQ1",
+              "result": "met",
+              "evidence_refs": [
+                "s1"
+              ]
+            }
+          ],
+          "claim_checks": [
+            {
+              "claim": "侧对窗户",
+              "location": "s1",
+              "source_ref": "mat1",
+              "assessment": "personal_experience"
+            }
+          ],
+          "overall": "pass"
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "editorial_reviewer_invalid",
+      "schema": "Role_editorial_reviewer",
+      "valid": false,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "issues": [],
+          "requirement_checks": [
+            {
+              "requirement_id": "REQ1",
+              "result": "met",
+              "evidence_refs": [
+                "s1"
+              ]
+            }
+          ],
+          "claim_checks": [
+            {
+              "claim": "侧对窗户",
+              "location": "s1",
+              "source_ref": "mat1",
+              "assessment": "personal_experience"
+            }
+          ],
+          "overall": "accepted"
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "audience_valid",
+      "schema": "Role_audience",
+      "valid": true,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "segment_id": "s1",
+          "action": "continue",
+          "understanding": "先观察光",
+          "question": null,
+          "reaction": "可以立刻试",
+          "interactions": [
+            "save"
+          ],
+          "comment_text": null
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "audience_invalid",
+      "schema": "Role_audience",
+      "valid": false,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "segment_id": "s1",
+          "action": "skip",
+          "understanding": "先观察光",
+          "question": null,
+          "reaction": "可以立刻试",
+          "interactions": [
+            "save"
+          ],
+          "comment_text": null
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "analyst_valid",
+      "schema": "Role_analyst",
+      "valid": true,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "findings": [
+            {
+              "id": "f1",
+              "segment_id": "s1",
+              "observation_refs": [
+                "ev1"
+              ],
+              "interpretation": "本次模拟希望更早看到例子",
+              "alternative_explanation": "也可能偏好短内容",
+              "suggested_edit": "把窗边站位放到首句"
+            }
+          ],
+          "comparison": {
+            "conditions_match": true,
+            "reason": "单版本诊断，比较不适用",
+            "summary": "本次为模拟诊断"
+          },
+          "next_experiment": "保持场景再测示例提前版本"
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "analyst_invalid",
+      "schema": "Role_analyst",
+      "valid": false,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "findings": "wrong",
+          "comparison": {
+            "conditions_match": true,
+            "reason": "单版本诊断，比较不适用",
+            "summary": "本次为模拟诊断"
+          },
+          "next_experiment": "保持场景再测示例提前版本"
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "revision_valid",
+      "schema": "Role_revision",
+      "valid": true,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "titles": [
+            "窗边拍自然人像",
+            "三步拍出松弛感",
+            "手机人像先找光"
+          ],
+          "cover_copy": "先找光，再聊天",
+          "segments": [
+            {
+              "segment_id": "s2",
+              "kind": "body",
+              "text": "先侧对窗户站好，再观察脸上的光。",
+              "source_refs": [
+                "mat1"
+              ]
+            },
+            {
+              "segment_id": "s3",
+              "kind": "body",
+              "text": "先聊天，再连拍，挑放松的一张。",
+              "source_refs": [
+                "mat1"
+              ]
+            }
+          ],
+          "change_log": [
+            {
+              "finding_id": "f1",
+              "issue_id": null,
+              "old_segment_id": "s1",
+              "new_segment_id": "s2",
+              "change": "replace",
+              "reason": "提前操作"
+            }
+          ]
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "revision_invalid",
+      "schema": "Role_revision",
+      "valid": false,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "titles": [
+            "窗边拍自然人像",
+            "三步拍出松弛感",
+            "手机人像先找光"
+          ],
+          "cover_copy": "先找光，再聊天",
+          "segments": [
+            {
+              "segment_id": "s2",
+              "kind": "body",
+              "text": "先侧对窗户站好，再观察脸上的光。",
+              "source_refs": [
+                "mat1"
+              ]
+            },
+            {
+              "segment_id": "s3",
+              "kind": "body",
+              "text": "先聊天，再连拍，挑放松的一张。",
+              "source_refs": [
+                "mat1"
+              ]
+            }
+          ],
+          "change_log": []
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "operator_needs_input",
+      "schema": "Role_operator",
+      "valid": true,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "needs_input",
+        "summary": "完成本步骤",
+        "data": null,
+        "evidence_refs": [],
+        "questions": [
+          {
+            "id": "Q1",
+            "question": "请补充经验素材",
+            "reason": "正文需要事实依据"
+          }
+        ],
+        "issues": []
+      }
+    },
+    {
+      "id": "candidate_missing_cover",
+      "schema": "ContentCandidate",
+      "valid": true,
+      "payload": {
+        "titles": [
+          "窗边拍自然人像",
+          "三步拍出松弛感",
+          "手机人像先找光"
+        ],
+        "segments": [
+          {
+            "segment_id": "s1",
+            "kind": "body",
+            "text": "侧对窗户，先看脸上的光。",
+            "source_refs": [
+              "mat1"
+            ]
+          },
+          {
+            "segment_id": "s3",
+            "kind": "body",
+            "text": "先聊天，再连拍，挑放松的一张。",
+            "source_refs": [
+              "mat1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delivery_missing_cover",
+      "schema": "ContentDelivery",
+      "valid": false,
+      "payload": {
+        "titles": [
+          "窗边拍自然人像",
+          "三步拍出松弛感",
+          "手机人像先找光"
+        ],
+        "segments": [
+          {
+            "segment_id": "s1",
+            "kind": "body",
+            "text": "侧对窗户，先看脸上的光。",
+            "source_refs": [
+              "mat1"
+            ]
+          },
+          {
+            "segment_id": "s3",
+            "kind": "body",
+            "text": "先聊天，再连拍，挑放松的一张。",
+            "source_refs": [
+              "mat1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "create_valid",
+      "schema": "CreateTask",
+      "valid": true,
+      "payload": {
+        "account_id": "acc1",
+        "input_mode": "idea",
+        "objective": "教手机用户拍自然人像",
+        "audience": "手机摄影入门者",
+        "platform": "generic",
+        "format": "text",
+        "style": "口语具体",
+        "requirements": [
+          {
+            "id": "REQ1",
+            "text": "说明窗边站位"
+          }
+        ],
+        "materials": [
+          {
+            "kind": "user_supplied_experience",
+            "label": "个人经验",
+            "text": "侧对窗户，先看脸上的光。",
+            "source_url": null,
+            "authorized": true
+          }
+        ],
+        "preview_requested": false,
+        "length_rule": {
+          "minimum": null,
+          "maximum": null
+        }
+      }
+    },
+    {
+      "id": "create_extra_path",
+      "schema": "CreateTask",
+      "valid": false,
+      "payload": {
+        "account_id": "acc1",
+        "input_mode": "idea",
+        "objective": "教手机用户拍自然人像",
+        "audience": "手机摄影入门者",
+        "platform": "generic",
+        "format": "text",
+        "style": "口语具体",
+        "requirements": [
+          {
+            "id": "REQ1",
+            "text": "说明窗边站位"
+          }
+        ],
+        "materials": [
+          {
+            "kind": "user_supplied_experience",
+            "label": "个人经验",
+            "text": "侧对窗户，先看脸上的光。",
+            "source_url": null,
+            "authorized": true
+          }
+        ],
+        "preview_requested": false,
+        "length_rule": {
+          "minimum": null,
+          "maximum": null
+        },
+        "path": "../escape"
+      }
+    },
+    {
+      "id": "confirm_valid",
+      "schema": "ConfirmBrief",
+      "valid": true,
+      "payload": {
+        "expected_row_version": 2,
+        "expected_brief_version": 1,
+        "brief_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "id": "confirm_invalid_integer",
+      "schema": "ConfirmBrief",
+      "valid": false,
+      "payload": {
+        "expected_row_version": "2",
+        "expected_brief_version": 1,
+        "brief_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "id": "cover_only_revision_valid",
+      "schema": "Role_revision",
+      "valid": true,
+      "payload": {
+        "schema_version": "creator-agent.v1",
+        "status": "ok",
+        "summary": "完成本步骤",
+        "data": {
+          "titles": [
+            "窗边拍自然人像",
+            "三步拍出松弛感",
+            "手机人像先找光"
+          ],
+          "cover_copy": "先找光，再聊天",
+          "segments": [
+            {
+              "segment_id": "s1",
+              "kind": "body",
+              "text": "侧对窗户，先看脸上的光。",
+              "source_refs": [
+                "mat1"
+              ]
+            },
+            {
+              "segment_id": "s3",
+              "kind": "body",
+              "text": "先聊天，再连拍，挑放松的一张。",
+              "source_refs": [
+                "mat1"
+              ]
+            }
+          ],
+          "change_log": [
+            {
+              "finding_id": null,
+              "issue_id": "RULE_COVER",
+              "old_segment_id": "cover",
+              "new_segment_id": "cover",
+              "change": "metadata_update",
+              "reason": "补齐封面"
+            }
+          ]
+        },
+        "evidence_refs": [],
+        "questions": [],
+        "issues": []
+      }
+    },
+    {
+      "id": "preflight_spec_valid",
+      "schema": "PreviewSpec",
+      "valid": true,
+      "payload": {
+        "version_id": "v1",
+        "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "scenario": {
+          "medium": "text",
+          "segmenter_version": "paragraph-v1",
+          "personas": [
+            {
+              "id": "p1",
+              "goal": "学拍照",
+              "knowledge": "入门",
+              "preferences": []
+            }
+          ],
+          "max_segments": 8,
+          "requested_seed": null
+        }
+      }
+    },
+    {
+      "id": "preview_without_confirmed_hash_invalid",
+      "schema": "PreviewCreate",
+      "valid": false,
+      "payload": {
+        "version_id": "v1",
+        "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "scenario": {
+          "medium": "text",
+          "segmenter_version": "paragraph-v1",
+          "personas": [
+            {
+              "id": "p1",
+              "goal": "学拍照",
+              "knowledge": "入门",
+              "preferences": []
+            }
+          ],
+          "max_segments": 8,
+          "requested_seed": null
+        }
+      }
+    },
+    {
+      "id": "preview_bound_valid",
+      "schema": "PreviewCreate",
+      "valid": true,
+      "payload": {
+        "version_id": "v1",
+        "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "scenario": {
+          "medium": "text",
+          "segmenter_version": "paragraph-v1",
+          "personas": [
+            {
+              "id": "p1",
+              "goal": "学拍照",
+              "knowledge": "入门",
+              "preferences": []
+            }
+          ],
+          "max_segments": 8,
+          "requested_seed": null
+        },
+        "expected_conditions_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "expected_scenario_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    },
+    {
+      "id": "restore_failed_candidate_head_valid",
+      "schema": "RestoreHead",
+      "valid": true,
+      "payload": {
+        "expected_row_version": 8,
+        "expected_head_version_id": "v2",
+        "target_version_id": "v1",
+        "target_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "confirm": true
+      }
+    },
+    {
+      "id": "restore_unconfirmed_invalid",
+      "schema": "RestoreHead",
+      "valid": false,
+      "payload": {
+        "expected_row_version": 8,
+        "expected_head_version_id": "v2",
+        "target_version_id": "v1",
+        "target_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "confirm": false
+      }
+    },
+    {
+      "id": "material_integer_is_not_authorization",
+      "schema": "MaterialInput",
+      "valid": false,
+      "payload": {
+        "kind": "user_supplied_experience",
+        "label": "个人经验",
+        "text": "侧对窗户，先看脸上的光。",
+        "source_url": null,
+        "authorized": 1
+      }
+    },
+    {
+      "id": "restore_integer_is_not_confirmation",
+      "schema": "RestoreHead",
+      "valid": false,
+      "payload": {
+        "expected_row_version": 8,
+        "expected_head_version_id": "v2",
+        "target_version_id": "v1",
+        "target_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "confirm": 1
+      }
+    }
+  ]
+}

@@ -2,12 +2,12 @@ import os
 from anthropic import Anthropic
 
 client = Anthropic(
-    api_key="sk-cwpbh4s1lcm4vc61wzkeq2k2n1mkq6yu99u97e1q839ernhp",
-    base_url="https://api.xiaomimimo.com/anthropic"
+    api_key=os.environ["MIMO_API_KEY"],
+    base_url=os.environ.get("MIMO_BASE_URL", "https://api.xiaomimimo.com/anthropic")
 )
 
 message = client.messages.create(
-    model="mimo-v2.6-pro",
+    model=os.environ.get("MIMO_MODEL_ID", "mimo-v2.6-pro"),
     max_tokens=1024,
     system="You are MiMo, an AI assistant developed by Xiaomi. Today is date: Tuesday, December 16, 2025. Your knowledge cutoff date is December 2024.",
     messages=[

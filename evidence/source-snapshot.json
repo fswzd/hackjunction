@@ -1,0 +1,387 @@
+{
+ "schema_version": "hackjunction.source-snapshot.v1",
+ "generated_at": "2026-11-07T03:18:26+00:00",
+ "git_head": "809af8a085b98f8f906b2344d460071d41cd5d75",
+ "git_dirty": true,
+ "file_count": 63,
+ "files": [
+  {
+   "path": "backend/workflow/five_agent/__init__.py",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "bytes": 0,
+   "lines": 1
+  },
+  {
+   "path": "backend/workflow/five_agent/adapters.py",
+   "sha256": "61e5e3c9e785249f070f94dc0d765742798f2b44df487617ed1b69ae7d694fc0",
+   "bytes": 26584,
+   "lines": 561
+  },
+  {
+   "path": "backend/workflow/five_agent/contracts.py",
+   "sha256": "35322a45e7150bddc6b22d95df91d716c7d4345546ec3d48f8f5d59764c08b73",
+   "bytes": 11802,
+   "lines": 269
+  },
+  {
+   "path": "backend/workflow/five_agent/driver.py",
+   "sha256": "85ae18175372d301afc7482b4ffffcaca9c187f2adefa75154fc2ef3eb35ec0b",
+   "bytes": 14059,
+   "lines": 261
+  },
+  {
+   "path": "backend/workflow/five_agent/gateway.py",
+   "sha256": "1baf62d3d3c2c3334fc331be5060a273f28c45a19cdd3b546a06742d191a70dc",
+   "bytes": 11274,
+   "lines": 237
+  },
+  {
+   "path": "backend/workflow/five_agent/graph.py",
+   "sha256": "0bdcaf28b68bd4931d70a0085a882b40ff2c46f6be3a36930d5b91fd69301aec",
+   "bytes": 11086,
+   "lines": 186
+  },
+  {
+   "path": "backend/workflow/five_agent/graphstate.py",
+   "sha256": "3bd3bdef5940f74adbe15f9ee28d957ea46b9b3f173bdb2e5e9d77ea1341b26c",
+   "bytes": 1852,
+   "lines": 60
+  },
+  {
+   "path": "backend/workflow/five_agent/nodes.py",
+   "sha256": "24d761a894b289433951c47f3861a2bdf13355496246e33ee5382a70b7622733",
+   "bytes": 54898,
+   "lines": 952
+  },
+  {
+   "path": "backend/workflow/five_agent/program.py",
+   "sha256": "35a872f4c98dd3f36f88e48817fb8b4ead4631f1b82329aa58a7b1b0596db587",
+   "bytes": 9132,
+   "lines": 206
+  },
+  {
+   "path": "backend/workflow/five_agent/projection.py",
+   "sha256": "42d95830956f3ebbac55572f9a4e0c246f0d8d2254497166a5876802aaee2b5f",
+   "bytes": 5798,
+   "lines": 119
+  },
+  {
+   "path": "backend/workflow/five_agent/registry.py",
+   "sha256": "51eb91ae76c910eae813190fb1ca4c5bcf54ab2c405fab9d1bc2d8453b5cefef",
+   "bytes": 5613,
+   "lines": 152
+  },
+  {
+   "path": "backend/workflow/five_agent/repository.py",
+   "sha256": "f1f01a0dbd0864c628bcb9c096c12633a3c0b0a726dc4ba4a990c77442af0837",
+   "bytes": 32067,
+   "lines": 618
+  },
+  {
+   "path": "backend/workflow/five_agent/resources.py",
+   "sha256": "ff546ba2d9d53b79ed41bd0d59140a8366fa4bf0da27d76db9ba6bf541d3cf5d",
+   "bytes": 1179,
+   "lines": 32
+  },
+  {
+   "path": "backend/workflow/five_agent/resources/agent-interface-seven.json",
+   "sha256": "89a3f663f55bdecfdcfbaaa7128623e8afe1e81156d6b819bf456eddc5a327bd",
+   "bytes": 6133,
+   "lines": 189
+  },
+  {
+   "path": "backend/workflow/five_agent/resources/agent-interface.json",
+   "sha256": "3cbd396d35c51d845c620fb22c56ba54fca5cd7fc114dc5980cbc68e6c29bbab",
+   "bytes": 4738,
+   "lines": 82
+  },
+  {
+   "path": "backend/workflow/five_agent/resources/domain_schemas.json",
+   "sha256": "2a23c60198d36b8f1630489bd2310ae5eb718602cfa26988398b49404a03f2ae",
+   "bytes": 41852,
+   "lines": 2138
+  },
+  {
+   "path": "backend/workflow/five_agent/resources/extension_schemas.json",
+   "sha256": "8961df5443cb69315501465dd97557ff0514d241efdfec5474af46354a6d4137",
+   "bytes": 1827,
+   "lines": 95
+  },
+  {
+   "path": "backend/workflow/five_agent/resources/provenance.json",
+   "sha256": "0f3085803f70b646ea1b6674f4490812040a26acd70102d353fc6f72ae2fea9d",
+   "bytes": 1275,
+   "lines": 41
+  },
+  {
+   "path": "birthco-local/backend/agents/analyst.py",
+   "sha256": "bf4b4b6e0763e8222315103ec1b3ed350f741f34e601c0c6430cbbd83b506da5",
+   "bytes": 12982,
+   "lines": 146
+  },
+  {
+   "path": "birthco-local/backend/agents/audience.py",
+   "sha256": "aa0ea47223f088189c6313b93c2806fe33768c0d8bcf3509d594482fdeefd528",
+   "bytes": 8694,
+   "lines": 115
+  },
+  {
+   "path": "birthco-local/backend/agents/director.py",
+   "sha256": "51e803cd733ff8c10a974b7b0c0a0dfbcbdaeb8c027beb8032b5dc913e82158d",
+   "bytes": 17805,
+   "lines": 225
+  },
+  {
+   "path": "birthco-local/backend/agents/editorial_reviewer.py",
+   "sha256": "93fd2d040ab28392bc70dfaf40a13f19362b1b363ff7d0b0d2686da71fd58f2d",
+   "bytes": 10824,
+   "lines": 154
+  },
+  {
+   "path": "birthco-local/backend/agents/operator.py",
+   "sha256": "6af9cef388676369d01f65607cc38f5f1ff2ee19e370d58bb55768adaa46872b",
+   "bytes": 9659,
+   "lines": 143
+  },
+  {
+   "path": "birthco-local/backend/agents/pr_analyst.py",
+   "sha256": "0645117a6d4ec780016e209e0a59003183637b2ccfcf70bc378c67f73796e1fb",
+   "bytes": 17034,
+   "lines": 294
+  },
+  {
+   "path": "birthco-local/backend/agents/scout.py",
+   "sha256": "772447ed55125d9f2c0544a5143ad7316a1595de5eb984ef5d92abfaec152d14",
+   "bytes": 11311,
+   "lines": 167
+  },
+  {
+   "path": "birthco-local/backend/adapters/personas.py",
+   "sha256": "8c8dee4936f80fd2801467483fd4fed00ef4978c77397ebe2e267e5d79bd0cf6",
+   "bytes": 2949,
+   "lines": 91
+  },
+  {
+   "path": "birthco-local/backend/adapters/model/mock.py",
+   "sha256": "b4938b3f0fbf1d606f5f7269cdfcf8bd7f139abe896f8e665a546e6cfa77eddb",
+   "bytes": 1071,
+   "lines": 29
+  },
+  {
+   "path": "birthco-local/backend/adapters/model/protocol.py",
+   "sha256": "804172f73518b3795bc3b8ef059dd9d32a64aec652cddca9126ff9414c344258",
+   "bytes": 4057,
+   "lines": 101
+  },
+  {
+   "path": "birthco-local/backend/adapters/model/qwen.py",
+   "sha256": "b1bd89df16089bc5840b5d360f670c39b136bd039f989c715d5f4be1b462696a",
+   "bytes": 14175,
+   "lines": 300
+  },
+  {
+   "path": "birthco-local/backend/domain/__init__.py",
+   "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+   "bytes": 1,
+   "lines": 2
+  },
+  {
+   "path": "birthco-local/backend/domain/errors.py",
+   "sha256": "a2be6211c14c8617908247c091b1bcaecb71b03bda65fe9953d8563516add246",
+   "bytes": 2562,
+   "lines": 55
+  },
+  {
+   "path": "birthco-local/backend/domain/hashing.py",
+   "sha256": "dc9044af2bb76e8e20b2735599360fc146d1027e41623c27b64f793e4a0f9a88",
+   "bytes": 1831,
+   "lines": 48
+  },
+  {
+   "path": "birthco-local/backend/domain/schemas.py",
+   "sha256": "d468c704bac129fad64458ec25d7c783bd379c863e2006e914d5947ab294c6c0",
+   "bytes": 25021,
+   "lines": 875
+  },
+  {
+   "path": "birthco-local/backend/domain/states.py",
+   "sha256": "35a9aa3b261a4c1b9fb0eed70e252efcfd8ef62d0fd45deed54ffcdba32b40e2",
+   "bytes": 996,
+   "lines": 41
+  },
+  {
+   "path": "birthco-local/contracts/openapi.json",
+   "sha256": "b212d3f92f14b48040c79da1509164e0cd40991512e601fee444c7a766fe41a8",
+   "bytes": 347093,
+   "lines": 12992
+  },
+  {
+   "path": "birthco-local/contracts/schemas.json",
+   "sha256": "ae73a5aae8b52e890e92d88a08a9b43e4ac7f743b3cb9cde6ac978223e2c3b5d",
+   "bytes": 423956,
+   "lines": 17864
+  },
+  {
+   "path": "tests/five_agent/conftest.py",
+   "sha256": "8272fc84154cd247177f2aa759df74e5b588f170036aaf8a3a06c67be93d4500",
+   "bytes": 98,
+   "lines": 5
+  },
+  {
+   "path": "tests/five_agent/test_branches.py",
+   "sha256": "208eab4aae61b793b089fd34799582cf66cf53b57b8b3745e9f6aed32babf69a",
+   "bytes": 16665,
+   "lines": 317
+  },
+  {
+   "path": "tests/five_agent/test_contract.py",
+   "sha256": "d817013148e77f459d9a8feaf77406ebf2898f009b78c1a8349b2264d0206287",
+   "bytes": 7388,
+   "lines": 171
+  },
+  {
+   "path": "tests/five_agent/test_main_chain.py",
+   "sha256": "3cca1e79a5785f3da73c727369ec273ad6dbe3a23582c959a848a182c6e1bc27",
+   "bytes": 9340,
+   "lines": 191
+  },
+  {
+   "path": "tests/five_agent/test_recovery_budget.py",
+   "sha256": "b2a74b010aaf60a34f55fb441b3a8faed0320bbc35920de50949cd9bd818eda3",
+   "bytes": 11492,
+   "lines": 231
+  },
+  {
+   "path": "tests/five_agent/test_seven_roles.py",
+   "sha256": "c731c15596865971a2f74f978dfd96f88f949af9d4a9e7b03565e18a5ed8fb56",
+   "bytes": 6058,
+   "lines": 121
+  },
+  {
+   "path": "birthco-local/tests/conftest.py",
+   "sha256": "8659c4f6af34a32f61ecc29774fd873cf628e7e0828ce9ff04773418357a6cc6",
+   "bytes": 98,
+   "lines": 5
+  },
+  {
+   "path": "birthco-local/tests/adapters/test_personas.py",
+   "sha256": "2abb33ccb0ed367f061c54ed43b2abb5e1f96d4c1d7abcff645cb947261ba4db",
+   "bytes": 9529,
+   "lines": 258
+  },
+  {
+   "path": "birthco-local/tests/adapters/model/test_redaction.py",
+   "sha256": "fe0068c2235b20542ddcfaba7cd105346d5b2c6fad197d6d2ea2226acaed4bd8",
+   "bytes": 1193,
+   "lines": 33
+  },
+  {
+   "path": "birthco-local/tests/adapters/model/test_transport.py",
+   "sha256": "cd643abe104741fec86edaae78c766a0a246589e0db00b8bd7ef0e7aac3d827a",
+   "bytes": 9472,
+   "lines": 211
+  },
+  {
+   "path": "birthco-local/tests/agents/test_analyst.py",
+   "sha256": "b38676746bb44e0c34fabbcfb30bc6740ef037d3625f205f86e3ecf8562b20ab",
+   "bytes": 15205,
+   "lines": 225
+  },
+  {
+   "path": "birthco-local/tests/agents/test_audience.py",
+   "sha256": "4198d5d47bc9b403cd327e38cb9f6b5da12fa59b5411139f220834e936c4dfb9",
+   "bytes": 12781,
+   "lines": 199
+  },
+  {
+   "path": "birthco-local/tests/agents/test_director.py",
+   "sha256": "cf5516a92601b947db8b3e61b135c455070c89b2fe34ec55d9b8c6a3cc7fa0fc",
+   "bytes": 13702,
+   "lines": 217
+  },
+  {
+   "path": "birthco-local/tests/agents/test_editorial_reviewer.py",
+   "sha256": "3954c67f567a7dc63155d940d3ab7f90368b10746121a9284b28ca19b0e756ea",
+   "bytes": 7216,
+   "lines": 121
+  },
+  {
+   "path": "birthco-local/tests/agents/test_operator.py",
+   "sha256": "e27f33123fb1a1ea45635657dcdb751ba999ac1608a94a7e46c7807a42232b22",
+   "bytes": 5437,
+   "lines": 107
+  },
+  {
+   "path": "birthco-local/tests/agents/test_pr_analyst.py",
+   "sha256": "ff334f52623370b284f901bd935994f78ad3091f71a8645fb461b095a95030cc",
+   "bytes": 13863,
+   "lines": 236
+  },
+  {
+   "path": "birthco-local/tests/agents/test_scout.py",
+   "sha256": "9c2f1a246a445c284f2ca7a3f7b4d12ed6c3482fc65ab2dea02898f0dca2fe39",
+   "bytes": 8445,
+   "lines": 129
+  },
+  {
+   "path": "birthco-local/tests/agents/test_team_demo.py",
+   "sha256": "bdea75ba28574434bf43ab043edeed95c53fb741c0d81551300f25527f7e94bf",
+   "bytes": 5691,
+   "lines": 124
+  },
+  {
+   "path": "birthco-local/tests/api/test_session.py",
+   "sha256": "751f4dd1e35e4454cca7519873a943831e146ef21ba1dcacaa56931797312885",
+   "bytes": 3189,
+   "lines": 61
+  },
+  {
+   "path": "birthco-local/tests/api/test_tasks.py",
+   "sha256": "0efc839dc01ddbb9f5e0ffeffeeffed88aab215fda8531a177f4b93916c501a2",
+   "bytes": 6506,
+   "lines": 110
+  },
+  {
+   "path": "birthco-local/tests/contracts/test_errors.py",
+   "sha256": "302812c6a31b6f4479d7dad2c2a689234470743bbd6597987d8533d22878b914",
+   "bytes": 549,
+   "lines": 18
+  },
+  {
+   "path": "birthco-local/tests/contracts/test_hashing.py",
+   "sha256": "3d2a83537e9c73d73a150fa90cd783d12aec71878635ed092331de7061fd7020",
+   "bytes": 1562,
+   "lines": 35
+  },
+  {
+   "path": "birthco-local/tests/contracts/test_schemas.py",
+   "sha256": "6909f68a1c27896d26372f8e435f8269a1f86758d0faebdbf601c41ec15b6b6a",
+   "bytes": 6580,
+   "lines": 137
+  },
+  {
+   "path": "birthco-local/tests/storage/conftest.py",
+   "sha256": "b9096c6ba237270267e82b3bebc612a55999fe93cec01526b7c8ecb8f0689133",
+   "bytes": 490,
+   "lines": 13
+  },
+  {
+   "path": "birthco-local/tests/storage/test_ledger.py",
+   "sha256": "5459bc27b3c17afaf258b9f3876ae70533acb448aeffcf2f727bfeaebadf9f70",
+   "bytes": 6399,
+   "lines": 93
+  },
+  {
+   "path": "birthco-local/tests/storage/test_queue.py",
+   "sha256": "b9c3f5d6db8a4e0735c8318f8dd8630f749ce9066d065f2d94fe83d2e922e8ba",
+   "bytes": 7728,
+   "lines": 149
+  },
+  {
+   "path": "birthco-local/tests/storage/test_repository.py",
+   "sha256": "52b838274d8af28d9dd1565ab1f160296eeea9ea83a6b3c7d3d79defa647ff2e",
+   "bytes": 10703,
+   "lines": 179
+  }
+ ]
+}

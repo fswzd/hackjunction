@@ -1,0 +1,135 @@
+{
+  "mode": "live",
+  "input_hash": "a34c8e5b3ee15e1a8223e1e0824c384e084934763f43e2caf6edd32d99efee43",
+  "version_id": "v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "content_hash": "aabb8b517da91769ea0252334be80036d80dc995b2740029ce9fbec16d171e73",
+  "metrics": {
+    "scope": "simulated_sessions_not_humans",
+    "N": 2,
+    "S": 2,
+    "C": 0,
+    "U": 0,
+    "Z": 0,
+    "exited": 2,
+    "coverage_ratio": {
+      "numerator": 2,
+      "denominator": 2,
+      "value": 1.0
+    },
+    "completion_ratio": {
+      "numerator": 0,
+      "denominator": 2,
+      "value": 0.0
+    },
+    "segments": [
+      {
+        "segment_id": "cover_v_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seen_sessions": 2,
+        "exit_sessions": 0,
+        "exit_rate": {
+          "numerator": 0,
+          "denominator": 2,
+          "value": 0.0
+        }
+      },
+      {
+        "segment_id": "s1",
+        "seen_sessions": 2,
+        "exit_sessions": 2,
+        "exit_rate": {
+          "numerator": 2,
+          "denominator": 2,
+          "value": 1.0
+        }
+      },
+      {
+        "segment_id": "s2",
+        "seen_sessions": 0,
+        "exit_sessions": 0,
+        "exit_rate": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null
+        }
+      }
+    ],
+    "interaction_intentions": {
+      "like": {
+        "numerator": 0,
+        "denominator": 2,
+        "value": 0.0
+      },
+      "comment": {
+        "numerator": 0,
+        "denominator": 2,
+        "value": 0.0
+      },
+      "save": {
+        "numerator": 0,
+        "denominator": 2,
+        "value": 0.0
+      }
+    },
+    "comments": [],
+    "viewer_calls": 4,
+    "failed_calls": 0,
+    "unknown_outcome_calls": 0,
+    "viewer_usage": {
+      "known_total_tokens": null,
+      "usage_not_reported_calls": 4,
+      "remote_outcome_unknown_calls": 0
+    },
+    "viewer_mode": "mock",
+    "mock_fixture_exit_ordinal": 1
+  },
+  "comparison_metrics": null,
+  "comparison_context": {
+    "conditions_match": false,
+    "reason": "单版本分析：没有可比较的第二版。",
+    "descriptive_only": true,
+    "alignment_verified": false,
+    "differences": [
+      "no_second_version"
+    ]
+  },
+  "analysis_status": "needs_input",
+  "call_id": "analyst_5f255cff33a34415a31e9236997edead",
+  "envelope": {
+    "schema_version": "creator-agent.v1",
+    "status": "needs_input",
+    "summary": "本次模拟中两个会话（session_1b4d0bf24db14961a86eb7755216d2e8、session_1b015a4301754d1bb104e24f6983d055）的全部事件均为 Mock 机械流程测试（viewer_mode=mock，mock_fixture_exit_ordinal=1），s1 上的两次退出可能是预设 fixture，不能诊断为真实内容缺陷；s2 的 seen_sessions=0，closing 段没有被任何会话看到。因此本次不提出内容级 findings，需补充非 mock 观察数据后再分析。单版本分析：没有可比较的第二版。",
+    "data": null,
+    "evidence_refs": [
+      "event_e31c9e8f153d4504b656ac249a570478",
+      "event_db58fdc66c0844d4a109c9acae37ff30",
+      "event_8c9e1e4facbe47d986db3e58263b546e",
+      "event_3977c5eeb93442538410b2a78cabd24a"
+    ],
+    "questions": [
+      {
+        "id": "Q1",
+        "question": "能否提供非 Mock 的观众会话（真实模型 persona 运行或人类读者数据）覆盖封面、三个标题、s1 与 s2？",
+        "reason": "本次模拟中 viewer_mode=mock，四个事件均标注为机械流程示例，mock_fixture_exit_ordinal=1，退出可能是预设 fixture，据此无法对封面、标题或正文提出有依据的改稿 finding。"
+      },
+      {
+        "id": "Q2",
+        "question": "s2（closing：「请先确认使用场景，再比较预算与重量」）在本次数据中 seen_sessions=0、exit_rate 分母为 0，能否补充让会话至少看到 s2 的运行数据？",
+        "reason": "两个会话都在 s1 退出（event_db58fdc66c0844d4a109c9acae37ff30、event_3977c5eeb93442538410b2a78cabd24a），closing 段没有任何观察事件，其呈现效果完全无证据可评估。"
+      }
+    ],
+    "issues": []
+  },
+  "analysis_usage": {
+    "input": 2569,
+    "output": 2789,
+    "total": 5358,
+    "cached": null,
+    "reasoning": null
+  },
+  "error": null,
+  "next_action": "collect_more_feedback",
+  "automatic_revision": false,
+  "is_simulation": true,
+  "human_sample": false,
+  "causal_claims_supported": false
+}
