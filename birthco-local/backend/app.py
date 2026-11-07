@@ -1,4 +1,5 @@
 """Loopback-only Flask app factory; startup never runs migrations or a worker."""
+import os
 import sqlite3
 
 from flask import Flask, request
@@ -18,9 +19,15 @@ def create_app(overrides: dict | None = None) -> Flask:
     with connect(db_path):
         pass
     app = Flask(__name__, static_folder=None)
+    allowed_origins = {settings.origin}
+    for item in os.environ.get("BIRTHCO_ALLOWED_ORIGINS", "").split(","):
+        value = item.strip().rstrip("/")
+        if value:
+            allowed_origins.add(value)
     app.config.update(DB_PATH=db_path, DATA_DIR=settings.data_dir, MODEL_MODE=settings.model_mode,
                       SESSION_SECRET=session_secret(settings.data_dir), MAX_CONTENT_LENGTH=1048576,
-                      JSON_AS_ASCII=False, PROPAGATE_EXCEPTIONS=False)
+                      JSON_AS_ASCII=False, PROPAGATE_EXCEPTIONS=False,
+                      BIND_HOST=settings.host, BIND_PORT=settings.port, ALLOWED_ORIGINS=allowed_origins)
 
     @app.before_request
     def boundary():
@@ -74,8 +81,9 @@ def create_app(overrides: dict | None = None) -> Flask:
     from backend.api.accounts import blueprint as accounts_blueprint
     from backend.api.task_create import blueprint as create_blueprint
     from backend.api.task_reads import blueprint as reads_blueprint
+    from backend.api.task_actions import blueprint as actions_blueprint
     from backend.api.previews import blueprint as previews_blueprint
-    for blueprint in (session_blueprint, accounts_blueprint, create_blueprint, reads_blueprint, previews_blueprint):
+    for blueprint in (session_blueprint, accounts_blueprint, create_blueprint, reads_blueprint, actions_blueprint, previews_blueprint):
         app.register_blueprint(blueprint)
     return app
 

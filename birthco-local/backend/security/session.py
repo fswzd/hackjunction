@@ -19,18 +19,28 @@ def _digest(value: str) -> str:
     return hmac.new(current_app.config["SESSION_SECRET"], value.encode(), hashlib.sha256).hexdigest()
 
 
+def _allowed_origins() -> set[str]:
+    configured = current_app.config.get("ALLOWED_ORIGINS")
+    if configured:
+        return set(configured)
+    host = current_app.config.get("BIND_HOST", "127.0.0.1")
+    port = current_app.config.get("BIND_PORT", 5000)
+    return {f"http://{host}:{port}"}
+
+
 def validate_origin() -> None:
-    expected = "127.0.0.1:5000"
-    if request.host != expected:
+    origins = _allowed_origins()
+    allowed_hosts = {origin.split("://", 1)[-1] for origin in origins}
+    if request.host not in allowed_hosts:
         raise DomainError("ORIGIN_DENIED", "Unexpected local host", "Open the local workbench address")
     origin = request.headers.get("Origin")
-    if origin and origin != "http://" + expected:
+    if origin and origin not in origins:
         raise DomainError("ORIGIN_DENIED", "Cross-origin request", "Use the local workbench")
     site = request.headers.get("Sec-Fetch-Site")
     if site and site != "same-origin":
         raise DomainError("ORIGIN_DENIED", "Cross-site request", "Use the local workbench")
     referer = request.headers.get("Referer")
-    if referer and not referer.startswith("http://" + expected + "/"):
+    if referer and not any(referer.startswith(item + "/") for item in origins):
         raise DomainError("ORIGIN_DENIED", "Cross-origin referrer", "Use the local workbench")
 
 

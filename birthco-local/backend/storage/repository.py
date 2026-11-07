@@ -58,6 +58,7 @@ ACCEPTED ACCEPTED revision_exported
 ACCEPTED ACCEPTED restore_head
 """.strip().splitlines())
 _TASK_EDGES.update((state, "CANCELLED", "cancel") for state in ("DRAFT", "PLANNING", "WAITING_CONFIRMATION", "QUEUED", "GENERATING", "VALIDATING", "REVISING", "EXPORTING", "WAITING_INPUT", "NEEDS_REVIEW", "FAILED", "INTERRUPTED"))
+_CANCELLABLE_STATES = frozenset(start for start, _, action in _TASK_EDGES if action == "cancel")
 
 
 def _id(prefix: str) -> str:
@@ -67,6 +68,99 @@ def _id(prefix: str) -> str:
 def _event(db, task_id: str, run_id: str, kind: str, step: str, state: str, summary: str, now: str) -> None:
     seq = db.execute("SELECT coalesce(max(seq),0)+1 FROM task_events WHERE task_id=?", (task_id,)).fetchone()[0]
     db.execute("INSERT INTO task_events(id,task_id,run_id,seq,type,step,state,summary,refs_json,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)", (_id("e_"), task_id, run_id, seq, kind, step, state, summary, "[]", now))
+
+
+def confirm_brief_tx(db, command: "ConfirmBrief", expected_row_version: int) -> dict:
+    """Confirm the frozen Brief and enqueue the draft phase inside a caller transaction."""
+    from .queue import Queue
+    now = utc_now()
+    task = db.execute("SELECT state,row_version,current_run_id,current_brief_version FROM tasks WHERE id=?", (command.task_id,)).fetchone()
+    if task is None:
+        raise DomainError("NOT_FOUND", "Task not found", "Reload tasks")
+    if task["row_version"] != expected_row_version or task["state"] != "WAITING_CONFIRMATION" or task["current_run_id"] != command.run_id or task["current_brief_version"] != command.expected_brief_version:
+        raise DomainError("VERSION_CONFLICT", "Task or Brief changed", "Reload the Brief", current_row_version=task["row_version"])
+    brief = db.execute("SELECT brief_hash,confirmed_at FROM briefs WHERE task_id=? AND version=?", (command.task_id, command.expected_brief_version)).fetchone()
+    run = db.execute("SELECT kind,state,phase FROM runs WHERE id=? AND task_id=?", (command.run_id, command.task_id)).fetchone()
+    if brief is None or brief["brief_hash"] != command.brief_hash or brief["confirmed_at"] is not None or run is None or (run["kind"], run["state"], run["phase"]) != ("content", "WAITING", "planning"):
+        raise DomainError("VERSION_CONFLICT", "Brief confirmation preconditions failed", "Reload the Brief")
+    db.execute("UPDATE briefs SET confirmed_at=? WHERE task_id=? AND version=?", (now, command.task_id, command.expected_brief_version))
+    db.execute("UPDATE tasks SET state='QUEUED',row_version=row_version+1,updated_at=? WHERE id=?", (now, command.task_id))
+    db.execute("UPDATE runs SET phase='draft',brief_version=?,brief_hash=? WHERE id=?", (command.expected_brief_version, command.brief_hash, command.run_id))
+    Queue.enqueue_tx(db, command.run_id, now)
+    _event(db, command.task_id, command.run_id, "confirm", "draft", "QUEUED", "Brief confirmed", now)
+    return {"task_id": command.task_id, "state": "QUEUED", "row_version": expected_row_version + 1}
+
+
+def edit_brief_tx(db, task_id: str, brief_body: dict, expected_row_version: int, expected_brief_version: int, stored_hash: str) -> dict:
+    """Store a new immutable Brief revision while the task waits for confirmation."""
+    now = utc_now()
+    task = db.execute("SELECT state,row_version,current_brief_version,current_run_id FROM tasks WHERE id=?", (task_id,)).fetchone()
+    if task is None:
+        raise DomainError("NOT_FOUND", "Task not found", "Reload tasks")
+    if task["row_version"] != expected_row_version or task["state"] != "WAITING_CONFIRMATION" or task["current_brief_version"] != expected_brief_version:
+        raise DomainError("VERSION_CONFLICT", "Task or Brief changed", "Reload the Brief", current_row_version=task["row_version"])
+    next_version = expected_brief_version + 1
+    try:
+        db.execute("INSERT INTO briefs(task_id,version,body_json,brief_hash,rule_json,created_at) VALUES(?,?,?,?,'{}',?)", (task_id, next_version, canonical_bytes(brief_body).decode("utf-8"), stored_hash, now))
+    except sqlite3.IntegrityError as exc:
+        raise DomainError("IDEMPOTENCY_CONFLICT", "Brief content already exists", "Change the Brief before saving") from exc
+    db.execute("UPDATE tasks SET current_brief_version=?,row_version=row_version+1,updated_at=? WHERE id=?", (next_version, now, task_id))
+    _event(db, task_id, task["current_run_id"], "edit_brief", "planning", "WAITING_CONFIRMATION", "Brief edited", now)
+    return {"task_id": task_id, "state": "WAITING_CONFIRMATION", "row_version": expected_row_version + 1, "brief_version": next_version}
+
+
+def accept_version_tx(db, task_id: str, version_id: str, content_hash: str, expected_row_version: int, session_id: str) -> dict:
+    """Accept the frozen READY version and persist the human acceptance record."""
+    now = utc_now()
+    task = db.execute("SELECT state,row_version,current_run_id,ready_version_id,accepted_version_id FROM tasks WHERE id=?", (task_id,)).fetchone()
+    if task is None:
+        raise DomainError("NOT_FOUND", "Task not found", "Reload tasks")
+    if task["row_version"] != expected_row_version:
+        raise DomainError("VERSION_CONFLICT", "Task version changed", "Reload task", current_row_version=task["row_version"])
+    if task["state"] not in {"READY", "ACCEPTED"}:
+        raise DomainError("INVALID_TRANSITION", "Task is not ready for acceptance", "Wait for READY")
+    if task["state"] == "ACCEPTED":
+        if task["accepted_version_id"] != version_id:
+            raise DomainError("VERSION_CONFLICT", "Another version was accepted", "Reload task", current_row_version=task["row_version"])
+        return {"task_id": task_id, "state": "ACCEPTED", "row_version": task["row_version"]}
+    if task["ready_version_id"] != version_id:
+        raise DomainError("VERSION_CONFLICT", "Version is not the ready head", "Reload the task", current_row_version=task["row_version"])
+    version = db.execute("SELECT content_hash FROM content_versions WHERE id=? AND task_id=?", (version_id, task_id)).fetchone()
+    if version is None:
+        raise DomainError("NOT_FOUND", "Content version not found", "Reload task versions")
+    if version["content_hash"] != content_hash:
+        raise DomainError("CONDITIONS_MISMATCH", "Content hash mismatch", "Reload the version")
+    try:
+        db.execute("INSERT INTO acceptances(id,task_id,version_id,content_hash,session_id,accepted_at) VALUES(?,?,?,?,?,?)", (_id("ac_"), task_id, version_id, content_hash, session_id, now))
+    except sqlite3.IntegrityError as exc:
+        raise DomainError("VERSION_CONFLICT", "Version was already accepted", "Reload task", current_row_version=task["row_version"]) from exc
+    db.execute("UPDATE tasks SET state='ACCEPTED',accepted_version_id=?,row_version=row_version+1,updated_at=? WHERE id=?", (version_id, now, task_id))
+    _event(db, task_id, task["current_run_id"], "accept", "export", "ACCEPTED", "Content accepted", now)
+    return {"task_id": task_id, "state": "ACCEPTED", "row_version": expected_row_version + 1}
+
+
+def cancel_task_tx(db, task_id: str, expected_row_version: int, summary: str = "Task cancelled") -> dict:
+    """Cancel a non-terminal task and settle any active runs."""
+    now = utc_now()
+    task = db.execute("SELECT state,row_version,current_run_id FROM tasks WHERE id=?", (task_id,)).fetchone()
+    if task is None:
+        raise DomainError("NOT_FOUND", "Task not found", "Reload tasks")
+    if task["row_version"] != expected_row_version:
+        raise DomainError("VERSION_CONFLICT", "Task version changed", "Reload task", current_row_version=task["row_version"])
+    if task["state"] not in _CANCELLABLE_STATES:
+        raise DomainError("INVALID_TRANSITION", "Task cannot be cancelled from this state", "Reload task state")
+    db.execute("UPDATE tasks SET state='CANCELLED',row_version=row_version+1,updated_at=? WHERE id=?", (now, task_id))
+    active = db.execute("SELECT id,lease_owner,lease_epoch FROM runs WHERE task_id=? AND state IN ('QUEUED','RUNNING','WAITING','INTERRUPTED')", (task_id,)).fetchall()
+    for run in active:
+        db.execute("UPDATE model_calls SET status='unknown',finished_at=? WHERE run_id=? AND status='sent'", (now, run["id"]))
+        db.execute("UPDATE model_calls SET status='failed',finished_at=? WHERE run_id=? AND status='reserved'", (now, run["id"]))
+        db.execute("UPDATE checkpoints SET status='unknown' WHERE run_id=? AND status='reserved' AND EXISTS (SELECT 1 FROM model_calls c WHERE c.run_id=checkpoints.run_id AND c.step=checkpoints.step AND c.attempt=checkpoints.attempt AND c.status='unknown')", (run["id"],))
+        db.execute("UPDATE checkpoints SET status='rejected' WHERE run_id=? AND status='reserved'", (run["id"],))
+        db.execute("UPDATE runs SET state='CANCELLED',lease_owner=NULL,lease_until=NULL,lease_epoch=lease_epoch+1,queue_seq=NULL,finished_at=?,updated_at=?,row_version=row_version+1 WHERE id=?", (now, now, run["id"]))
+        if run["lease_owner"]:
+            db.execute("UPDATE worker_slot SET owner=NULL,lease_until=NULL,epoch=epoch+1 WHERE id=1 AND owner=? AND epoch=?", (run["lease_owner"], run["lease_epoch"]))
+    _event(db, task_id, task["current_run_id"], "cancel", "cancel", "CANCELLED", summary, now)
+    return {"task_id": task_id, "state": "CANCELLED", "row_version": expected_row_version + 1}
 
 
 @dataclass(frozen=True)
@@ -135,7 +229,6 @@ class Repository:
             raise DomainError("INVALID_TRANSITION", "Unlisted task transition", "Reload task state")
         if command.action != "cancel":
             raise DomainError("INVALID_TRANSITION", "This action requires its domain command", "Use the specific transactional command")
-        now = utc_now()
         with connect(self.db_path) as db:
             with immediate(db):
                 row = db.execute("SELECT state,row_version,current_run_id FROM tasks WHERE id=?", (command.task_id,)).fetchone()
@@ -146,40 +239,12 @@ class Repository:
                 owned = db.execute("SELECT 1 FROM runs WHERE id=? AND task_id=?", (command.run_id, command.task_id)).fetchone()
                 if owned is None:
                     raise DomainError("SCOPE_DENIED", "Run belongs to another task", "Use task run")
-                db.execute("UPDATE tasks SET state=?,row_version=row_version+1,updated_at=? WHERE id=?", (command.to_state, now, command.task_id))
-                if command.action == "cancel":
-                    active = db.execute("SELECT id,lease_owner,lease_epoch FROM runs WHERE task_id=? AND state IN ('QUEUED','RUNNING','WAITING','INTERRUPTED')", (command.task_id,)).fetchall()
-                    for run in active:
-                        db.execute("UPDATE model_calls SET status='unknown',finished_at=? WHERE run_id=? AND status='sent'", (now, run["id"]))
-                        db.execute("UPDATE model_calls SET status='failed',finished_at=? WHERE run_id=? AND status='reserved'", (now, run["id"]))
-                        db.execute("UPDATE checkpoints SET status='unknown' WHERE run_id=? AND status='reserved' AND EXISTS (SELECT 1 FROM model_calls c WHERE c.run_id=checkpoints.run_id AND c.step=checkpoints.step AND c.attempt=checkpoints.attempt AND c.status='unknown')", (run["id"],))
-                        db.execute("UPDATE checkpoints SET status='rejected' WHERE run_id=? AND status='reserved'", (run["id"],))
-                        db.execute("UPDATE runs SET state='CANCELLED',lease_owner=NULL,lease_until=NULL,lease_epoch=lease_epoch+1,queue_seq=NULL,finished_at=?,updated_at=?,row_version=row_version+1 WHERE id=?", (now, now, run["id"]))
-                        if run["lease_owner"]:
-                            db.execute("UPDATE worker_slot SET owner=NULL,lease_until=NULL,epoch=epoch+1 WHERE id=1 AND owner=? AND epoch=?", (run["lease_owner"], run["lease_epoch"]))
-                _event(db, command.task_id, command.run_id, command.action, command.action, command.to_state, command.summary, now)
-                return {"task_id": command.task_id, "state": command.to_state, "row_version": expected_row_version + 1}
+                return cancel_task_tx(db, command.task_id, expected_row_version, command.summary)
 
     def _confirm_brief(self, command: ConfirmBrief, expected_row_version: int) -> dict:
-        from .queue import Queue
-        now = utc_now()
         with connect(self.db_path) as db:
             with immediate(db):
-                task = db.execute("SELECT state,row_version,current_run_id,current_brief_version FROM tasks WHERE id=?", (command.task_id,)).fetchone()
-                if task is None:
-                    raise DomainError("NOT_FOUND", "Task not found", "Reload tasks")
-                if task["row_version"] != expected_row_version or task["state"] != "WAITING_CONFIRMATION" or task["current_run_id"] != command.run_id or task["current_brief_version"] != command.expected_brief_version:
-                    raise DomainError("VERSION_CONFLICT", "Task or Brief changed", "Reload the Brief", current_row_version=task["row_version"])
-                brief = db.execute("SELECT brief_hash,confirmed_at FROM briefs WHERE task_id=? AND version=?", (command.task_id, command.expected_brief_version)).fetchone()
-                run = db.execute("SELECT kind,state,phase FROM runs WHERE id=? AND task_id=?", (command.run_id, command.task_id)).fetchone()
-                if brief is None or brief["brief_hash"] != command.brief_hash or brief["confirmed_at"] is not None or run is None or (run["kind"], run["state"], run["phase"]) != ("content", "WAITING", "planning"):
-                    raise DomainError("VERSION_CONFLICT", "Brief confirmation preconditions failed", "Reload the Brief")
-                db.execute("UPDATE briefs SET confirmed_at=? WHERE task_id=? AND version=?", (now, command.task_id, command.expected_brief_version))
-                db.execute("UPDATE tasks SET state='QUEUED',row_version=row_version+1,updated_at=? WHERE id=?", (now, command.task_id))
-                db.execute("UPDATE runs SET phase='draft',brief_version=?,brief_hash=? WHERE id=?", (command.expected_brief_version, command.brief_hash, command.run_id))
-                Queue.enqueue_tx(db, command.run_id, now)
-                _event(db, command.task_id, command.run_id, "confirm", "draft", "QUEUED", "Brief confirmed", now)
-                return {"task_id": command.task_id, "state": "QUEUED", "row_version": expected_row_version + 1}
+                return confirm_brief_tx(db, command, expected_row_version)
 
     def reserve_call(self, *, task_id: str, run_id: str, owner: str, epoch: int, step: str, attempt: int, role: str, mode: str, model_id: str, prompt_hash: str, input_hash: str, token_estimate: int) -> str:
         if attempt < 1 or token_estimate < 0:

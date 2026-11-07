@@ -12,6 +12,10 @@ class AppConfig:
     data_dir: Path
     model_mode: str
 
+    @property
+    def origin(self) -> str:
+        return f"http://{self.host}:{self.port}"
+
     @classmethod
     def load(cls, overrides: dict | None = None):
         values = {
@@ -21,8 +25,10 @@ class AppConfig:
             "model_mode": os.environ.get("BIRTHCO_MODEL_MODE", "mock"),
         }
         values.update(overrides or {})
-        if values["host"] != "127.0.0.1" or values["port"] != 5000:
-            raise ValueError("Local service must bind 127.0.0.1:5000")
+        if values["host"] != "127.0.0.1":
+            raise ValueError("Local service must bind 127.0.0.1")
+        if not 1 <= int(values["port"]) <= 65535:
+            raise ValueError("BIRTHCO_PORT must be between 1 and 65535")
         if values["model_mode"] not in {"mock", "live"}:
             raise ValueError("BIRTHCO_MODEL_MODE must be mock or live")
         values["data_dir"] = Path(values["data_dir"]).resolve()
