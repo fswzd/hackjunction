@@ -22,9 +22,9 @@ def main():
     task = CreateTask.model_validate(document["task"])
     scope = EditScope.model_validate(document["edit_scope"]) if document.get("edit_scope") else None
     if args.live:
-        from backend.adapters.model.qwen import QwenAdapter
-        with QwenAdapter() as adapter:
-            result = OperatorAgent(adapter, mode="live", model_id=os.environ.get("QWEN_MODEL_ID")).run(task, edit_scope=scope)
+        from backend.adapters.model.factory import create_live_adapter, live_model_id
+        with create_live_adapter() as adapter:
+            result = OperatorAgent(adapter, mode="live", model_id=live_model_id()).run(task, edit_scope=scope)
     else:
         result = OperatorAgent().run(task, edit_scope=scope)
     text = json.dumps(result.as_dict(), ensure_ascii=False, indent=2) + "\n"

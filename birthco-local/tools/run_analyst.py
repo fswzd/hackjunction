@@ -1,13 +1,25 @@
 """Validate an Audience trace, compute metrics, then optionally use one model call."""
 import argparse
 import json
-import os
 from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from backend.agents.analyst import AnalystAgent,configuration_failure
 from backend.simulation.analysis_data import AnalystInput
 from backend.domain.errors import DomainError
+
+
+def run_live(snapshot):
+    """Resolve the MiMo provider first; any configuration gap keeps valid statistics."""
+    from backend.adapters.model.factory import create_live_adapter,live_model_id
+    try:
+        adapter=create_live_adapter()
+        model_id=live_model_id()
+        if not model_id or not model_id.strip():raise ValueError("live model id is missing")
+    except (ValueError,OSError):
+        return configuration_failure(snapshot)
+    with adapter:
+        return AnalystAgent(adapter,mode="live",model_id=model_id).run(snapshot)
 
 
 def main():
@@ -19,11 +31,7 @@ def main():
     if args.input.stat().st_size>1048576:parser.error("input exceeds 1 MiB")
     snapshot=AnalystInput.model_validate_json(args.input.read_text(encoding="utf-8"))
     if args.live:
-        from backend.adapters.model.qwen import QwenAdapter
-        try:adapter=QwenAdapter()
-        except (ValueError,OSError):result=configuration_failure(snapshot)
-        else:
-            with adapter:result=AnalystAgent(adapter,mode="live",model_id=os.environ.get("QWEN_MODEL_ID")).run(snapshot)
+        result=run_live(snapshot)
     else:result=AnalystAgent().run(snapshot)
     text=json.dumps(result.as_dict(),ensure_ascii=False,indent=2)+"\n"
     if args.output:args.output.write_text(text,encoding="utf-8")

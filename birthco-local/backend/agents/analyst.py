@@ -20,7 +20,9 @@ SYSTEM="""你是众幕 AI 数据分析师。输入仅是内部模拟会话、冻
 Mock事件是机械流程测试，退出可能是预设fixture，不能把它诊断为真实内容缺陷。真实模型persona也不等于人类读者。
 比较只允许描述，comparison.conditions_match和reason必须逐字复制comparison_context给定值；没有已验证片段谱系时，不把同编号或顺序当可靠对齐，也不声称某版因改稿而变好。
 findings只能对left当前版本提出，不得拿right事件作为left改稿的证据。时长、视频完播、播放量、收入和真实反馈不在输入里，不能虚构。
-建议供用户选择，不修改内容、不接受版本、不发布。无法解释就提出具体补充问题；只输出符合schema的JSON。"""
+建议供用户选择，不修改内容、不接受版本、不发布。无法解释就提出具体补充问题；只输出符合schema的JSON。
+包络与引用硬规则（schema之外的程序校验，违反即整单拒绝）：status=ok 时 data 必填且 questions 与 issues 必须是空数组；status=needs_input 时至少一个 question 且 data 为 null；status=error 时至少一个 issue 且 data 为 null。
+finding 最多三个且 id 唯一；observation_refs 不得重复且必须全部来自 left 的真实 event_id；每个 finding 的 segment_id 必须与所引事件的片段一致；顶层 evidence_refs 必须恰好等于全部 finding.observation_refs 的并集，不得多列或漏列；interpretation、alternative_explanation、suggested_edit、summary、next_experiment 均不得空白。"""
 
 
 @dataclass(frozen=True)
@@ -88,7 +90,7 @@ class AnalystAgent:
         call_id="analyst_"+uuid4().hex
         request=ModelRequest(call_id=call_id,role="analyst",model_id=self.model_id,
             messages=(ModelMessage("system",SYSTEM+"\n输出schema："+canonical_bytes(Envelope[Analysis].model_json_schema()).decode()),ModelMessage("user",encoded.decode())),
-            max_completion_tokens=800,timeout_seconds=90,temperature=0.2,top_p=1.0,json_mode=True,mode=self.mode)
+            max_completion_tokens=3500,timeout_seconds=90,temperature=0.2,top_p=1.0,json_mode=True,mode=self.mode)
         def failed(code,cause,status="failed",usage=None):
             return result(status,call_id=call_id,usage=usage,error=DomainError(code,cause,"Keep the computed metrics; inspect the saved result before a new explicit attempt").detail())
         adapter=self.adapter
@@ -111,7 +113,7 @@ class AnalystAgent:
         if not isinstance(response,AdapterResponse):return failed("INTERRUPTED","Unrecognized analysis response","interrupted")
         if response.mode!=self.mode:return failed("MODEL_REJECTED","Model mode mismatch",usage=response.usage)
         if response.status=="unknown":return failed("INTERRUPTED","Remote analysis outcome is unknown","interrupted",response.usage)
-        if response.status!="received":return failed("MODEL_UNAVAILABLE","Analysis model failed",usage=response.usage)
+        if response.status!="received":return failed(response.error_code or "MODEL_UNAVAILABLE","Analysis model failed",usage=response.usage)
         if response.finish_reason!="stop" or response.truncated or response.text is None:return failed("SCHEMA_INVALID","Analysis output is incomplete",usage=response.usage)
         if len(response.text.encode("utf-8"))>1048576:return failed("OUTPUT_TOO_LARGE","Analysis output exceeds 1 MiB",usage=response.usage)
         try:envelope=Envelope[Analysis].model_validate_json(response.text)

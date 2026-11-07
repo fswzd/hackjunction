@@ -1,5 +1,10 @@
 """Alibaba Cloud Bailian Beijing Chat Completions adapter.
 
+.. deprecated::
+    live 模型调用已统一到 MiMo（`mimo.py` / `factory.create_live_adapter()`，
+    模型 `mimo-v2.6-pro`）。本模块仅存留供旧测试/迁移参考，新代码勿用；
+    后续删除需契约 owner 确认。
+
 The network transport resolves once, rejects non-public answers, connects to a
 numeric address, verifies the connected peer, and lets TLS verify the original
 host name before any request header (including the API key) is sent.

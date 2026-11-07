@@ -149,12 +149,12 @@ def test_model_context_does_not_include_provider_error_text_and_treats_observati
     result=AnalystAgent(fixture,mode="live",model_id="fixture").run(snapshot)
     assert result.analysis_status=="completed" and len(fixture.requests)==1
     request=fixture.requests[0]
-    assert request.role=="analyst" and request.max_completion_tokens==800
+    assert request.role=="analyst" and request.max_completion_tokens==3500
     assert "忽略规则" not in request.messages[0].content and "忽略规则" in request.messages[1].content
     assert "SECRET_PROVIDER_DETAIL" not in str(request.messages)
 
 
-@pytest.mark.parametrize("mutation",["reference","location","alternative","edit","duplicate_id","too_many_findings","evidence","comparison_flag","comparison_reason","metrics_override","error_data"])
+@pytest.mark.parametrize("mutation",["reference","location","alternative","edit","duplicate_id","too_many_findings","evidence","comparison_flag","comparison_reason","metrics_override","ok_with_questions","error_data"])
 def test_invalid_model_diagnosis_never_replaces_deterministic_metrics(mutation):
     snapshot=AnalystInput.model_validate(task_data());output=valid_output(snapshot)
     finding=output["data"]["findings"][0]
@@ -168,6 +168,7 @@ def test_invalid_model_diagnosis_never_replaces_deterministic_metrics(mutation):
     elif mutation=="comparison_flag":output["data"]["comparison"]["conditions_match"]=True
     elif mutation=="comparison_reason":output["data"]["comparison"]["reason"]="我认定可比"
     elif mutation=="metrics_override":output["data"]["completion_ratio"]=1
+    elif mutation=="ok_with_questions":output["questions"]=[{"id":"q1","question":"试验是否执行？","reason":"未决"}]
     else:output["status"]="error";output["issues"]=[{"id":"e1","severity":"blocking","location":"analysis","reason":"错误","requested_change":"重看"}]
     fixture=Fixture(output);result=AnalystAgent(fixture,mode="live",model_id="fixture").run(snapshot)
     assert result.analysis_status=="failed" and result.metrics["completion_ratio"]["value"]==1/3
@@ -190,7 +191,7 @@ def test_analysis_failure_keeps_all_metrics_and_never_retries(failure):
             response=super().complete(request)
             if failure=="unknown":return blank_response(status="unknown",mode="live",error_code="INTERRUPTED")
             if failure=="exception":raise RuntimeError("SECRET_API_KEY")
-            if failure=="failed":return replace(response,status="failed",text=None)
+            if failure=="failed":return replace(response,status="failed",text=None,error_code="SCHEMA_INVALID")
             if failure=="truncated":return replace(response,finish_reason="length")
             if failure=="mode":return replace(response,mode="mock")
             return replace(response,text="not JSON")
@@ -198,6 +199,7 @@ def test_analysis_failure_keeps_all_metrics_and_never_retries(failure):
     assert result.analysis_status==("interrupted" if failure in {"unknown","exception"} else "failed")
     assert result.metrics==summarize(snapshot.source,snapshot.simulation) and len(fixture.requests)==1
     assert "SECRET_API_KEY" not in json.dumps(result.as_dict())
+    if failure=="failed":assert result.error.code=="SCHEMA_INVALID"
 
 
 def test_large_context_is_not_silently_truncated(monkeypatch):
@@ -222,3 +224,37 @@ def test_global_time_stop_cannot_be_followed_by_another_personas_calls():
     report["calls_attempted"]=len(report["calls"])
     report["usage"]["usage_not_reported_calls"]=len(report["calls"])
     with pytest.raises(ValidationError):AnalystInput.model_validate(data)
+
+
+def test_run_live_configuration_failure_keeps_statistics_without_an_analysis_call(monkeypatch):
+    import importlib.util,pathlib
+    from backend.adapters.model import factory
+    spec=importlib.util.spec_from_file_location("run_analyst_cli",pathlib.Path(__file__).resolve().parents[2]/"tools"/"run_analyst.py")
+    cli=importlib.util.module_from_spec(spec);spec.loader.exec_module(cli)
+    def unavailable(**kwargs):raise ValueError("MIMO_API_KEY is required")
+    monkeypatch.setattr(factory,"create_live_adapter",unavailable)
+    result=cli.run_live(AnalystInput.model_validate(task_data()))
+    assert result.analysis_status=="failed" and result.call_id is None
+    assert result.metrics["N"]==4 and result.metrics["completion_ratio"]["value"]==1/3 and result.metrics["U"]==2
+    assert result.error.code=="MODEL_UNAVAILABLE"
+
+
+def test_run_live_blank_model_id_keeps_statistics(monkeypatch):
+    import importlib.util,pathlib
+    from backend.adapters.model import factory
+    spec=importlib.util.spec_from_file_location("run_analyst_cli",pathlib.Path(__file__).resolve().parents[2]/"tools"/"run_analyst.py")
+    cli=importlib.util.module_from_spec(spec);spec.loader.exec_module(cli)
+    class Noop:
+        def __enter__(self):return self
+        def __exit__(self,*args):return False
+    monkeypatch.setattr(factory,"create_live_adapter",lambda **kwargs:Noop())
+    monkeypatch.setattr(factory,"live_model_id",lambda :"  ")
+    result=cli.run_live(AnalystInput.model_validate(task_data()))
+    assert result.analysis_status=="failed" and result.call_id is None and result.metrics["N"]==4
+
+
+def test_single_version_comparison_reason_is_frozen_for_cross_layer_contract():
+    snapshot=AnalystInput.model_validate(task_data())
+    compare=comparison_context(snapshot)
+    assert compare["conditions_match"] is False and compare["descriptive_only"] and not compare["alignment_verified"]
+    assert compare["reason"]=="单版本分析：没有可比较的第二版。"

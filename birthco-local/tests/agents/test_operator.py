@@ -104,3 +104,36 @@ def test_whitespace_only_draft_is_missing_input_even_with_scope():
 def test_original_paragraph_text_is_not_trimmed():
     segments=draft_segments("  第一段\n\n第二段\n")
     assert [s["text"] for s in segments]==["  第一段","第二段\n"]
+
+
+def test_added_requirement_ids_are_rejected_when_requirements_frozen():
+    value = OperatorAgent().run(task()).envelope.model_dump(mode="json")
+    value["data"]["requirements"].append({"id": "req_invented", "text": "模型自拟的额外要求"})
+    adapter = FixtureAdapter(value)
+    with pytest.raises(DomainError) as caught:
+        OperatorAgent(adapter, mode="live", model_id="fixture-model").run(task())
+    assert caught.value.code == "SCOPE_DENIED" and len(adapter.requests) == 1
+
+
+def test_frozen_fields_subset_allows_derived_audience_but_keeps_objective():
+    value = OperatorAgent().run(task()).envelope.model_dump(mode="json")
+    value["data"]["audience"] = "从任务推断的目标读者"   # derived, not frozen
+    value["data"]["objective"] = "被改写的目标"
+    adapter = FixtureAdapter(value)
+    frozen = frozenset({"input_mode", "objective", "requirements", "length_rule"})
+    with pytest.raises(DomainError) as caught:
+        OperatorAgent(adapter, mode="live", model_id="fixture-model").run(task(), frozen_fields=frozen)
+    assert caught.value.code == "SCOPE_DENIED", "objective 仍被冻结"
+    value["data"]["objective"] = "选择相机"
+    adapter = FixtureAdapter(value)
+    result = OperatorAgent(adapter, mode="live", model_id="fixture-model").run(task(), frozen_fields=frozen)
+    assert result.envelope.data.audience == "从任务推断的目标读者"
+    assert result.envelope.data.objective == "选择相机"
+
+
+def test_unknown_frozen_field_is_rejected_before_any_call():
+    adapter = FixtureAdapter({})
+    with pytest.raises(DomainError) as caught:
+        OperatorAgent(adapter, mode="live", model_id="fixture-model").run(
+            task(), frozen_fields=frozenset({"objective", "invented_field"}))
+    assert caught.value.code == "SCOPE_DENIED" and adapter.requests == []

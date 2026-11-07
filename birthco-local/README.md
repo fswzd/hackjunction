@@ -32,4 +32,4 @@ python -m venv .venv
 | 模拟观众 | tools/run_audience.py | [AUDIENCE.md](AUDIENCE.md) |
 | 数据分析师 | tools/run_analyst.py | [ANALYST.md](ANALYST.md) |
 
-各角色样例位于 examples。真实百炼调用必须配置环境密钥并显式加 --live；本轮未验证真实模型效果。Scout 的 live 只代表模型分析，仍不联网搜索。
+各角色样例位于 examples。真实 MiMo 调用必须配置环境密钥并显式加 --live；本轮未验证真实模型效果。Scout 的 live 只代表模型分析，仍不联网搜索。

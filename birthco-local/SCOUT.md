@@ -14,6 +14,6 @@ research_requested=true、authorized=true 是可信调用方的明确请求和�
 
 本组件只做材料内分析，没有浏览器或任意 URL 抓取。source_url 是用户提供的未核实元数据，不会被访问。所有 evidence_date 必须 null，结果固定标记 live_search_performed=false、currentness_verified=false；程序验证引用与数据边界，选题与材料是否真正相符仍需用户/真实模型质量验收。
 
-真实模式配置 DASHSCOPE_API_KEY、QWEN_MODEL_ID 后显式加 --live：只将本次材料发给百炼分析，单次一个请求、输出上限2000 Token、没有自动重试。这里 live 只表示真实模型调用，不表示联网搜热点。真实模型效果和计费尚未测试。
+真实模式配置 MIMO_API_KEY、MIMO_MODEL_ID 后显式加 --live：只将本次材料发给MiMo 模型分析，单次一个请求、输出上限2000 Token、没有自动重试。这里 live 只表示真实模型调用，不表示联网搜热点。真实模型效果和计费尚未测试。
 
 输出只是建议，等待用户选择；不会修改账号、记忆或 Brief，也不会写正文、发布或预测流量。用户选定后需由运营官整理新的待确认 Brief。当前没有持久化自动交接、A06 三轮检索或记忆系统。

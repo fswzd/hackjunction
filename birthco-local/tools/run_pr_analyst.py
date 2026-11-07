@@ -14,7 +14,7 @@ def main():
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--handoff-output", type=Path, help="New file only; written only when no gaps or conflicts remain")
-    parser.add_argument("--live", action="store_true", help="At most one billable Qwen request; no automatic retries")
+    parser.add_argument("--live", action="store_true", help="At most one billable MiMo request; no automatic retries")
     args = parser.parse_args()
     paths = [args.input.resolve(), args.output.resolve()]
     if args.handoff_output:
@@ -28,9 +28,9 @@ def main():
         parser.error("input exceeds 1 MiB")
     source = PRAnalysisInput.model_validate_json(args.input.read_text(encoding="utf-8"))
     if args.live:
-        from backend.adapters.model.qwen import QwenAdapter
-        with QwenAdapter() as adapter:
-            result = PRAnalystAgent(adapter, mode="live", model_id=os.environ.get("QWEN_MODEL_ID")).run(source)
+        from backend.adapters.model.factory import create_live_adapter, live_model_id
+        with create_live_adapter() as adapter:
+            result = PRAnalystAgent(adapter, mode="live", model_id=live_model_id()).run(source)
     else:
         result = PRAnalystAgent().run(source)
     # Exclusive creation protects old runs; missing-input/error never creates handoff.

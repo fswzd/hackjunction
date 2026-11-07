@@ -27,7 +27,9 @@ def test_all_six_handoffs_are_bound_and_offline(tmp_path, source, monkeypatch):
     def forbidden(*args, **kwargs):
         raise AssertionError("network/provider access is forbidden in the demo")
     monkeypatch.setattr(socket.socket, "connect", forbidden)
+    from backend.adapters.model.mimo import MiMoAdapter
     from backend.adapters.model.qwen import QwenAdapter
+    monkeypatch.setattr(MiMoAdapter, "__init__", forbidden)
     monkeypatch.setattr(QwenAdapter, "__init__", forbidden)
     original = source.model_dump(mode="json")
     folder = tmp_path / "run"

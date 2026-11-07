@@ -18,9 +18,9 @@ def main():
     if args.input.stat().st_size>1048576:parser.error("input exceeds 1 MiB")
     snapshot=DirectorInput.model_validate_json(args.input.read_text(encoding="utf-8"))
     if args.live:
-        from backend.adapters.model.qwen import QwenAdapter
-        with QwenAdapter() as adapter:
-            result=ContentDirectorAgent(adapter,mode="live",model_id=os.environ.get("QWEN_MODEL_ID")).run(snapshot)
+        from backend.adapters.model.factory import create_live_adapter, live_model_id
+        with create_live_adapter() as adapter:
+            result=ContentDirectorAgent(adapter,mode="live",model_id=live_model_id()).run(snapshot)
     else:result=ContentDirectorAgent().run(snapshot)
     text=json.dumps(result.as_dict(),ensure_ascii=False,indent=2)+"\n"
     if args.output:args.output.write_text(text,encoding="utf-8")

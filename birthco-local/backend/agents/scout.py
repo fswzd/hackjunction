@@ -136,7 +136,9 @@ class ScoutAgent:
             raise DomainError("SCHEMA_INVALID","Research output is incomplete","Request a new bounded attempt explicitly")
         if len(response.text.encode("utf-8"))>1048576:raise DomainError("OUTPUT_TOO_LARGE","Research output exceeds 1 MiB","Reduce input scope")
         try:envelope=Envelope[OpportunitySet].model_validate_json(response.text)
-        except ValidationError:raise DomainError("SCHEMA_INVALID","Invalid research output schema","Inspect the contract without exposing raw output") from None
+        except ValidationError as exc:
+            locs=tuple(sorted({".".join(str(p) for p in err.get("loc",())) for err in exc.errors()}))[:50]
+            raise DomainError("SCHEMA_INVALID","Invalid research output schema","Inspect the contract without exposing raw output",field_errors=locs) from None
         self._validate(snapshot,envelope)
         return result(envelope,call_id,response.usage)
 

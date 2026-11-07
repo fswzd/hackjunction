@@ -9,7 +9,7 @@ python tools/run_director.py --input examples/director-revision-task.json --outp
 
 默认 Mock 是零网络、零模型费用的机械模板，明确包含 Mock 标记。它演示输入输出和改稿边界，不代表真正的写作质量。内容生成后运行程序规则：缺标题、缺封面、重复编号或长度不符会保留候选与失败原因，next_action=repair_content，不能自动进入通过状态。
 
-真实模式需要配置 DASHSCOPE_API_KEY、QWEN_MODEL_ID，显式加 --live，单次最多一个请求且不自动重试。真实调用和内容效果尚未验收。
+真实模式需要配置 MIMO_API_KEY、MIMO_MODEL_ID，显式加 --live，单次最多一个请求且不自动重试。真实调用和内容效果尚未验收。
 
 新稿只能使用预留段落ID；事实来源只能引用本次素材ID。旧稿的替换、新增、删除、移动及标题/封面改动必须有对应的授权 issue_id 与修改记录，保留段落的类型、文本、来源与编号逐字不变。程序验证的是引用和修改边界，事实是否真正得到支持、文案质量仍由独立审稿与用户核对。
 

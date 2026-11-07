@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from backend.adapters.model.qwen import (  # noqa: E402
+from backend.adapters.model.qwen import (  # noqa: E402  # deprecated: live 已统一走 check_mimo.py / MiMo
     DEFAULT_BASE_URL, QwenAdapter,
     ModelConfigurationError, validate_base_url,
 )
