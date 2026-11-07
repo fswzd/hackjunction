@@ -12,7 +12,7 @@ from backend.integrations.types import ExternalAccountCreate, ManualImport, Perf
 
 
 def register_account(db_path, payload: ExternalAccountCreate) -> dict:
-    if payload.platform not in ("douyin",):
+    if payload.platform not in ("douyin", "xiaohongshu"):
         raise ValueError(f"unsupported platform: {payload.platform}")
     return storage.register_external_account(
         db_path, account_id=payload.account_id, platform=payload.platform,
@@ -34,9 +34,14 @@ def import_via_adapter(db_path, external_account_id: str, *, count: int = 10) ->
     """douyin-session 适配器抓取导入；会话缺失/抓取失败给出可操作错误。"""
     from backend.integrations.douyin import fetch as douyin_fetch  # noqa: PLC0415
     account = storage.get_external_account(db_path, external_account_id)
-    if account["platform"] != "douyin":
-        raise ValueError("adapter import currently supports douyin only")
-    works: list[PerfVideo] = douyin_fetch.fetch_recent_works(external_account_id, count=count)
+    if account["platform"] == "douyin":
+        fetch = douyin_fetch
+    elif account["platform"] == "xiaohongshu":
+        from backend.integrations.xiaohongshu import fetch as xhs_fetch  # noqa: PLC0415
+        fetch = xhs_fetch
+    else:
+        raise ValueError(f"adapter import does not support {account['platform']}")
+    works: list[PerfVideo] = fetch.fetch_recent_works(external_account_id, count=count)
     inserted = storage.upsert_imported_videos(
         db_path, external_account_id, [w.model_dump() for w in works], source="adapter")
     account = storage.get_external_account(db_path, external_account_id)

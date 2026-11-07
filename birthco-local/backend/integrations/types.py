@@ -5,7 +5,7 @@ from pydantic import Field
 
 from backend.domain.schemas import Model
 
-PLATFORMS = ("douyin",)
+PLATFORMS = ("douyin", "xiaohongshu")
 SESSION_STATUSES = ("none", "pending_adapter_setup", "logged_in", "expired")
 
 
@@ -31,7 +31,7 @@ class PerfVideo(Model):
 class ExternalAccountCreate(Model):
     """注册一个已存在的平台账号（不新建账号，只做接入管理）。"""
     account_id: str = Field(min_length=1, max_length=64)   # 绑定本地业务分区
-    platform: str = Field(min_length=1, max_length=32)      # 目前支持 douyin
+    platform: str = Field(min_length=1, max_length=32)      # douyin | xiaohongshu
     handle: str = Field(min_length=1, max_length=64)        # 抖音号/主页标识
     display_name: str = Field(default="", max_length=64)
     profile_url: str | None = Field(default=None, max_length=500)
