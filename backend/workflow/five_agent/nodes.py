@@ -87,6 +87,38 @@ def _issues_of(outcome) -> list:
     return list(outcome.result.issues or []) if outcome.result else []
 
 
+# 子 run 终态映射：AgentResult.status -> run 终态。
+# 子 run 的生命周期由创建它的节点负责终结（ok / needs_input / error 三出口全覆盖）。
+SUB_RUN_TERMINAL = {"ok": "READY", "needs_input": "WAITING_INPUT", "error": "NEEDS_REVIEW"}
+
+
+def _finish_sub_run(svc: Services, sub_run_id: str, state_run_id: str, outcome_status: str) -> None:
+    """终结内容 run 内创建的显式子 run（scout / pr_intake）。
+
+    独立 run（子 run 即 state run）的终态由 driver 按 state patch 写入，此处跳过。
+    """
+    if sub_run_id != state_run_id:
+        svc.repo.set_run_status(sub_run_id, SUB_RUN_TERMINAL[outcome_status])
+
+
+def _save_diagnostics(svc: Services, state: FiveAgentState, source: str,
+                      *, error_code: str | None = None, issues: list | None = None,
+                      field_errors: list | None = None) -> dict:
+    """持久化受控诊断（只存错误码/issue 编号/字段路径，不存模型原文），返回真实 Ref。"""
+    payload = {"source": source, "error_code": error_code,
+               "issue_codes": [i.get("id") for i in (issues or [])],
+               "field_errors": list(field_errors or [])}
+    art_id = "diag_" + object_hash({"task": state["task_id"], "run": state["run_id"],
+                                    "payload": payload})[:20]
+    svc.repo.save_artifact(art_id, state["task_id"], state["run_id"], "diagnostics", payload)
+    return {"id": art_id, "sha256": object_hash(payload)}
+
+
+def _materials_fp(material_refs: list[dict]) -> list[dict]:
+    """指纹输入：素材的内容承诺 = id + 内容 sha256，缺一不可（id 相同正文不同必须换指纹）。"""
+    return [{"id": r["id"], "sha256": r["sha256"]} for r in material_refs]
+
+
 # ----------------------------------------------------------------- content: route
 
 
@@ -146,26 +178,33 @@ def node_pr_analysis(state: FiveAgentState, svc: Services) -> dict:
     svc.router.bind_task(state["task_id"])
     input_payload = {"request_text": request_text[:20000], "material_refs": material_refs}
     step_key = step_key_pr(_fp({"request_text": request_text,
-                                "materials": [r["id"] for r in material_refs]})[:16])
+                                "materials": _materials_fp(material_refs)})[:16])
     try:
         outcome = _call(state, svc, step_key, "analyze_request", input_payload,
                         run_id=pr_run_id, max_attempts=2)
-    except (BudgetExceeded, AgentUnavailable, CancelledError, InterruptedUnknown):
+    except (CancelledError, InterruptedUnknown):
+        # 取消/中断各有权威终态路径（CANCELLED / INTERRUPTED），禁止吞入分流
+        raise
+    except (BudgetExceeded, AgentUnavailable):
+        _finish_sub_run(svc, pr_run_id, state["run_id"], "error")
         raise
     except GatewayError:
-        return validate_state_patch({"route_decision": "needs_review", "terminal": "NEEDS_REVIEW",
-                                     "error_ref": {"id": state["run_id"]},
+        _finish_sub_run(svc, pr_run_id, state["run_id"], "error")
+        diag = _save_diagnostics(svc, state, "pr_analysis", error_code="MODEL_REJECTED")
+        return validate_state_patch({"route_decision": "needs_review", "terminal": SUB_RUN_TERMINAL["error"],
+                                     "error_ref": diag,
                                      "resume_step": "pr_analysis"})
 
     if outcome.status == "ok":
         analysis = outcome.data
+        _finish_sub_run(svc, pr_run_id, state["run_id"], "ok")
         art_id = "pranalysis_" + object_hash({"task": state["task_id"], "data": analysis})[:24]
         svc.repo.save_artifact(art_id, state["task_id"], state["run_id"], "pr_analysis", analysis)
         svc.repo.log_event(state["task_id"], state["run_id"], "pr_analysis_committed",
                            {"artifact_id": art_id,
                             "ready_for_operator": analysis["ready_for_operator"]})
         if state["run_kind"] == "pr_intake":
-            return validate_state_patch({"route_decision": "stop", "terminal": "READY",
+            return validate_state_patch({"route_decision": "stop", "terminal": SUB_RUN_TERMINAL["ok"],
                                          "artifact_batch_ref": {"id": art_id, "sha256": object_hash(analysis)},
                                          "resume_step": "pr_analysis"})
         if analysis["ready_for_operator"]:
@@ -179,16 +218,19 @@ def node_pr_analysis(state: FiveAgentState, svc: Services) -> dict:
 
     if outcome.status == "needs_input":
         questions = _questions_of(outcome)
+        _finish_sub_run(svc, pr_run_id, state["run_id"], "needs_input")
         svc.repo.save_artifact(f"pending_questions_{state['run_id']}", state["task_id"],
                                state["run_id"], "pending_questions",
                                {"questions": questions, "source": "pr_analysis"})
         if state["run_kind"] == "pr_intake":
-            return validate_state_patch({"route_decision": "stop", "terminal": "WAITING_INPUT",
+            return validate_state_patch({"route_decision": "stop", "terminal": SUB_RUN_TERMINAL["needs_input"],
                                          "resume_step": "pr_analysis"})
         return validate_state_patch({"route_decision": "wait_input", "resume_step": "pr_analysis"})
     # error: 商单分析不交接，人工处理
-    return validate_state_patch({"route_decision": "needs_review", "terminal": "NEEDS_REVIEW",
-                                 "error_ref": {"id": state["run_id"]}, "resume_step": "pr_analysis"})
+    _finish_sub_run(svc, pr_run_id, state["run_id"], "error")
+    diag = _save_diagnostics(svc, state, "pr_analysis", issues=_issues_of(outcome))
+    return validate_state_patch({"route_decision": "needs_review", "terminal": SUB_RUN_TERMINAL["error"],
+                                 "error_ref": diag, "resume_step": "pr_analysis"})
 
 
 # ----------------------------------------------------------------- traffic/scout
@@ -210,36 +252,60 @@ def node_traffic(state: FiveAgentState, svc: Services) -> dict:
             svc.repo.set_run_status(scout_run_id, "RUNNING")
     svc.router.bind_task(state["task_id"])
     input_payload = proj.build_capture_input(goal, material_refs)
-    step_key = step_key_scout(_fp({"goal": goal, "materials": [r["id"] for r in material_refs]})[:16])
+    step_key = step_key_scout(_fp({"goal": goal, "materials": _materials_fp(material_refs)})[:16])
     discovery = task["payload"].get("purpose") == "discover_topics"
     try:
         outcome = _call(state, svc, step_key, "capture_opportunities", input_payload,
                         run_id=scout_run_id)
+    except (CancelledError, InterruptedUnknown):
+        # 取消/中断各有权威终态路径（CANCELLED / INTERRUPTED），禁止吞入失败分流
+        raise
     except (GatewayError, BudgetExceeded) as exc:
+        _finish_sub_run(svc, scout_run_id, state["run_id"], "error")
         if discovery:
-            return validate_state_patch({"route_decision": "needs_review", "terminal": "NEEDS_REVIEW",
-                                         "error_ref": {"id": state["run_id"]},
-                                         "resume_step": "traffic"})
+            diag = _save_diagnostics(svc, state, "traffic", error_code=getattr(exc, "code", None))
+            return validate_state_patch({"route_decision": "needs_review",
+                                         "terminal": SUB_RUN_TERMINAL["error"],
+                                         "error_ref": diag, "resume_step": "traffic"})
         svc.repo.log_event(state["task_id"], state["run_id"], "traffic_skipped",
                            {"reason": f"capture failed: {exc}"})
         return validate_state_patch({"route_decision": "brief", "resume_step": "traffic"})
 
     if outcome.status == "ok":
+        _finish_sub_run(svc, scout_run_id, state["run_id"], "ok")
         opp_id = "oppset_" + object_hash({"task": state["task_id"], "data": outcome.data})[:24]
         svc.repo.save_artifact(opp_id, state["task_id"], state["run_id"], "opportunity_set", outcome.data)
         if state["run_kind"] == "scout":
-            return validate_state_patch({"route_decision": "stop", "terminal": "READY",
+            return validate_state_patch({"route_decision": "stop", "terminal": SUB_RUN_TERMINAL["ok"],
                                          "artifact_batch_ref": {"id": opp_id, "sha256": object_hash(outcome.data)},
                                          "resume_step": "traffic"})
         return validate_state_patch({"route_decision": "wait_opportunity",
                                      "artifact_batch_ref": {"id": opp_id, "sha256": object_hash(outcome.data)},
                                      "resume_step": "traffic"})
-    # needs_input / error from scout: record and follow the non-discovery rule
+    # needs_input / error from scout: 记录、终结子 run、按发现/非发现分流
+    _finish_sub_run(svc, scout_run_id, state["run_id"], outcome.status)
     svc.repo.log_event(state["task_id"], state["run_id"], "traffic_skipped",
-                       {"reason": f"capture status {outcome.status}", "issues": _issues_of(outcome)})
+                       {"reason": f"capture status {outcome.status}", "issues": _issues_of(outcome),
+                        "questions": _questions_of(outcome)})
+    if outcome.status == "needs_input":
+        svc.repo.save_artifact(f"pending_questions_{state['run_id']}_scout", state["task_id"],
+                               state["run_id"], "pending_questions",
+                               {"questions": _questions_of(outcome), "source": "traffic"})
+    terminal = SUB_RUN_TERMINAL[outcome.status]
+    if state["run_kind"] == "scout":
+        # 独立 scout run 的图只有 stop/needs_review 两个终点；error 走 needs_review 节点落同终态
+        patch = {"route_decision": "needs_review" if outcome.status == "error" else "stop",
+                 "terminal": terminal, "resume_step": "traffic"}
+        if outcome.status == "error":
+            patch["error_ref"] = _save_diagnostics(svc, state, "traffic", issues=_issues_of(outcome))
+        return validate_state_patch(patch)
     if discovery:
-        return validate_state_patch({"route_decision": "needs_review", "terminal": "NEEDS_REVIEW",
-                                     "resume_step": "traffic"})
+        patch = {"route_decision": "needs_review" if outcome.status == "error" else "stop",
+                 "terminal": terminal, "resume_step": "traffic"}
+        if outcome.status == "error":
+            patch["error_ref"] = _save_diagnostics(svc, state, "traffic", issues=_issues_of(outcome))
+        return validate_state_patch(patch)
+    # 非发现模式：捕捉是可选分支，失败/缺料继续走 brief（分流规则），子 run 已终结留痕
     return validate_state_patch({"route_decision": "brief", "resume_step": "traffic"})
 
 
@@ -295,8 +361,8 @@ def node_brief(state: FiveAgentState, svc: Services) -> dict:
         f"\n补充：{a}" for a in payload.get("answers", []))
     input_mode = payload.get("input_mode", "idea")
     planning = {"user_input": user_input, "input_mode": input_mode,
-                "material_ids": [r["id"] for r in material_refs],
-                "selected_opportunity_id": (selected or {}).get("id")}
+                "materials": _materials_fp(material_refs),
+                "selected_opportunity_ref": selected}
     # 商单链：把 pr_analyst 已就绪的客户硬性要求并入需求整理输入（可追溯到 artifact）
     pr = _find_pr_analysis(state, svc)
     if pr and pr["payload"].get("ready_for_operator"):

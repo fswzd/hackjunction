@@ -468,10 +468,12 @@ class AdapterRouter:
     def __init__(self, repo: Repository, mode: str = "mock",
                  scripts: dict[tuple[str, str], list[Behaviour]] | None = None,
                  audience_exits: dict[str, int | None] | None = None,
-                 audience_timeout_at: dict[str, int] | None = None):
+                 audience_timeout_at: dict[str, int] | None = None,
+                 agent_modes: dict[str, str] | None = None):
         if mode not in ("mock", "live"):
             raise ValueError("mode must be mock|live")
         self.mode = mode
+        self.agent_modes = dict(agent_modes or {})
         self.repo = repo
         scripts = scripts or {}
         per_agent: dict[str, dict[str, list[Behaviour]]] = {}
@@ -524,6 +526,12 @@ class AdapterRouter:
             "data_analyst": RealAdapterStub("data_analyst", ("diagnose_preview",)),
             "simulated_audience": RealAdapterStub("simulated_audience", ("read_segment",)),
         }
+        for agent_id, m in self.agent_modes.items():
+            if m not in ("mock", "live"):
+                raise ValueError(f"agent_modes[{agent_id}] must be mock|live")
+        unknown = set(self.agent_modes) - set(self.mocks)
+        if unknown:
+            raise ValueError(f"agent_modes has unknown agent ids: {sorted(unknown)}")
         self._resolvers: dict[str, TaskResolver] = {}
 
     def _audience_default(self, call: AgentCall, resolver: TaskResolver) -> dict:
@@ -544,7 +552,10 @@ class AdapterRouter:
     def adapter_for(self, action: str) -> MockAgent | RealAdapterStub:
         from .registry import ACTIONS
         agent_id = ACTIONS[action]
-        if self.mode == "live":
+        # per-agent override enables single-role rollout; the global mode is the
+        # default for every agent without an override.  live NEVER falls back to mock.
+        mode = self.agent_modes.get(agent_id, self.mode)
+        if mode == "live":
             return self.reals[agent_id]
         return self.mocks[agent_id]
 
