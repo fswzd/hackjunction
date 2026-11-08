@@ -132,7 +132,11 @@ class ApiExternalAccounts implements ExternalAccountsClient {
   private session: { csrf_token: string } | null = null;
   private sessionPromise: Promise<{ csrf_token: string }> | null = null;
 
-  private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  private async request<T>(
+    path: string,
+    init: RequestInit = {},
+    allowSessionRetry = true,
+  ): Promise<T> {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
     const response = await fetch(`${this.base}${path}`, {
@@ -143,7 +147,23 @@ class ApiExternalAccounts implements ExternalAccountsClient {
     const payload = (await response.json().catch(() => ({}))) as {
       data?: T;
     } & BackendErrorBody;
-    if (!response.ok) throw backendError(response.status, payload);
+    if (!response.ok) {
+      if (response.status === 401 && allowSessionRetry && path !== "/api/v1/session") {
+        this.session = null;
+        this.sessionPromise = null;
+        try {
+          const fresh = await this.ensureSession();
+          const replay = new Headers(init.headers);
+          replay.set("X-CSRF-Token", fresh.csrf_token);
+          if (replay.has("Idempotency-Key")) replay.set("Idempotency-Key", randomKey());
+          return this.request<T>(path, { ...init, headers: replay }, false);
+        } catch {
+          this.session = null;
+          this.sessionPromise = null;
+        }
+      }
+      throw backendError(response.status, payload);
+    }
     return payload.data as T;
   }
 
@@ -155,6 +175,11 @@ class ApiExternalAccounts implements ExternalAccountsClient {
       ).then((info) => {
         this.session = info;
         return info;
+      }).catch((error: unknown) => {
+        // A single transient failure must not lock this client out forever.
+        this.session = null;
+        this.sessionPromise = null;
+        throw error;
       });
     }
     return this.sessionPromise;
@@ -223,6 +248,7 @@ class ApiExternalAccounts implements ExternalAccountsClient {
   }
 
   async status(externalAccountId: string) {
+    await this.ensureSession();
     return this.request<ExternalAccountStatus>(
       `/api/v1/accounts/external/${encodeURIComponent(externalAccountId)}/status`,
     );
@@ -258,6 +284,7 @@ class ApiExternalAccounts implements ExternalAccountsClient {
   }
 
   async experience(externalAccountId: string) {
+    await this.ensureSession();
     return this.request<ExperienceSummary>(
       `/api/v1/accounts/external/${encodeURIComponent(externalAccountId)}/experience`,
     );

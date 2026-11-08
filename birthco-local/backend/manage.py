@@ -3,6 +3,7 @@ import argparse
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import logging
 import os
 from pathlib import Path
 import shutil
@@ -108,7 +109,20 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     for name in ("migrate", "backup", "reconcile"):
         sub.add_parser(name).add_argument("--data-dir", type=Path, required=True)
+    worker = sub.add_parser("worker")
+    worker.add_argument("--data-dir", type=Path, required=True)
+    worker.add_argument("--once", action="store_true")
     args = parser.parse_args()
+    if args.command == "worker":
+        from backend.worker.executor import Worker
+
+        logging.basicConfig(level=logging.INFO)
+        service = Worker(args.data_dir)
+        if args.once:
+            service.once()
+        else:
+            service.serve()
+        return
     if args.command == "migrate":
         result = {"database": str(migrate(args.data_dir))}
     elif args.command == "backup":

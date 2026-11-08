@@ -2330,6 +2330,88 @@
     "title": "UpdateInput",
     "type": "object"
   },
+  "QuestionsRead": {
+    "$defs": {
+      "Question": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "question": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "reason"
+        ],
+        "title": "Question",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "questions": {
+        "items": {
+          "$ref": "#/$defs/Question"
+        },
+        "title": "Questions",
+        "type": "array"
+      }
+    },
+    "required": [
+      "questions"
+    ],
+    "title": "QuestionsRead",
+    "type": "object"
+  },
+  "ReturnForRevision": {
+    "additionalProperties": false,
+    "properties": {
+      "expected_row_version": {
+        "minimum": 0,
+        "title": "Expected Row Version",
+        "type": "integer"
+      },
+      "version_id": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+        "title": "Version Id",
+        "type": "string"
+      },
+      "content_hash": {
+        "pattern": "^[a-f0-9]{64}$",
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "note": {
+        "maxLength": 1000,
+        "minLength": 1,
+        "title": "Note",
+        "type": "string"
+      }
+    },
+    "required": [
+      "expected_row_version",
+      "version_id",
+      "content_hash",
+      "note"
+    ],
+    "title": "ReturnForRevision",
+    "type": "object"
+  },
   "EditBrief": {
     "$defs": {
       "Brief": {
@@ -20759,6 +20841,13 @@
       },
       "content": {
         "$ref": "#/$defs/ContentDelivery"
+      },
+      "max_segments": {
+        "default": 8,
+        "maximum": 8,
+        "minimum": 2,
+        "title": "Max Segments",
+        "type": "integer"
       },
       "personas": {
         "items": {

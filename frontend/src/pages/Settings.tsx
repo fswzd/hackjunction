@@ -96,6 +96,122 @@ const EMPTY: Profile = {
   completedAt: "",
 };
 
+interface AgentInterfaceInfo {
+  agent_id: string;
+  label: string;
+  provider: string;
+  model_id: string;
+  base_url: string;
+  configured: boolean;
+  offline: boolean;
+  api_key_configured: boolean;
+  env_prefix: string;
+}
+
+/** Read-only view of the seven expert-agent interfaces wired into the backend. */
+function AgentInterfaces({ enabled }: { enabled: boolean }) {
+  const [rows, setRows] = useState<AgentInterfaceInfo[]>([]);
+  const [modelMode, setModelMode] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [message, setMessage] = useState("");
+  const base = import.meta.env.VITE_API_BASE ?? "";
+
+  const load = async () => {
+    setStatus("loading");
+    setMessage("");
+    try {
+      // Bootstrap first: the diagnostics route is session-protected.
+      await fetch(`${base}/api/v1/session`, { credentials: "include" });
+      const response = await fetch(`${base}/api/v1/agents`, { credentials: "include" });
+      const body = (await response.json().catch(() => ({}))) as {
+        data?: { model_mode?: string; agents?: AgentInterfaceInfo[] };
+        error?: { cause_hint?: string };
+      };
+      if (!response.ok) throw new Error(body.error?.cause_hint ?? `后端返回 ${response.status}`);
+      setRows(body.data?.agents ?? []);
+      setModelMode(body.data?.model_mode ?? "");
+      setStatus("ok");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "无法读取接口状态");
+      setStatus("error");
+    }
+  };
+
+  useEffect(() => {
+    if (enabled) void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <h2 className="text-sm font-semibold">七角色 Agent 接口</h2>
+          <p className="mt-0.5 text-[11px] text-muted">
+            每个 Agent 独立解析模型服务；未配置凭据时使用离线 Mock，绝不静默联网
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-muted">
+            {modelMode ? `运行模式 ${modelMode}` : ""}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<RotateCcw size={13} />}
+            onClick={() => void load()}
+          >
+            检测
+          </Button>
+        </div>
+      </CardHeader>
+      <CardBody>
+        {!enabled ? (
+          <p className="text-[11px] leading-5 text-muted">
+            切到「真实接口」模式后可在这里查看后端七个 Agent 的接入状态。
+          </p>
+        ) : status === "loading" ? (
+          <p className="text-[11px] text-muted">正在读取接口状态…</p>
+        ) : status === "error" ? (
+          <p className="text-[11px] leading-5 text-red">{message}</p>
+        ) : (
+          <div className="space-y-1.5">
+            {rows.map((row) => (
+              <div
+                key={row.agent_id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-line bg-raised/40 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium text-text">{row.label}</p>
+                  <p className="truncate text-[10px] text-muted">
+                    {row.provider} · {row.model_id} · {row.base_url}
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    "shrink-0 rounded-full border px-2 py-0.5 text-[10px]",
+                    row.configured
+                      ? "border-green/30 bg-green/10 text-green"
+                      : "border-amber/30 bg-amber/10 text-amber",
+                  )}
+                >
+                  {row.offline ? "离线 Mock" : row.configured ? "已接入" : "待配置"}
+                </span>
+              </div>
+            ))}
+            <p className="pt-1 text-[10px] leading-5 text-muted">
+              接入方式：在启动进程的环境变量里设置 <code>AGENT_API_KEY</code> /
+              <code> AGENT_BASE_URL</code> / <code>AGENT_MODEL_ID</code>（也可按
+              <code> OPERATOR_</code>、<code>DIRECTOR_</code> 等前缀给单个
+              Agent 单独指定）。凭据只在进程内存中，不写入任何文件。
+            </p>
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
 export function Settings() {
   const snapshot = useWorkspace((state) => state.snapshot);
   const mode = useWorkspace((state) => state.mode);
@@ -406,14 +522,14 @@ export function Settings() {
                   accent="#8FD6A8"
                 />
                 <Row
-                  label="修订运行"
-                  value="需后端 worker 消费 feedback · 未接入"
-                  accent="#F0B36E"
+                  label="退回修改 / 定向修订运行"
+                  value="POST /revise → worker 生成新版本 · 已接入"
+                  accent="#8FD6A8"
                 />
                 <Row
                   label="产物下载"
                   value="GET tasks/{id}/artifacts + /artifacts/{id}/download · 已接入"
-                  accent="#F0B36E"
+                  accent="#8FD6A8"
                 />
                 <Row
                   label="工作空间画像"
@@ -435,6 +551,8 @@ export function Settings() {
               ) : null}
             </CardBody>
           </Card>
+
+          <AgentInterfaces enabled={mode === "api"} />
         </div>
 
         <div className="space-y-4">

@@ -42,7 +42,7 @@ interface WorkspaceState {
   refresh: () => Promise<void>;
   setMode: (mode: "demo" | "api") => Promise<void>;
   completeOnboarding: (profile: Profile) => Promise<void>;
-  createTask: (input: CreateTaskInput) => Promise<void>;
+  createTask: (input: CreateTaskInput) => Promise<boolean>;
   advanceTask: (taskId: string) => Promise<void>;
   advanceOldest: () => Promise<void>;
   decideTask: (
@@ -171,7 +171,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     const epoch = snapshotEpoch;
     try {
       const snapshot = await adapter.createTask(input);
-      if (epoch !== snapshotEpoch) return;
+      if (epoch !== snapshotEpoch) return false;
       set({
         snapshot,
         toast: {
@@ -180,8 +180,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
           tone: "success",
         },
       });
+      return true;
     } catch (error) {
       get().showToast(errorMessage(error), "error");
+      return false;
     }
   },
 
@@ -239,7 +241,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
                     ? "已保存新的 Brief 版本，请再次确认或继续修改。"
                     : "已退回运营官，重新规划 Brief。"
                   : apiMode
-                    ? "修订意见已记录为 feedback（edit_request）；后端修订运行尚未接入，任务仍保持待验收。"
+                    ? "已退回内容主创：后端已启动定向修订运行，请等待新版本。"
                     : "已退回内容主创，进行定向修订。"
                 : briefGate
                   ? "已取消本次任务。"

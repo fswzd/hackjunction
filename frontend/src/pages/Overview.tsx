@@ -425,8 +425,9 @@ export function Overview() {
               "text-[10px] leading-5 text-muted",
             )}
           >
-            当前为<b className="text-amber">演示模式</b>：任务由本地适配层按阶段推进，
-            2D 与 3D 读取同一份状态。真实后端切换入口在「设置」。
+            {snapshot.mode === "api"
+              ? "任务由本地后端自动推进，工作台会刷新进度。任务书确认和稿件验收由你决定。"
+              : "当前为演示模式。任务由本地演示数据推进，可在「设置」切换到真实接口。"}
           </div>
         </div>
       </div>

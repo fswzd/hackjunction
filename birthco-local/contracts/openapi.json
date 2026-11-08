@@ -1068,6 +1068,113 @@
       }
     },
     "/api/v1/tasks/{task_id}/input": {
+      "get": {
+        "operationId": "get_tasks_task_id_input",
+        "x-owner": "A03b",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSuccess_QuestionsRead_"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+            }
+          }
+        ]
+      },
       "post": {
         "operationId": "post_tasks_task_id_input",
         "x-owner": "A03b",
@@ -2345,6 +2452,143 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AcceptVersion"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{task_id}/revise": {
+      "post": {
+        "operationId": "post_tasks_task_id_revise",
+        "x-owner": "A04a",
+        "responses": {
+          "202": {
+            "description": "Committed response; asynchronous work not yet complete",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSuccess_TaskSummary_"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnForRevision"
               }
             }
           }
@@ -4214,6 +4458,115 @@
         }
       }
     },
+    "/api/v1/tasks/{task_id}/previews": {
+      "get": {
+        "operationId": "get_tasks_task_id_previews",
+        "x-owner": "A07b",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSuccess_list_PreviewRead__"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+            }
+          }
+        ]
+      }
+    },
     "/api/v1/previews/{preview_id}": {
       "get": {
         "operationId": "get_previews_preview_id",
@@ -4225,6 +4578,115 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiSuccess_PreviewRead_"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed error; see design section 5",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "preview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/previews/{preview_id}/analysis": {
+      "get": {
+        "operationId": "get_previews_preview_id_analysis",
+        "x-owner": "A08a",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSuccess_AnalysisRead_"
                 }
               }
             }
@@ -7475,6 +7937,57 @@
           "materials"
         ],
         "title": "UpdateInput",
+        "type": "object"
+      },
+      "QuestionsRead": {
+        "additionalProperties": false,
+        "properties": {
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
+            "title": "Questions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "questions"
+        ],
+        "title": "QuestionsRead",
+        "type": "object"
+      },
+      "ReturnForRevision": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_row_version": {
+            "minimum": 0,
+            "title": "Expected Row Version",
+            "type": "integer"
+          },
+          "version_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Version Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_row_version",
+          "version_id",
+          "content_hash",
+          "note"
+        ],
+        "title": "ReturnForRevision",
         "type": "object"
       },
       "EditBrief": {
@@ -13238,6 +13751,13 @@
           "content": {
             "$ref": "#/components/schemas/ContentDelivery"
           },
+          "max_segments": {
+            "default": 8,
+            "maximum": 8,
+            "minimum": 2,
+            "title": "Max Segments",
+            "type": "integer"
+          },
           "personas": {
             "items": {
               "$ref": "#/components/schemas/Persona"
@@ -13401,6 +13921,25 @@
           "request_id"
         ],
         "title": "ApiSuccess[list[MaterialRead]]",
+        "type": "object"
+      },
+      "ApiSuccess_QuestionsRead_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/QuestionsRead"
+          },
+          "request_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "ApiSuccess[QuestionsRead]",
         "type": "object"
       },
       "ApiSuccess_BriefRead_": {
@@ -13727,11 +14266,15 @@
         "title": "ApiSuccess[PreviewRead]",
         "type": "object"
       },
-      "ApiSuccess_AudienceEventPage_": {
+      "ApiSuccess_list_PreviewRead__": {
         "additionalProperties": false,
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/AudienceEventPage"
+            "items": {
+              "$ref": "#/components/schemas/PreviewRead"
+            },
+            "title": "Data",
+            "type": "array"
           },
           "request_id": {
             "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
@@ -13743,7 +14286,7 @@
           "data",
           "request_id"
         ],
-        "title": "ApiSuccess[AudienceEventPage]",
+        "title": "ApiSuccess[list[PreviewRead]]",
         "type": "object"
       },
       "ApiSuccess_AnalysisRead_": {
@@ -13763,6 +14306,25 @@
           "request_id"
         ],
         "title": "ApiSuccess[AnalysisRead]",
+        "type": "object"
+      },
+      "ApiSuccess_AudienceEventPage_": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AudienceEventPage"
+          },
+          "request_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "request_id"
+        ],
+        "title": "ApiSuccess[AudienceEventPage]",
         "type": "object"
       },
       "ApiSuccess_RevisionRead_": {

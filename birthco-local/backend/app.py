@@ -1,8 +1,9 @@
 """Loopback-only Flask app factory; startup never runs migrations or a worker."""
 import os
 import sqlite3
+import traceback
 
-from flask import Flask, request
+from flask import Flask, current_app, request
 from pydantic import ValidationError
 from werkzeug.exceptions import BadRequest, HTTPException, RequestEntityTooLarge
 
@@ -13,17 +14,23 @@ from backend.security.session import validate_origin, require_session, require_w
 from backend.storage.db import connect
 
 
+def _allowed_origins(settings) -> set[str]:
+    """Configured local origins; loopback aliases are handled in validate_origin."""
+    origins = {settings.origin}
+    for item in os.environ.get("BIRTHCO_ALLOWED_ORIGINS", "").split(","):
+        value = item.strip().rstrip("/")
+        if value:
+            origins.add(value)
+    return origins
+
+
 def create_app(overrides: dict | None = None) -> Flask:
     settings = AppConfig.load(overrides)
     db_path = settings.data_dir / "db.sqlite"
     with connect(db_path):
         pass
     app = Flask(__name__, static_folder=None)
-    allowed_origins = {settings.origin}
-    for item in os.environ.get("BIRTHCO_ALLOWED_ORIGINS", "").split(","):
-        value = item.strip().rstrip("/")
-        if value:
-            allowed_origins.add(value)
+    allowed_origins = _allowed_origins(settings)
     app.config.update(DB_PATH=db_path, DATA_DIR=settings.data_dir, MODEL_MODE=settings.model_mode,
                       SESSION_SECRET=session_secret(settings.data_dir), MAX_CONTENT_LENGTH=1048576,
                       JSON_AS_ASCII=False, PROPAGATE_EXCEPTIONS=False,
@@ -33,8 +40,12 @@ def create_app(overrides: dict | None = None) -> Flask:
     def boundary():
         if request.path.startswith("/api/"):
             validate_origin()
-            if not (request.method == "GET" and request.path == "/api/v1/session"):
-                require_write() if request.method in {"POST", "PUT", "PATCH", "DELETE"} else require_session()
+            if request.path in {"/api/v1/session", "/api/v1/health"}:
+                return
+            if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+                require_write()
+            else:
+                require_session()
 
     @app.errorhandler(DomainError)
     def domain_failure(exc: DomainError):
@@ -70,12 +81,30 @@ def create_app(overrides: dict | None = None) -> Flask:
         return exc
 
     @app.errorhandler(Exception)
-    def unexpected_failure(_):
-        return error("STORAGE_UNAVAILABLE", 503, "Service unavailable", "Retry with the same request key", retryable=True)
+    def unexpected_failure(exc: Exception):
+        # Never swallow a bug into an opaque "service unavailable". Log the full
+        # traceback server-side (it goes to .run/api.err.log) and give the caller
+        # a truthful, actionable hint so the UI no longer shows a mystery 503.
+        current_app.logger.error(
+            "Unhandled %s on %s %s\n%s",
+            type(exc).__name__, request.method, request.path,
+            "".join(traceback.format_exception(type(exc), exc, exc.__traceback__)),
+        )
+        detail = str(exc).strip().replace("\n", " ")[:220]
+        hint = f"服务内部错误：{type(exc).__name__}" + (f" — {detail}" if detail else "")
+        return error("STORAGE_UNAVAILABLE", 500, hint,
+                     "查看 .run/api.err.log 中的完整堆栈，或把该信息反馈给开发者",
+                     retryable=False)
 
     @app.get("/")
     def index():
         return success({"service": "众幕 AI Agent backend", "mode": settings.model_mode})
+
+    @app.get("/api/v1/health")
+    def health():
+        """Unauthenticated readiness probe used by the desktop launcher."""
+        return success({"status": "ok", "mode": settings.model_mode,
+                        "db": str(db_path), "port": settings.port})
 
     from backend.security.session import blueprint as session_blueprint
     from backend.api.accounts import blueprint as accounts_blueprint
@@ -85,7 +114,10 @@ def create_app(overrides: dict | None = None) -> Flask:
     from backend.api.external_accounts import blueprint as external_accounts_blueprint
     from backend.api.previews import blueprint as previews_blueprint
     from backend.api.artifacts import blueprint as artifacts_blueprint
-    for blueprint in (session_blueprint, accounts_blueprint, create_blueprint, reads_blueprint, actions_blueprint, previews_blueprint, external_accounts_blueprint, artifacts_blueprint):
+    from backend.api.agents import blueprint as agents_blueprint
+    for blueprint in (session_blueprint, accounts_blueprint, create_blueprint, reads_blueprint,
+                      actions_blueprint, previews_blueprint, external_accounts_blueprint,
+                      artifacts_blueprint, agents_blueprint):
         app.register_blueprint(blueprint)
     return app
 

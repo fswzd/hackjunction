@@ -32,7 +32,7 @@ foreach ($port in 5000, 5001, 4173, 4174) {
 }
 
 # 3) pid 文件清账
-foreach ($name in @("api", "frontend")) {
+foreach ($name in @("api", "worker", "frontend")) {
   $pidFile = Join-Path $runDir "$name.pid"
   if (Test-Path $pidFile) {
     $procId = Get-Content $pidFile | Select-Object -First 1

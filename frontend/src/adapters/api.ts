@@ -7,6 +7,7 @@ import {
   stepMeta,
   type StageDefinition,
 } from "@/domain/agents";
+import { parseLengthSpec, targetFromRequirements } from "@/domain/length";
 import type {
   AgentId,
   AgentStatus,
@@ -391,8 +392,14 @@ function stageState(
 function briefToVM(body: BackendBriefBody): TaskBrief {
   const minimum = body.length_rule?.minimum;
   const maximum = body.length_rule?.maximum;
-  const duration =
-    minimum != null || maximum != null
+  // Show the target the user actually picked ("30 秒" / "800 字") instead of an
+  // opaque range, and expose the enforced character budget for transparency.
+  const target = targetFromRequirements(
+    (body.requirements ?? []).map((item) => item.text ?? ""),
+  );
+  const duration = target
+    ? `${target.label} · 约 ${target.minimum}–${target.maximum} 字`
+    : minimum != null || maximum != null
       ? `${minimum ?? "不限"}–${maximum ?? "不限"} 字`
       : "";
   return {
@@ -579,6 +586,7 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
   private async request<T>(
     path: string,
     init: RequestInit = {},
+    allowSessionRetry = true,
   ): Promise<T> {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
@@ -588,6 +596,23 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
       headers,
     });
     if (!response.ok) {
+      // A backend restart, a cleared cookie or an expired 12h session used to
+      // leave a stale in-memory session behind and turn every following poll
+      // into a permanent 401. Re-bootstrap once and replay the request instead.
+      if (response.status === 401 && allowSessionRetry && path !== "/api/v1/session") {
+        this.session = null;
+        this.sessionPromise = null;
+        try {
+          const fresh = await this.ensureSession();
+          const replay = new Headers(init.headers);
+          replay.set("X-CSRF-Token", fresh.csrf_token);
+          if (replay.has("Idempotency-Key")) replay.set("Idempotency-Key", randomKey());
+          return this.request<T>(path, { ...init, headers: replay }, false);
+        } catch {
+          this.session = null;
+          this.sessionPromise = null;
+        }
+      }
       let message = `后端返回 ${response.status}`;
       try {
         const body = (await response.json()) as {
@@ -618,6 +643,7 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
         })
         .catch((error: unknown) => {
           // 一次瞬时失败不得永久锁死适配器：清掉缓存的 rejected Promise，下次调用重试
+          this.session = null;
           this.sessionPromise = null;
           throw error;
         });
@@ -818,13 +844,19 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
       const title = input.title.trim();
       const objective = `${title}：${input.idea.trim()}`.slice(0, 1000);
       const stage = creatorStageMeta(readProfile()?.creatorStage);
-      // CreateTask has no duration/format fields (format is fixed to "text"),
-      // so carry them as explicit creative constraints in requirements.
+      // CreateTask has no duration/format fields (format is fixed to "text").
+      // Put the chosen target FIRST so a long idea cannot push it past the
+      // 1000-character requirement limit, and ALSO send it as the structured
+      // length_rule the generator and validator actually enforce.
+      const spec = parseLengthSpec(input.duration);
       const requirementText = [
+        input.duration ? `目标时长 / 篇幅：${input.duration}` : "",
+        spec
+          ? `目标篇幅硬性要求：正文约 ${spec.target} 字（${spec.minimum}–${spec.maximum} 字）；标题与封面中的时长数字须与「${spec.durationLabel}」一致`
+          : "",
         input.idea.trim(),
         `账号阶段：${stage.label}`,
         input.format ? `内容形式：${input.format}` : "",
-        input.duration ? `目标时长 / 篇幅：${input.duration}` : "",
       ]
         .filter(Boolean)
         .join("；")
@@ -843,9 +875,19 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
             text: requirementText || objective,
           },
         ],
-        materials: [],
+        materials: input.sourceText ? [{
+          kind: "source_text",
+          label: input.commercialBrief ? "商单简报" : "参考资料",
+          text: input.sourceText,
+          source_url: null,
+          authorized: true,
+        }] : [],
         preview_requested: input.previewRequested,
-        length_rule: { minimum: null, maximum: 20000 },
+        // Previously always {minimum: null, maximum: 20000}, which made an
+        // "800 字" request deliverable as a 120-character stub.
+        length_rule: spec
+          ? { minimum: spec.minimum, maximum: spec.maximum }
+          : { minimum: null, maximum: 20000 },
       };
       const created = await this.request<{ data: BackendTaskSummary }>(
         "/api/v1/tasks",
@@ -883,6 +925,7 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
             ...next,
             brief: briefToVM(payload.data.brief),
             briefConfirmed: Boolean(payload.data.confirmed),
+            previewRequested: task.previewRequested || Boolean(payload.data.brief.route?.includes("preview")),
           };
         }
       } catch {
@@ -905,6 +948,28 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
         }
       } catch {
         /* Version body is optional for rendering the task row */
+      }
+    }
+    if (next.previewRequested && versionId) {
+      try {
+        const payload = await this.request<{
+          data: { preview_id: string; version_id: string; state: string; analysis_id: string | null;
+            metrics: { started: number; selected_sessions: number } | null }[];
+        }>(`/api/v1/tasks/${encodeURIComponent(task.id)}/previews`);
+        const preview = payload.data.find((item) => item.version_id === versionId);
+        if (preview) {
+          const findings: string[] = [];
+          next = { ...next, preview: { state: preview.state, started: preview.metrics?.started ?? null,
+            selected: preview.metrics?.selected_sessions ?? null, findings } };
+          if (preview.analysis_id) {
+            const report = await this.request<{ data: { analysis: { findings: { suggested_edit: string }[] } } }>(
+              `/api/v1/previews/${encodeURIComponent(preview.preview_id)}/analysis`,
+            );
+            findings.push(...report.data.analysis.findings.map((item) => item.suggested_edit));
+          }
+        }
+      } catch {
+        /* Preview status can load on the next refresh. */
       }
     }
     return next;
@@ -988,6 +1053,28 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
     });
   }
 
+  private async waitForPreviews(taskId: string, versionId: string): Promise<void> {
+    // The backend refuses acceptance while a preview run is QUEUED/RUNNING.
+    // Wait here so the user never sees a 409 for a click made a second too
+    // early; cap the wait so a genuinely stuck preview still surfaces an error.
+    const deadline = Date.now() + 20_000;
+    while (Date.now() < deadline) {
+      try {
+        const payload = await this.request<{
+          data: { version_id: string; state: string }[];
+        }>(`/api/v1/tasks/${encodeURIComponent(taskId)}/previews`);
+        const running = (payload.data ?? []).some(
+          (item) => item.version_id === versionId
+            && (item.state === "QUEUED" || item.state === "RUNNING"),
+        );
+        if (!running) return;
+      } catch {
+        return; // preview listing is optional; let the backend give the verdict
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
+    }
+  }
+
   private async acceptContent(
     taskId: string,
     rowVersion: number,
@@ -1008,15 +1095,33 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
         "后端验收接口只接受冻结版本，不能把界面里的改写直接写入。请先用“退回修改”记录修订意见。",
       );
     }
-    await this.writeRequest(`/api/v1/tasks/${encodeURIComponent(taskId)}/accept`, "POST", {
-      expected_row_version: rowVersion,
-      version_id: versionId,
-      content_hash: version.content_hash,
-    });
+    await this.waitForPreviews(taskId, versionId);
+    try {
+      await this.writeRequest(`/api/v1/tasks/${encodeURIComponent(taskId)}/accept`, "POST", {
+        expected_row_version: rowVersion,
+        version_id: versionId,
+        content_hash: version.content_hash,
+      });
+    } catch (error) {
+      // The preview may have just finished (row_version advanced). Refresh once
+      // and retry with the current version instead of failing the human gate.
+      const message = error instanceof Error ? error.message : "";
+      if (!message.includes("试映") && !message.includes("preview") && !message.includes("版本")) {
+        throw error;
+      }
+      const current = await this.refreshTask(taskId);
+      await this.waitForPreviews(taskId, versionId);
+      await this.writeRequest(`/api/v1/tasks/${encodeURIComponent(taskId)}/accept`, "POST", {
+        expected_row_version: current.row_version,
+        version_id: versionId,
+        content_hash: version.content_hash,
+      });
+    }
   }
 
   private async submitRevisionNote(
     taskId: string,
+    rowVersion: number,
     task: BackendTaskSummary,
     options: DecisionOptions,
   ): Promise<void> {
@@ -1024,27 +1129,16 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
     if (!versionId) {
       throw new Error("后端尚未提供可修订的内容版本。");
     }
-    const text = [
-      options.note?.trim(),
-      options.editedBody?.trim()
-        ? "创作者在审核界面提交了修改稿，请据此修订。"
-        : "",
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .slice(0, 1000);
+    const text = options.note?.trim().slice(0, 1000);
     if (!text) {
       throw new Error("请填写修改意见后再退回内容主创。");
     }
-    await this.writeRequest(`/api/v1/tasks/${encodeURIComponent(taskId)}/feedback`, "POST", {
+    const version = await this.readVersion(taskId, versionId);
+    await this.writeRequest(`/api/v1/tasks/${encodeURIComponent(taskId)}/revise`, "POST", {
+      expected_row_version: rowVersion,
       version_id: versionId,
-      kind: "edit_request",
-      text,
-      platform: null,
-      window_start: null,
-      window_end: null,
-      metrics: {},
-      source_ref: null,
+      content_hash: version.content_hash,
+      note: text,
     });
   }
 
@@ -1055,9 +1149,7 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
   }
 
   async advanceTask(_taskId: string): Promise<WorkspaceSnapshot> {
-    throw new ApiNotWiredError(
-      "真实任务由后端 worker 按 QUEUED → GENERATING → VALIDATING 等状态推进，前端不能手动推进。",
-    );
+    return this.load();
   }
 
   async decideTask(
@@ -1084,7 +1176,7 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
         if (decision === "approve") {
           await this.acceptContent(taskId, rowVersion, task, options.editedBody);
         } else if (decision === "revise") {
-          await this.submitRevisionNote(taskId, task, options);
+          await this.submitRevisionNote(taskId, rowVersion, task, options);
         } else {
           await this.cancelTask(taskId, rowVersion);
         }

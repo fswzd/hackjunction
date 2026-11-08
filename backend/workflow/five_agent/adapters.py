@@ -558,6 +558,19 @@ class AdapterRouter:
             "data_analyst": specialist,
             "simulated_audience": RealAdapterStub("simulated_audience", ("read_segment",)),
         }
+        # Wire the two interfaces that were left awaiting an owner handoff.
+        # build_reals() returns the business-layer bridges for all seven roles;
+        # here we only replace the two stubs so the verified specialist path is
+        # untouched. The bridges run their own business model (offline mock by
+        # default, real provider as soon as one is configured) and honour the
+        # same AgentAdapter.invoke contract -- no more AGENT_UNAVAILABLE.
+        try:
+            from .team_entries import build_reals
+            wired = build_reals(repo, mode="mock")
+            self.reals["pr_analyst"] = wired["pr_analyst"]
+            self.reals["simulated_audience"] = wired["simulated_audience"]
+        except Exception:  # pragma: no cover - business layer is optional here
+            pass
         # Real-entry injection: a teammate's real adapter replaces its stub here
         # (single-role rollout). Never routed unless agent_modes/mode selects live.
         for agent_id, adapter in (reals or {}).items():

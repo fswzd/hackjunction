@@ -1,5 +1,6 @@
 """Preview preflight, create, read, events, cancel and resume."""
 import json
+import os
 from uuid import uuid4
 
 from flask import Blueprint, current_app, request
@@ -8,6 +9,7 @@ from backend.api import existing_response, fingerprint, json_body, request_id, s
 from backend.domain.errors import DomainError
 from backend.domain.hashing import canonical_bytes, conditions_hash, scenario_hash, sha256_json
 from backend.domain.schemas import (
+    AnalysisRead,
     AudienceEventPage,
     Expected,
     PreflightRead,
@@ -21,7 +23,8 @@ from backend.domain.schemas import (
 )
 from backend.security.session import require_write
 from backend.storage.db import connect, immediate, utc_now
-from backend.storage.repository import _event
+from backend.storage.repository import _event, cancel_run_tx
+from backend.storage.queue import Queue
 
 blueprint = Blueprint("previews", __name__)
 
@@ -42,7 +45,7 @@ def _compute_hashes(spec: PreviewSpec, mode: str):
     s_hash = scenario_hash(spec.scenario)
     budget = _budget(len(spec.scenario.personas), spec.scenario.max_segments)
     c_hash = conditions_hash(
-        scenario=spec.scenario, model_id="mock-audience-v1" if mode == "mock" else "live-audience",
+        scenario=spec.scenario, model_id="mock-audience-v1" if mode == "mock" else os.environ.get("QWEN_MODEL_ID", "qwen3.8-flash"),
         temperature=_TEMPERATURE, top_p=_TOP_P,
         prompt_version=_PROMPT_VERSION, prompt_hash=_PROMPT_HASH,
         schema_version=_SCHEMA_VERSION,
@@ -68,18 +71,18 @@ def _preview_read(db, preview_id: str) -> dict:
     counts = db.execute("SELECT count(*) AS completed,sum(CASE WHEN u.usage_status='known' THEN u.input_tokens END) AS input_tokens,sum(CASE WHEN u.usage_status='known' THEN u.output_tokens END) AS output_tokens,sum(CASE WHEN u.usage_status='known' THEN u.total_tokens END) AS total_tokens,sum(CASE WHEN u.usage_status='unknown' THEN 1 ELSE 0 END) AS unknown_calls FROM model_calls c JOIN usage_ledger u ON u.call_id=c.id WHERE c.run_id=? AND c.status NOT IN ('reserved','sent')", (row["run_id"],)).fetchone()
     unknown = counts["unknown_calls"] or 0
     # 与 task_reads.summary 同口径：calls_reserved 取 runs 行；unknown（未决）不计入 completed
-    run_row = db.execute("SELECT calls_reserved FROM runs WHERE id=?", (row["run_id"],)).fetchone()
+    run_row = db.execute("SELECT calls_reserved,started_at,finished_at,error_json FROM runs WHERE id=?", (row["run_id"],)).fetchone()
     unresolved = db.execute("SELECT count(*) FROM model_calls WHERE run_id=? AND status='unknown'", (row["run_id"],)).fetchone()[0]
     usage = Usage(calls_reserved=run_row["calls_reserved"] if run_row else 0, calls_completed=(counts["completed"] or 0) - unresolved, input_tokens=counts["input_tokens"], output_tokens=counts["output_tokens"], total_tokens=counts["total_tokens"], unknown_calls=unknown, cost_status="partial" if unknown and counts["total_tokens"] is not None else "unknown" if unknown else "unpriced", amount_minor=None, currency=None)
-    from backend.domain.schemas import ErrorDetail
     metrics = json.loads(row["metrics_json"]) if row["metrics_json"] else None
-    error = None
+    error = json.loads(run_row["error_json"]) if run_row["error_json"] else None
+    analysis = db.execute("SELECT id FROM analyses WHERE preview_id=? ORDER BY rowid DESC LIMIT 1", (preview_id,)).fetchone()
     return PreviewRead(
         preview_id=row["id"], task_id=row["task_id"], version_id=row["version_id"],
         content_hash=row["content_hash"], scenario_hash=row["scenario_hash"], conditions_hash=row["conditions_hash"],
         state=row["state"], row_version=row["row_version"], sessions=summaries,
-        started_at=None, finished_at=None,
-        metrics=metrics, analysis_id=None, analysis_status=row["analysis_status"],
+        started_at=run_row["started_at"], finished_at=run_row["finished_at"],
+        metrics=metrics, analysis_id=analysis["id"] if analysis else None, analysis_status=row["analysis_status"],
         usage=usage, error=error,
     ).model_dump(mode="json")
 
@@ -118,7 +121,7 @@ def create_preview():
     digest = fingerprint(raw, mode)
     scope = "local_operator"
     now = utc_now()
-    s_hash, c_hash, budget = _compute_hashes(payload, mode)
+    s_hash, c_hash, _ = _compute_hashes(payload, mode)
     if payload.expected_scenario_hash != s_hash:
         raise DomainError("CONDITIONS_MISMATCH", "Scenario hash mismatch", "Re-run preflight")
     if payload.expected_conditions_hash != c_hash:
@@ -133,21 +136,50 @@ def create_preview():
                 raise DomainError("NOT_FOUND", "Content version not found", "Select an existing version")
             if version["content_hash"] != payload.content_hash:
                 raise DomainError("CONDITIONS_MISMATCH", "Content hash mismatch", "Refresh the version")
-            task_id = version["task_id"]
-            preview_id = "pv_" + uuid4().hex
-            run_id = "r_" + uuid4().hex
-            scenario_id = "sc_" + uuid4().hex
-            seq = db.execute("UPDATE queue_sequence SET next_seq=next_seq+1 WHERE id=1 RETURNING next_seq").fetchone()[0]
-            db.execute("INSERT INTO runs(id,task_id,kind,state,mode,phase,limits_json,created_at,updated_at,queue_seq) VALUES(?,?,?,?,?,?,?,?,?,?)", (run_id, task_id, "preview", "QUEUED", mode, "audience", json.dumps(budget), now, now, seq))
-            db.execute("INSERT INTO preview_scenarios(id,scenario_hash,body_json) VALUES(?,?,?)", (scenario_id, s_hash, canonical_bytes(payload.scenario).decode("utf-8")))
-            db.execute("INSERT INTO preview_runs(id,task_id,version_id,run_id,content_hash,scenario_id,conditions_hash,conditions_json,state,row_version,analysis_status) VALUES(?,?,?,?,?,?,?,?,?,?,?)", (preview_id, task_id, payload.version_id, run_id, payload.content_hash, scenario_id, c_hash, json.dumps({"mode": mode, "budget": budget}), "QUEUED", 0, "pending"))
-            for persona in payload.scenario.personas:
-                db.execute("INSERT INTO audience_sessions(id,preview_id,persona_id,persona_json,cursor,outcome,stop_reason) VALUES(?,?,?,?,?,?,?)", ("session_" + uuid4().hex, preview_id, persona.id, canonical_bytes(persona).decode("utf-8"), 0, "pending", None))
-            _event(db, task_id, run_id, "preview_created", "audience", "QUEUED", "Preview accepted", now)
+            preview_id = enqueue_preview(db, version["task_id"], payload, mode, now)
             data = _preview_read(db, preview_id)
             body = {"data": data, "request_id": request_id()}
             save_response(db, scope, key, digest, body, 202)
     return success(data, 202)
+
+
+def enqueue_preview(db, task_id, spec, mode, now):
+    s_hash, c_hash, budget = _compute_hashes(spec, mode)
+    preview_id, run_id = "pv_" + uuid4().hex, "r_" + uuid4().hex
+    scenario_id = "sc_" + uuid4().hex
+    seq = db.execute("UPDATE queue_sequence SET next_seq=next_seq+1 WHERE id=1 RETURNING next_seq").fetchone()[0]
+    limits = {**budget, "max_model_calls": budget["max_calls"] + 1, "max_total_tokens": 200000}
+    db.execute("INSERT INTO runs(id,task_id,kind,state,mode,phase,limits_json,created_at,updated_at,queue_seq) VALUES(?,?,?,?,?,?,?,?,?,?)",
+               (run_id, task_id, "preview", "QUEUED", mode, "audience", json.dumps(limits), now, now, seq))
+    db.execute("INSERT INTO preview_scenarios(id,scenario_hash,body_json) VALUES(?,?,?) ON CONFLICT(scenario_hash) DO NOTHING",
+               (scenario_id, s_hash, canonical_bytes(spec.scenario).decode("utf-8")))
+    scenario_id = db.execute("SELECT id FROM preview_scenarios WHERE scenario_hash=?", (s_hash,)).fetchone()[0]
+    db.execute("INSERT INTO preview_runs(id,task_id,version_id,run_id,content_hash,scenario_id,conditions_hash,conditions_json,state,row_version,analysis_status) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+               (preview_id, task_id, spec.version_id, run_id, spec.content_hash, scenario_id, c_hash,
+                json.dumps({"mode": mode, "budget": budget}), "QUEUED", 0, "pending"))
+    for persona in spec.scenario.personas:
+        db.execute("INSERT INTO audience_sessions(id,preview_id,persona_id,persona_json,cursor,outcome) VALUES(?,?,?,?,0,'pending')",
+                   ("session_" + uuid4().hex, preview_id, persona.id, canonical_bytes(persona).decode("utf-8")))
+    _event(db, task_id, run_id, "preview_created", "audience", "QUEUED", "试映已排队", now)
+    return preview_id
+
+
+@blueprint.get("/api/v1/tasks/<task_id>/previews")
+def list_previews(task_id):
+    with connect(current_app.config["DB_PATH"]) as db:
+        ids = db.execute("SELECT id FROM preview_runs WHERE task_id=? ORDER BY rowid DESC LIMIT 100", (task_id,))
+        return success([_preview_read(db, row["id"]) for row in ids])
+
+
+@blueprint.get("/api/v1/previews/<preview_id>/analysis")
+def read_analysis(preview_id):
+    with connect(current_app.config["DB_PATH"]) as db:
+        row = db.execute("SELECT a.id,a.body_json,p.version_id FROM analyses a JOIN preview_runs p ON p.id=a.preview_id WHERE a.preview_id=? ORDER BY a.rowid DESC LIMIT 1", (preview_id,)).fetchone()
+        if row is None:
+            raise DomainError("NOT_FOUND", "Analysis not available", "Wait for preview analysis")
+        value = AnalysisRead(analysis_id=row["id"], preview_id=preview_id, version_id=row["version_id"],
+                             analysis=json.loads(row["body_json"]))
+    return success(value.model_dump(mode="json"))
 
 
 @blueprint.get("/api/v1/previews/<preview_id>")
@@ -190,9 +222,13 @@ def cancel_preview(preview_id: str):
     _, key = require_write()
     raw = json_body()
     payload = Expected.model_validate(raw)
+    digest = fingerprint(raw)
     now = utc_now()
     with connect(current_app.config["DB_PATH"]) as db:
         with immediate(db):
+            previous = existing_response(db, "local_operator", key, digest)
+            if previous:
+                return previous
             row = db.execute("SELECT * FROM preview_runs WHERE id=?", (preview_id,)).fetchone()
             if row is None:
                 raise DomainError("NOT_FOUND", "Preview not found", "Reload previews")
@@ -200,10 +236,11 @@ def cancel_preview(preview_id: str):
                 raise DomainError("VERSION_CONFLICT", "Row version changed", "Reload the preview")
             if row["state"] in {"COMPLETED", "CANCELLED", "FAILED"}:
                 raise DomainError("INVALID_TRANSITION", "Preview already finished", "Read the final state")
-            db.execute("UPDATE preview_runs SET state='CANCELLED',row_version=row_version+1 WHERE id=?", (preview_id,))
-            db.execute("UPDATE runs SET state='CANCELLED',updated_at=? WHERE id=?", (now, row["run_id"]))
+            run = db.execute("SELECT id,lease_owner,lease_epoch FROM runs WHERE id=?", (row["run_id"],)).fetchone()
+            cancel_run_tx(db, run, now)
             _event(db, row["task_id"], row["run_id"], "preview_cancelled", "audience", "CANCELLED", "Preview cancelled", now)
             data = _preview_read(db, preview_id)
+            save_response(db, "local_operator", key, digest, {"data": data, "request_id": request_id()}, 200)
     return success(data, 200)
 
 
@@ -212,9 +249,13 @@ def resume_preview(preview_id: str):
     _, key = require_write()
     raw = json_body()
     payload = Resume.model_validate(raw)
+    digest = fingerprint(raw)
     now = utc_now()
     with connect(current_app.config["DB_PATH"]) as db:
         with immediate(db):
+            previous = existing_response(db, "local_operator", key, digest)
+            if previous:
+                return previous
             row = db.execute("SELECT * FROM preview_runs WHERE id=?", (preview_id,)).fetchone()
             if row is None:
                 raise DomainError("NOT_FOUND", "Preview not found", "Reload previews")
@@ -222,9 +263,12 @@ def resume_preview(preview_id: str):
                 raise DomainError("VERSION_CONFLICT", "Row version changed", "Reload the preview")
             if row["state"] not in {"INTERRUPTED", "INCOMPLETE"}:
                 raise DomainError("INVALID_TRANSITION", "Preview is not resumable", "Only interrupted or incomplete previews can resume")
-            db.execute("UPDATE preview_runs SET state='QUEUED',row_version=row_version+1 WHERE id=?", (preview_id,))
-            db.execute("UPDATE runs SET state='QUEUED',updated_at=? WHERE id=?", (now, row["run_id"]))
+            Queue.check_resumable_tx(db, row["run_id"], payload.strategy)
+            Queue.enqueue_tx(db, row["run_id"], now)
+            db.execute("UPDATE preview_runs SET state='QUEUED',analysis_status='pending',row_version=row_version+1 WHERE id=?", (preview_id,))
+            db.execute("UPDATE runs SET error_json=NULL,finished_at=NULL WHERE id=?", (row["run_id"],))
             _event(db, row["task_id"], row["run_id"], "preview_resumed", "audience", "QUEUED", "Preview resumed", now)
             data = _preview_read(db, preview_id)
             body = {"data": data, "request_id": request_id()}
+            save_response(db, "local_operator", key, digest, body, 202)
     return success(data, 202)

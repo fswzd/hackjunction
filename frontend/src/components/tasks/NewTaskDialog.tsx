@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { useWorkspace } from "@/store/workspace";
 import { creatorStageMeta } from "@/domain/profile";
+import { findConflicts, normalizeMentions, parseLengthSpec } from "@/domain/length";
 import { cn } from "@/lib/format";
 
 const FORMATS = ["短视频", "图文", "长视频", "播客"];
@@ -38,6 +39,9 @@ export function NewTaskDialog() {
   const [tone, setTone] = useState<string[]>(["清晰"]);
   const [projectId, setProjectId] = useState("");
   const [previewRequested, setPreviewRequested] = useState(false);
+  const [sourceText, setSourceText] = useState("");
+  const [commercialBrief, setCommercialBrief] = useState(false);
+  const [sourceAuthorized, setSourceAuthorized] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -56,9 +60,25 @@ export function NewTaskDialog() {
     setTone(["清晰"]);
     setProjectId(projectsRef.current[0]?.id ?? "");
     setPreviewRequested(false);
+    setSourceText("");
+    setCommercialBrief(false);
+    setSourceAuthorized(false);
     setError("");
     setSubmitting(false);
   }, [open]);
+
+  // A title like "60 秒看懂" must not survive a 30-second selection. Warn the
+  // user, offer a one-click fix, and normalise again on submit as a backstop.
+  const spec = parseLengthSpec(duration);
+  const conflicts = spec
+    ? [...new Set([...findConflicts(title, spec), ...findConflicts(idea, spec)])]
+    : [];
+
+  const fixConflicts = () => {
+    if (!spec) return;
+    setTitle((current) => normalizeMentions(current, spec));
+    setIdea((current) => normalizeMentions(current, spec));
+  };
 
   const toggleTone = (value: string) => {
     setTone((current) =>
@@ -83,18 +103,27 @@ export function NewTaskDialog() {
       setError("请填写任务标题、创作想法和目标受众。");
       return;
     }
+    if (mode === "api" && ((commercialBrief && !sourceText.trim()) || (sourceText.trim() && !sourceAuthorized))) {
+      setError("请填写商单简报或参考资料，并确认有权使用该资料。");
+      return;
+    }
     setSubmitting(true);
-    await createTask({
-      title,
-      idea,
+    const ok = await createTask({
+      title: spec ? normalizeMentions(title, spec) : title,
+      idea: spec ? normalizeMentions(idea, spec) : idea,
       audience,
       format,
       duration,
       tone,
       projectId,
       previewRequested,
+      sourceText: mode === "api" ? sourceText.trim() : undefined,
+      commercialBrief,
     });
     setSubmitting(false);
+    // Keep the dialog (and the typed input) intact when the backend rejects it,
+    // so the user can fix the input instead of losing everything.
+    if (!ok) return;
     openNewTask(false);
     const newest = useWorkspace.getState().snapshot?.tasks[0];
     if (newest) {
@@ -214,7 +243,7 @@ export function NewTaskDialog() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <fieldset>
             <legend className="mb-1.5 text-xs font-medium text-text">
-              内容形式
+              脚本用途
             </legend>
             <div className="flex flex-wrap gap-1.5">
               {FORMATS.map((item) => (
@@ -237,7 +266,7 @@ export function NewTaskDialog() {
           </fieldset>
           <fieldset>
             <legend className="mb-1.5 text-xs font-medium text-text">
-              目标时长
+              目标时长 / 篇幅
             </legend>
             <div className="flex flex-wrap gap-1.5">
               {DURATIONS.map((item) => (
@@ -259,11 +288,39 @@ export function NewTaskDialog() {
             </div>
           </fieldset>
         </div>
+        <p className="text-[10px] leading-5 text-muted">
+          「脚本用途」只描述这份文字稿打算用在什么场景，工作台始终交付文字脚本 / 文章（Markdown），不生成视频文件。
+        </p>
+
+        {spec ? (
+          <p className="rounded-xl border border-blue/20 bg-blue/[0.04] px-3.5 py-2.5 text-[10px] leading-5 text-muted">
+            已选「{spec.label}」：正文按约 {spec.minimum}–{spec.maximum} 字生成并硬性校验，
+            标题与封面中的时长数字统一为「{spec.durationLabel}」。交付物是文字脚本 / 文章（Markdown），不生成视频文件。
+          </p>
+        ) : null}
+
+        {conflicts.length > 0 && spec ? (
+          <div role="alert" className="rounded-xl border border-amber/40 bg-amber/[0.08] px-3.5 py-3">
+            <p className="text-xs font-medium text-amber">注意：时长 / 篇幅与所选不一致</p>
+            <p className="mt-1 text-[11px] leading-5 text-muted">
+              你选的是「{spec.label}」，但标题或创作想法里写了「{conflicts.join("、")}」。
+              提交时会自动改成「{spec.durationLabel}」，避免生成的内容与要求对不上。
+            </p>
+            <button
+              type="button"
+              onClick={fixConflicts}
+              className="mt-2 rounded-lg border border-amber/40 bg-amber/10 px-2.5 py-1 text-[11px] text-amber transition hover:bg-amber/20"
+            >
+              立即改成「{spec.durationLabel}」
+            </button>
+          </div>
+        ) : null}
 
         {mode === "api" ? (
           <p className="rounded-xl border border-amber/25 bg-amber/[0.06] px-3.5 py-2.5 text-[10px] leading-5 text-muted">
-            后端 CreateTask 目前只接受 <code>format: "text"</code>。内容形式与目标时长会写入
-            requirements 文本，作为内容主创的创作约束。
+            后端 <code>CreateTask.format</code> 固定为 <code>"text"</code>，交付物是文字脚本 / 文章。
+            所选时长会同时写入 <code>length_rule</code> 与创作约束；生成端按目标篇幅产出，
+            校验端会拦截字数不足或标题时长不符的候选稿。
           </p>
         ) : null}
 
@@ -290,6 +347,31 @@ export function NewTaskDialog() {
             ))}
           </div>
         </fieldset>
+
+        {mode === "api" ? (
+          <fieldset className="space-y-2">
+            <legend className="mb-1 text-xs font-medium text-text">参考资料（选填）</legend>
+            <label className="flex items-center gap-2 text-xs text-muted">
+              <input type="checkbox" checked={commercialBrief} onChange={(event) => setCommercialBrief(event.target.checked)} />
+              这是商单，先分析客户需求
+            </label>
+            <textarea
+              aria-label="参考资料"
+              value={sourceText}
+              onChange={(event) => setSourceText(event.target.value)}
+              maxLength={20000}
+              rows={3}
+              placeholder={commercialBrief ? "品牌：城市漫步\n产品：周末步行指南\n粘贴客户简报和必须遵守的要求" : "粘贴可供流量捕捉者分析的资料"}
+              className="w-full resize-y rounded-xl border border-line bg-raised px-3 py-2 text-sm text-text"
+            />
+            {sourceText.trim() ? (
+              <label className="flex items-center gap-2 text-xs text-muted">
+                <input type="checkbox" checked={sourceAuthorized} onChange={(event) => setSourceAuthorized(event.target.checked)} />
+                我有权在此任务中使用这份资料
+              </label>
+            ) : null}
+          </fieldset>
+        ) : null}
 
         <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-raised/50 p-3.5">
           <input

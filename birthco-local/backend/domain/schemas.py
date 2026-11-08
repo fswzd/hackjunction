@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from typing import Generic, Literal, TypeVar, Annotated
 from pydantic import BaseModel, BeforeValidator, AfterValidator, ConfigDict, Field, StringConstraints, model_validator
 
+from .length import spec_from_requirements
+
 
 def require_true(value):
     if type(value) is not bool or value is not True:
@@ -331,6 +333,28 @@ class CreateTask(Model):
             raise ValueError("existing_draft accepts at most one draft material")
         if self.input_mode == "idea" and drafts:
             raise ValueError("idea mode cannot include existing_draft material")
+        # The workbench UI sends the chosen duration/length both as a text
+        # marker and as an explicit length_rule. Older clients (and hand-written
+        # API calls) may send only the marker together with the historical
+        # no-op {minimum: None, maximum: 20000} rule. Recover the real budget
+        # here so an "800 字" request can never silently produce a 120-character
+        # stub: the generator and the RULE_LENGTH validator both read this rule.
+        if self.length_rule.minimum is None:
+            spec = spec_from_requirements(r.text for r in self.requirements)
+            if spec is not None:
+                maximum = self.length_rule.maximum
+                # An explicit custom ceiling is a real client constraint and
+                # must not be overwritten by the preset. Only the historical
+                # no-op ceiling (20000 / absent) is replaced by the resolved
+                # target budget. A contradictory ceiling is left untouched so
+                # the rule validator reports it instead of silently loosening.
+                if maximum is None or maximum >= 20000:
+                    maximum = spec.maximum
+                if maximum >= spec.minimum:
+                    return self.model_copy(update={
+                        "length_rule": LengthRule(minimum=spec.minimum,
+                                                  maximum=maximum)
+                    })
         return self
 
 
@@ -346,6 +370,16 @@ class ConfirmBrief(Expected):
 class UpdateInput(Expected):
     answers: dict[Id, Short]
     materials: list[MaterialInput] = Field(max_length=20)
+
+
+class QuestionsRead(Model):
+    questions: list[Question]
+
+
+class ReturnForRevision(Expected):
+    version_id: Id
+    content_hash: Hash
+    note: Short
 
 
 class EditBrief(Expected):

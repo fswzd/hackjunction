@@ -202,6 +202,7 @@ class PreviewAnalysisInput(Model):
     version_id: Id
     content_hash: Hash
     content: ContentDelivery
+    max_segments: int = Field(default=8, ge=2, le=8)
     personas: list[Persona] = Field(min_length=1, max_length=6)
     segments: list[VisibleSegment] = Field(min_length=1, max_length=8)
     sessions: list[PreviewSession] = Field(min_length=1, max_length=6)
@@ -213,7 +214,7 @@ class PreviewAnalysisInput(Model):
         if self.segments[0].kind != "cover" or self.segments[0].text != self.content.cover_copy:
             raise ValueError("preview cover differs from the frozen content")
         if [s.model_dump() for s in self.segments[1:]] != [
-                s.model_dump(exclude={"source_refs"}) for s in self.content.segments[:7]]:
+                s.model_dump(exclude={"source_refs"}) for s in self.content.segments[:self.max_segments - 1]]:
             raise ValueError("preview segments differ from the frozen prefix")
         segment_ids = [s.segment_id for s in self.segments]
         if len(set(segment_ids)) != len(segment_ids):

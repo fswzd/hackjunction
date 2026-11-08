@@ -1,14 +1,30 @@
 {
   "evidence_kind": "mock_flow_end_to_end",
   "mode": "mock_dev_no_live_model_no_teammate_code_no_real_user",
-  "observed_at": "2026-11-07T09:44:02.561896+00:00",
-  "command": "python run_mock_demo.py",
-  "cwd": "E:\\hackjunction\\hackjunction",
+  "observed_at": "2026-11-07T20:06:26.155960+00:00",
+  "command": "python run_mock_demo.py --include-scout",
+  "cwd": "C:\\Users\\52436\\WorkBuddy\\2026-11-08-03-40-13\\project\\hackjunction-runnable",
   "exit_code": 0,
   "trace": [
     {
       "step": "start_content_run",
-      "run_id": "run_demo_task_content_78af1328",
+      "run_id": "run_demo_task_content_a193e342",
+      "status": "WAITING",
+      "terminal": null,
+      "pending_gates": [
+        "select_opportunity"
+      ],
+      "usage": {
+        "normal_calls": 0,
+        "tech_retries": 0,
+        "calls_completed": 0,
+        "tokens_known": 0,
+        "unknown_usage_calls": 0
+      }
+    },
+    {
+      "step": "select_opportunity",
+      "run_id": "run_demo_task_content_a193e342",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -18,13 +34,13 @@
         "normal_calls": 1,
         "tech_retries": 0,
         "calls_completed": 1,
-        "tokens_known": 254,
+        "tokens_known": 264,
         "unknown_usage_calls": 0
       }
     },
     {
       "step": "confirm_brief",
-      "run_id": "run_demo_task_content_78af1328",
+      "run_id": "run_demo_task_content_a193e342",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -34,13 +50,13 @@
         "normal_calls": 3,
         "tech_retries": 0,
         "calls_completed": 3,
-        "tokens_known": 751,
+        "tokens_known": 788,
         "unknown_usage_calls": 0
       }
     },
     {
       "step": "accept_delivery",
-      "run_id": "run_demo_task_content_78af1328",
+      "run_id": "run_demo_task_content_a193e342",
       "status": "READY",
       "terminal": "READY",
       "pending_gates": [],
@@ -48,13 +64,13 @@
         "normal_calls": 3,
         "tech_retries": 0,
         "calls_completed": 3,
-        "tokens_known": 751,
+        "tokens_known": 788,
         "unknown_usage_calls": 0
       }
     },
     {
       "step": "start_preview_run",
-      "run_id": "run_demo_task_preview_c723c60e",
+      "run_id": "run_demo_task_preview_c6be49fc",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -70,7 +86,7 @@
     },
     {
       "step": "preview_run",
-      "run_id": "run_demo_task_preview_c723c60e",
+      "run_id": "run_demo_task_preview_c6be49fc",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -86,7 +102,7 @@
     },
     {
       "step": "select_findings",
-      "run_id": "run_demo_task_preview_c723c60e",
+      "run_id": "run_demo_task_preview_c6be49fc",
       "status": "READY",
       "terminal": "READY",
       "pending_gates": [],
@@ -100,7 +116,7 @@
     },
     {
       "step": "start_revision_run",
-      "run_id": "run_demo_task_revision_489610ac",
+      "run_id": "run_demo_task_revision_919d9072",
       "status": "WAITING",
       "terminal": null,
       "pending_gates": [
@@ -110,13 +126,13 @@
         "normal_calls": 2,
         "tech_retries": 0,
         "calls_completed": 2,
-        "tokens_known": 566,
+        "tokens_known": 594,
         "unknown_usage_calls": 0
       }
     },
     {
       "step": "accept_revision",
-      "run_id": "run_demo_task_revision_489610ac",
+      "run_id": "run_demo_task_revision_919d9072",
       "status": "READY",
       "terminal": "READY",
       "pending_gates": [],
@@ -124,13 +140,13 @@
         "normal_calls": 2,
         "tech_retries": 0,
         "calls_completed": 2,
-        "tokens_known": 566,
+        "tokens_known": 594,
         "unknown_usage_calls": 0
       }
     }
   ],
   "runs": {
-    "run_demo_task_content_78af1328": {
+    "run_demo_task_content_a193e342": {
       "kind": "content",
       "status": "READY",
       "calls": [
@@ -138,32 +154,32 @@
           "action": "prepare_brief",
           "attempt": 1,
           "status": "received",
-          "usage_tokens": 254
+          "usage_tokens": 264
         },
         {
           "action": "draft",
           "attempt": 1,
           "status": "received",
-          "usage_tokens": 287
+          "usage_tokens": 309
         },
         {
           "action": "assess_content",
           "attempt": 1,
           "status": "received",
-          "usage_tokens": 210
+          "usage_tokens": 215
         }
       ],
       "usage": {
-        "run_id": "run_demo_task_content_78af1328",
+        "run_id": "run_demo_task_content_a193e342",
         "calls_reserved": 3,
         "normal_calls": 3,
         "tech_retries": 0,
         "calls_completed": 3,
-        "tokens_known": 751,
+        "tokens_known": 788,
         "unknown_usage_calls": 0
       }
     },
-    "run_demo_task_preview_c723c60e": {
+    "run_demo_task_preview_c6be49fc": {
       "kind": "preview",
       "status": "READY",
       "calls": [
@@ -217,7 +233,7 @@
         }
       ],
       "usage": {
-        "run_id": "run_demo_task_preview_c723c60e",
+        "run_id": "run_demo_task_preview_c6be49fc",
         "calls_reserved": 8,
         "normal_calls": 8,
         "tech_retries": 0,
@@ -226,7 +242,7 @@
         "unknown_usage_calls": 1
       }
     },
-    "run_demo_task_revision_489610ac": {
+    "run_demo_task_revision_919d9072": {
       "kind": "revision",
       "status": "READY",
       "calls": [
@@ -234,35 +250,35 @@
           "action": "revise",
           "attempt": 1,
           "status": "received",
-          "usage_tokens": 344
+          "usage_tokens": 367
         },
         {
           "action": "assess_content",
           "attempt": 1,
           "status": "received",
-          "usage_tokens": 222
+          "usage_tokens": 227
         }
       ],
       "usage": {
-        "run_id": "run_demo_task_revision_489610ac",
+        "run_id": "run_demo_task_revision_919d9072",
         "calls_reserved": 2,
         "normal_calls": 2,
         "tech_retries": 0,
         "calls_completed": 2,
-        "tokens_known": 566,
+        "tokens_known": 594,
         "unknown_usage_calls": 0
       }
     }
   },
   "versions": {
     "v1": {
-      "id": "ver_a7a03361cb2daf529958d408",
+      "id": "ver_8b2e950b42615e632ee67f71",
       "status": "accepted",
-      "content_hash": "3119c9f39f4236daefa4ef503bc9b09ee0c7de3339a11ed30422457a5fa6e87b",
+      "content_hash": "095438b64a7a9b0a31c975a82cc94caab27113ed8308acddb00703ea12872ed5",
       "titles": [
-        "写一篇新手拍照入门图文｜要点一",
-        "写一篇新手拍照入门图文｜要点二",
-        "写一篇新手拍照入门图文｜要点三"
+        "写一篇新手拍照入门图文 的切入角度 1｜要点一",
+        "写一篇新手拍照入门图文 的切入角度 1｜要点二",
+        "写一篇新手拍照入门图文 的切入角度 1｜要点三"
       ],
       "export_files": [
         "article.md",
@@ -270,10 +286,10 @@
       ]
     },
     "v2": {
-      "id": "ver_582fb3196464d79cab0fab09",
+      "id": "ver_769a209e37303c51d23f461f",
       "status": "accepted",
-      "base_version_id": "ver_a7a03361cb2daf529958d408",
-      "content_hash": "9cf5e23585a97aaa4e15264f1fefcd59a5976c9576e43299756aac65a5d7068b",
+      "base_version_id": "ver_8b2e950b42615e632ee67f71",
+      "content_hash": "2d6eb1cc5eebcbd66a626fe1b3c8085525fc34b7d6c1a1b349c2fc27f9dc6a6a",
       "change_log": [
         {
           "finding_id": "find_2",
@@ -288,7 +304,7 @@
     "v1_preserved": true
   },
   "preview": {
-    "preview_id": "preview_c34c566cca559dbb218ecefa",
+    "preview_id": "preview_977a3762aff9b3a9d2dc7461",
     "metrics": {
       "started": 3,
       "completed": 1,
@@ -300,9 +316,9 @@
         "id": "find_1",
         "segment_id": "cover_v1",
         "observation_refs": [
-          "evt_sess_6972d27feed40a56af95322b_0",
-          "evt_sess_fd4fdf175c24132d87894039_0",
-          "evt_sess_a4aac03b9a713f4305b7fa8e_0"
+          "evt_sess_3287b0f5f5fb8ce01ddcb1f4_0",
+          "evt_sess_56668395f95a28a467261e3d_0",
+          "evt_sess_7481a09fd898c7feff60d6fc_0"
         ],
         "interpretation": "本次模拟中该段退出 1/3；只描述模拟事件，不证明真实受众因内容离开。",
         "alternative_explanation": "退出可能是预设测试fixture、persona偏好或信息不足，不能据此确认内容是原因。",
@@ -312,7 +328,7 @@
         "id": "find_2",
         "segment_id": "seg_hook_1",
         "observation_refs": [
-          "evt_sess_fd4fdf175c24132d87894039_1"
+          "evt_sess_56668395f95a28a467261e3d_1"
         ],
         "interpretation": "本次模拟中该段退出 0/1；只描述模拟事件，不证明真实受众因内容离开。",
         "alternative_explanation": "退出可能是预设测试fixture、persona偏好或信息不足，不能据此确认内容是原因。",
@@ -376,7 +392,16 @@
         "context_seen_by_model": false
       }
     ],
-    "traffic_scout": [],
+    "traffic_scout": [
+      {
+        "action": "capture_opportunities",
+        "model_visible_input_keys": [
+          "goal",
+          "material_refs"
+        ],
+        "context_seen_by_model": false
+      }
+    ],
     "data_analyst": [
       {
         "action": "diagnose_preview",
@@ -452,7 +477,7 @@
     ]
   },
   "not_tested_here": [
-    "five owner real entry points (awaiting_owner_handoff)",
+    "production adapters (covered separately by offline transport integration tests)",
     "live models / real token cost",
     "real user confirmations via Flask/React UI",
     "langgraph-checkpoint-sqlite persistence (plugin not installed)"

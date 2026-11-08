@@ -163,6 +163,12 @@ export interface TaskVM {
   queuePosition: number | null;
   briefConfirmed: boolean;
   previewRequested: boolean;
+  preview?: {
+    state: string;
+    started: number | null;
+    selected: number | null;
+    findings: string[];
+  };
   usage: BackendUsage | null;
   backendError: string | null;
 }
@@ -228,6 +234,8 @@ export interface CreateTaskInput {
   projectId: string;
   /** Backend `CreateTask.preview_requested`: run the audience/diagnosis preview. */
   previewRequested: boolean;
+  sourceText?: string;
+  commercialBrief?: boolean;
 }
 
 export interface DecisionOptions {

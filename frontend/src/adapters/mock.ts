@@ -7,6 +7,7 @@ import {
   stateForBackendStep,
   type StageDefinition,
 } from "@/domain/agents";
+import { normalizeMentions, parseLengthSpec } from "@/domain/length";
 import type {
   AgentId,
   AgentStatus,
@@ -82,26 +83,52 @@ function event(
 }
 
 function buildOutput(task: TaskVM): TaskVM["output"] {
-  const { idea, audience, format, duration } = task.brief;
-  const body = [
-    `【标题】${task.title}`,
+  const { idea, audience, format } = task.brief;
+  // The demo adapter used a hard-coded 0–5s / 5–45s / 45–60s timeline even
+  // when the user picked 30 seconds, and always returned ~120 characters.
+  // Derive both the timeline and the length from the selected target. A pure
+  // word-count request ("800 字") is an article: no seconds timeline at all.
+  const spec = parseLengthSpec(task.brief.duration);
+  const title = spec ? normalizeMentions(task.title, spec) : task.title;
+  const seconds = spec?.targetSeconds ?? null;
+  const targetChars = spec?.target ?? 420;
+  const hookEnd = seconds ? Math.max(1, Math.round(seconds * 0.15)) : 0;
+  const bodyEnd = seconds ? Math.max(hookEnd + 1, Math.round(seconds * 0.8)) : 0;
+  const lines = [
+    `【标题】${title}`,
     "",
-    "【开场 0–5s】",
+    seconds ? `【开场 0–${hookEnd} 秒】` : "【开场】",
     `${audience || "正在刷到这条内容的人"}，先别急着划走——${idea || "这件事可能和你有关系"}。`,
     "",
-    "【主体 5–45s】",
+    seconds ? `【主体 ${hookEnd}–${bodyEnd} 秒】` : "【主体】",
     "第一，先把问题说清楚：读者真正卡住的地方是什么，而不是我们最想讲的地方。",
     `第二，给出一个今天就能试的具体动作，让内容与「${audience || "目标受众"}」建立关系。`,
     "第三，用一个真实的限制条件收束，避免把结果说得比事实更满。",
     "",
-    `【收尾 45–${duration.replace(/[^0-9]/g, "") || "60"}s】`,
+    seconds ? `【收尾 ${bodyEnd}–${seconds} 秒】` : "【收尾】",
     "如果你也遇到类似的问题，先试一次，再把结果带回来。下一次，我们沿着你的反馈继续改。",
-    "",
-    `—— 由众幕 AI · ${AGENT_META.content_creator.name}生成的 ${format || "内容"}候选稿`,
-  ].join("\n");
+  ];
+  if (!seconds && spec?.targetCharacters != null) {
+    lines.splice(1, 0,
+      `【篇幅】约 ${spec.minimum}–${spec.maximum} 字（目标 ${spec.targetCharacters} 字）`, "");
+  }
+  const expansions = [
+    `把范围再收窄一点：${idea || "这个主题"}里最值得先讲清楚的，是读者做完第一步之后会发生什么。`,
+    "给一个判断标准：与其罗列所有选项，不如说明什么条件下该选哪一种，以及什么时候应当先停下来。",
+    `补一个具体场景：${audience || "目标受众"}在真实使用中常见的卡点，往往出现在开始之前而不是中途。`,
+    "说明边界：这套做法依赖的前提、可能失效的情形，以及需要自己复核的环节，都应当写清楚。",
+    "回到结论：先把一个小场景验证完，再决定要不要扩大范围，比一次铺开所有信息更稳妥。",
+  ];
+  let index = 0;
+  while (lines.join("\n").length < targetChars && index < 24) {
+    lines.splice(lines.length - 2, 0, expansions[index % expansions.length]);
+    index += 1;
+  }
+  lines.push("", `—— 由众幕 AI · ${AGENT_META.content_creator.name}生成的文字脚本 / 文章候选稿（${format || "内容"}形式，不生成视频文件）`);
+  const body = lines.join("\n");
   return {
     version: task.output?.version ?? 1,
-    title: task.title,
+    title,
     body,
     updatedAt: iso(),
   };

@@ -52,6 +52,17 @@ class Queue:
             with immediate(db):
                 return self.enqueue_tx(db, run_id, now or utc_now())
 
+    @staticmethod
+    def check_resumable_tx(db, run_id, strategy):
+        if strategy != "continue_checkpoint":
+            raise DomainError("INVALID_TRANSITION", "Unknown calls require reconciliation", "Inspect the call ledger")
+        uncertain = db.execute(
+            "SELECT 1 FROM model_calls c JOIN checkpoints s ON s.run_id=c.run_id AND s.step=c.step AND s.attempt=c.attempt "
+            "WHERE c.run_id=? AND (c.status IN ('sent','unknown') OR (c.status='received' AND s.status='reserved'))",
+            (run_id,)).fetchone()
+        if uncertain:
+            raise DomainError("INVALID_TRANSITION", "A call has no committed result", "Reconcile the call before a new run")
+
     def claim(self, worker_id: str, now: datetime | None = None) -> Lease | None:
         now = now or datetime.now(timezone.utc)
         stamp, deadline = _stamp(now), _stamp(now + timedelta(seconds=30))
@@ -64,11 +75,15 @@ class Queue:
                     expired = db.execute("SELECT id,task_id,kind FROM runs WHERE lease_owner=? AND state='RUNNING'", (slot["owner"],)).fetchall()
                     for run in expired:
                         db.execute("UPDATE model_calls SET status='unknown',finished_at=? WHERE run_id=? AND status='sent'", (stamp, run["id"]))
+                        db.execute("UPDATE model_calls SET status='failed',finished_at=? WHERE run_id=? AND status='reserved'", (stamp, run["id"]))
                         db.execute("UPDATE checkpoints SET status='unknown' WHERE run_id=? AND status='reserved' AND EXISTS (SELECT 1 FROM model_calls c WHERE c.run_id=checkpoints.run_id AND c.step=checkpoints.step AND c.attempt=checkpoints.attempt AND c.status='unknown')", (run["id"],))
+                        db.execute("UPDATE checkpoints SET status='rejected' WHERE run_id=? AND status='reserved' AND EXISTS (SELECT 1 FROM model_calls c WHERE c.run_id=checkpoints.run_id AND c.step=checkpoints.step AND c.attempt=checkpoints.attempt AND c.status='failed')", (run["id"],))
                         db.execute("UPDATE runs SET state='INTERRUPTED',lease_owner=NULL,lease_until=NULL,queue_seq=NULL,lease_epoch=lease_epoch+1,row_version=row_version+1,updated_at=? WHERE id=?", (stamp, run["id"]))
                         if run["kind"] == "content":
                             db.execute("UPDATE tasks SET state='INTERRUPTED',row_version=row_version+1,updated_at=? WHERE id=? AND current_run_id=?", (stamp, run["task_id"], run["id"]))
-                            _event(db, run["task_id"], run["id"], "lease_expired", "recovery", "INTERRUPTED", "Worker lease expired", stamp)
+                        if run["kind"] == "preview":
+                            db.execute("UPDATE preview_runs SET state='INTERRUPTED',row_version=row_version+1 WHERE run_id=?", (run["id"],))
+                        _event(db, run["task_id"], run["id"], "lease_expired", "recovery", "INTERRUPTED", "Worker lease expired", stamp)
                     db.execute("UPDATE worker_slot SET owner=NULL,epoch=epoch+1,lease_until=NULL WHERE id=1")
                 run = db.execute("SELECT r.id,r.task_id,r.kind,r.phase,t.state AS task_state FROM runs r JOIN tasks t ON t.id=r.task_id WHERE r.state='QUEUED' AND (r.kind!='content' OR t.current_run_id=r.id) ORDER BY r.queue_seq,r.id LIMIT 1").fetchone()
                 if run is None:
@@ -127,7 +142,7 @@ class Queue:
             db.execute("UPDATE model_calls SET status='unknown',finished_at=? WHERE run_id=? AND status='sent'", (now, lease.run_id))
             db.execute("UPDATE model_calls SET status='failed',finished_at=? WHERE run_id=? AND status='reserved'", (now, lease.run_id))
             db.execute("UPDATE checkpoints SET status='unknown' WHERE run_id=? AND status='reserved' AND EXISTS (SELECT 1 FROM model_calls c WHERE c.run_id=checkpoints.run_id AND c.step=checkpoints.step AND c.attempt=checkpoints.attempt AND c.status='unknown')", (lease.run_id,))
-            db.execute("UPDATE checkpoints SET status='rejected' WHERE run_id=? AND status='reserved'", (lease.run_id,))
+            db.execute("UPDATE checkpoints SET status='rejected' WHERE run_id=? AND status='reserved' AND EXISTS (SELECT 1 FROM model_calls c WHERE c.run_id=checkpoints.run_id AND c.step=checkpoints.step AND c.attempt=checkpoints.attempt AND c.status='failed')", (lease.run_id,))
         db.execute("UPDATE runs SET state=?,lease_owner=NULL,lease_until=NULL,queue_seq=NULL,updated_at=?,finished_at=CASE WHEN ?='WAITING' THEN finished_at ELSE ? END,row_version=row_version+1 WHERE id=?", (state, now, state, now, lease.run_id))
         db.execute("UPDATE worker_slot SET owner=NULL,lease_until=NULL WHERE id=1 AND owner=? AND epoch=?", (lease.owner, lease.epoch))
         task_state = db.execute("SELECT state FROM tasks WHERE id=?", (lease.task_id,)).fetchone()[0]

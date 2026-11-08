@@ -41,31 +41,52 @@ def _allowed_origins() -> set[str]:
     return {f"http://{host}:{port}"}
 
 
+def _loopback(value: str) -> bool:
+    """Whether a host / origin points at this machine (any local port).
+
+    The service binds 127.0.0.1 only, so accepting the localhost alias and any
+    loopback port cannot expose it beyond the machine. This keeps the workbench
+    usable from a desktop app window, a Vite proxy and a direct API base URL
+    alike, instead of rejecting them as ORIGIN_DENIED.
+    """
+    host = value.split("://", 1)[-1].split("/", 1)[0]
+    if host.startswith("["):
+        host = host[1:].split("]", 1)[0]
+    else:
+        host = host.rsplit(":", 1)[0] if ":" in host else host
+    return host.lower() in {"127.0.0.1", "localhost", "::1"}
+
+
 def validate_origin() -> None:
     origins = _allowed_origins()
+    # Host must be the exact configured loopback address (a Host header pointing
+    # at another alias is still refused). Origin/Referer may use any loopback
+    # port so a Vite proxy, a desktop app window or a direct API base all work.
     allowed_hosts = {origin.split("://", 1)[-1] for origin in origins}
     if request.host not in allowed_hosts:
         raise DomainError("ORIGIN_DENIED", "Unexpected local host", "Open the local workbench address")
     origin = request.headers.get("Origin")
-    if origin and origin not in origins:
+    if origin and origin not in origins and not _loopback(origin):
         raise DomainError("ORIGIN_DENIED", "Cross-origin request", "Use the local workbench")
     site = request.headers.get("Sec-Fetch-Site")
     if site and site != "same-origin":
         raise DomainError("ORIGIN_DENIED", "Cross-site request", "Use the local workbench")
     referer = request.headers.get("Referer")
-    if referer and not any(referer.startswith(item + "/") for item in origins):
+    if referer and not any(referer.startswith(item + "/") for item in origins) and not _loopback(referer):
         raise DomainError("ORIGIN_DENIED", "Cross-origin referrer", "Use the local workbench")
 
 
 def require_session():
     cookie = request.cookies.get(COOKIE)
     if not cookie:
-        raise DomainError("SESSION_REQUIRED", "Session required", "Open the workbench and reload")
+        raise DomainError("SESSION_REQUIRED", "本地会话缺失，请刷新工作台",
+                          "重新打开或刷新页面以建立会话", retryable=True)
     with connect(current_app.config["DB_PATH"]) as db:
         row = db.execute("SELECT id,csrf_hash,capability,expires_at FROM app_sessions WHERE id=?", (_digest(cookie),)).fetchone()
         now = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
         if row is None or row["expires_at"] <= now:
-            raise DomainError("SESSION_REQUIRED", "Session expired", "Reload the workbench")
+            raise DomainError("SESSION_REQUIRED", "本地会话已过期，请重新连接后端",
+                              "刷新页面，前端会自动重新建立会话", retryable=True)
         g.local_session = dict(row)
         return g.local_session
 
@@ -74,7 +95,8 @@ def require_write():
     session = require_session()
     csrf = request.headers.get("X-CSRF-Token", "")
     if not csrf or not hmac.compare_digest(_digest(csrf), session["csrf_hash"]):
-        raise DomainError("SESSION_REQUIRED", "CSRF token invalid", "Reload the workbench")
+        raise DomainError("SESSION_REQUIRED", "CSRF 校验失败，请刷新页面后重试",
+                          "刷新工作台以重新取回会话凭据", retryable=True)
     key = request.headers.get("Idempotency-Key", "")
     if not KEY_PATTERN.fullmatch(key):
         raise DomainError("SCHEMA_INVALID", "Idempotency key must be 16-128 printable ASCII characters", "Provide a new request key")

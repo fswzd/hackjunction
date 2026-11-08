@@ -83,8 +83,10 @@ def read_materials(task_id):
 def read_events(task_id):
     after, limit = _int_query("after_seq", 0, 2147483647), _int_query("limit", 100, 100)
     with connect(current_app.config["DB_PATH"]) as db:
-        _task(db, task_id)
+        task = _task(db, task_id)
         rows = db.execute("SELECT * FROM task_events WHERE task_id=? AND seq>? ORDER BY seq LIMIT ?", (task_id, after, limit + 1)).fetchall()
-        items = [TaskEvent(event_id=row["id"], seq=row["seq"], run_id=row["run_id"], type=row["type"], step=row["step"], state=row["state"], summary=row["summary"], created_at=row["created_at"]) for row in rows[:limit]]
+        items = [TaskEvent(event_id=row["id"], seq=row["seq"], run_id=row["run_id"], type=row["type"], step=row["step"],
+                           state=task["state"] if row["state"] in {"RUNNING", "COMPLETED", "INCOMPLETE"} else row["state"],
+                           summary=row["summary"], created_at=row["created_at"]) for row in rows[:limit]]
         page = EventPage(items=items, next_after_seq=items[-1].seq if items else after, has_more=len(rows) > limit)
     return success(page.model_dump(mode="json"))

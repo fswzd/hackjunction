@@ -189,6 +189,7 @@ export function TaskDetail() {
   const progress = progressForTask(task);
   const isDemo = mode === "demo";
   const isBriefGate = task.pendingAction === "confirm_brief";
+  const previewPending = task.preview?.state === "QUEUED" || task.preview?.state === "RUNNING";
   const canAdvance = isDemo && task.status === "running";
   const nextStage = task.stages[task.stageIndex + 1];
 
@@ -362,6 +363,21 @@ export function TaskDetail() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
+          {task.preview ? (
+            <Card>
+              <CardHeader><h2 className="text-sm font-semibold">模拟试映</h2></CardHeader>
+              <CardBody>
+                <p className="text-xs text-muted">
+                  {previewPending ? "模拟观众正在逐段阅读。" : task.preview.state === "COMPLETED"
+                    ? `试映完成，${task.preview.started ?? 0} / ${task.preview.selected ?? 0} 个模拟观众产生了阅读记录。`
+                    : `试映状态 ${task.preview.state}`}
+                </p>
+                {task.preview.findings.map((finding, index) => (
+                  <p key={index} className="mt-2 text-xs text-text">{finding}</p>
+                ))}
+              </CardBody>
+            </Card>
+          ) : null}
           <Card>
             <CardHeader>
               <div>
@@ -789,7 +805,7 @@ export function TaskDetail() {
               variant="primary"
               icon={<Check size={14} />}
               onClick={() => void confirmApprove()}
-              disabled={pending || (!isBriefGate && isDemo && !bodyDraft.trim())}
+              disabled={pending || (!isBriefGate && (previewPending || (isDemo && !bodyDraft.trim())))}
             >
               {pending
                 ? "正在保存…"
@@ -861,7 +877,7 @@ export function TaskDetail() {
               variant="primary"
               icon={<RotateCcw size={14} />}
               onClick={() => void confirmRevise()}
-              disabled={pending}
+              disabled={pending || (!isDemo && !reviseNote.trim())}
             >
               {pending ? "正在退回…" : "确认退回"}
             </Button>
@@ -894,8 +910,7 @@ export function TaskDetail() {
           )}
           {!isBriefGate && !isDemo ? (
             <p className="rounded-xl border border-amber/25 bg-amber/[0.06] px-3 py-2 text-[10px] leading-5 text-muted">
-              真实接口模式下，退回内容会记录为 feedback（edit_request），不会直接改写冻结版本。
-              后端修订运行接入后会生成新的 READY 版本供你再次验收。
+              修改意见会交给内容主创。完成后会生成新版本，供你重新验收。
             </p>
           ) : null}
         </div>

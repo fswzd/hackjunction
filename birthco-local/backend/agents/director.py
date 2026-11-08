@@ -1,5 +1,6 @@
 """Bounded standalone content writer; does not review, accept, or publish."""
 from dataclasses import dataclass, asdict
+import re
 from typing import ClassVar, Literal
 from uuid import uuid4
 
@@ -10,6 +11,7 @@ from backend.agents.output_contract import ENVELOPE_RULES
 from backend.adapters.model.protocol import ModelAdapter, ModelMessage, ModelRequest, ModelUsage
 from backend.domain.errors import DomainError
 from backend.domain.hashing import brief_hash, content_hash, canonical_bytes, sha256_json
+from backend.domain.length import normalize_mentions, spec_from_requirements
 from backend.domain.schemas import (Model, Id, Hash, Text, Short, Confirmed, Brief, ContentCandidate,
     Revision, Envelope, Issue, Question, Segment, Change, RuleReport)
 from backend.validators.content import validate_content
@@ -179,6 +181,193 @@ def validate_scoped_revision(base: ContentCandidate, revision: Revision, locatio
     if content_hash(base)==content_hash(revision):raise DomainError("SCHEMA_INVALID","Change log describes no actual change","Return an actual scoped revision or ask for input")
 
 
+def _nonspace(text: str) -> int:
+    """Same measure as RULE_LENGTH: non-whitespace characters only."""
+    return sum(1 for char in text if not char.isspace())
+
+
+_SENTENCE_END = "。！？；.!?;"
+_CLAUSE_END = "，、：,:"
+# Intake metadata is a contract between UI and backend; it must never leak
+# into the delivered article as if it were the user's creative brief.
+_INTERNAL_REQUIREMENT_PATTERNS = (
+    r"目标(?:时长|篇幅)\s*[/／]?\s*(?:篇幅)?\s*[:：]\s*[^；;]*",
+    r"目标篇幅硬性要求\s*[:：]\s*[^；;]*",
+    r"标题与封面中的时长数字须与「[^」]*」一致",
+    r"账号阶段\s*[:：]\s*[^；;]*",
+    r"内容形式\s*[:：]\s*[^；;]*",
+)
+
+
+def _user_requirements(brief) -> str:
+    text = "；".join(requirement.text or "" for requirement in brief.requirements)
+    for pattern in _INTERNAL_REQUIREMENT_PATTERNS:
+        text = re.sub(pattern, "", text)
+    return "；".join(
+        piece.strip() for piece in re.split(r"[；;]", text) if piece.strip()
+    )[:400]
+
+
+def _clip(text: str, limit: int, *, strip_punctuation: bool = False) -> str:
+    """Shorten at a sentence boundary so a budget fit never leaves half a word."""
+    if len(text) <= limit:
+        return text
+    head = text[:limit]
+    floor = max(12, limit // 2)
+    # Prefer a real sentence end, then a clause end. Cutting at a colon used
+    # to leave an unclosed quotation like 「品牌： in the downloaded script.
+    for boundary in (_SENTENCE_END, _CLAUSE_END):
+        cut = max((head.rfind(char) for char in boundary), default=-1)
+        if cut >= floor:
+            result = head[:cut + 1]
+            return result.rstrip("，、,;；:： ") if strip_punctuation else result
+    return head.rstrip()
+
+
+def _timeline(paragraphs: list[str], seconds: int | None) -> list[str]:
+    """Prefix each block with its offset; the last block always ends on target."""
+    if not seconds:
+        return list(paragraphs)
+    count = len(paragraphs)
+    return [f"[第 {round(seconds * i / count)}–{round(seconds * (i + 1) / count)} 秒] {para}"
+            for i, para in enumerate(paragraphs)]
+
+
+def _body_count(paragraphs: list[str], seconds: int | None) -> int:
+    """Exact RULE_LENGTH count, including the timeline labels."""
+    return _nonspace("\n\n".join(_timeline(paragraphs, seconds)))
+
+
+def _mock_article(brief, materials, spec, minimum, maximum, reserved):
+    """Deterministic offline script that actually honours the requested length.
+
+    The previous stub was ~120 characters no matter what the user asked for.
+    Here the character budget is a first-class input: timeline labels count
+    towards it, tight durations use compact paragraphs, and the final body is
+    fitted into [minimum, maximum]. An intentionally impossible budget (for
+    example ``maximum=1``) is deliberately left over budget so that the
+    validator still reports a rule failure instead of silently hiding it.
+    """
+    objective = normalize_mentions(brief.objective, spec) if spec else brief.objective
+    core = normalize_mentions(brief.core_promise or brief.objective, spec) if spec else (brief.core_promise or brief.objective)
+    requirements = _user_requirements(brief)
+    excerpts = [m.text.strip().replace("\n", " ") for m in materials[:3] if m.text.strip()]
+    refs = [m.material_id for m in materials[:3]]
+
+    minimum = max(0, int(minimum or 0))
+    maximum = int(maximum or 20000)
+    seconds = spec.target_seconds if spec else None
+    # Only a sane, achievable budget is fitted. A contradictory or absurdly
+    # small rule must surface as a validator failure (repair_content).
+    fit = maximum >= max(minimum, 80)
+    target = min(max(max(minimum, spec.target if spec else 400), 1), maximum)
+    compact = fit and maximum <= 320
+
+    angles = [
+        ("先说结论", f"{objective}。面向{brief.audience}，最短的答案是先收窄范围，锁定一个今天就能验证的点，而不是把所有信息一次铺开。"),
+        ("问题从哪来", f"围绕「{requirements}」，先交代读者实际卡住的场景：真正缺的往往不是技巧清单，而是一套判断先后顺序的标准。"),
+        ("给一个可试的动作", "把主张拆成今天能做完的一小步：先记录现状，再用同一标准复测一次，让结论有可比较的依据，而不是停在印象上。"),
+        ("用材料支撑", "把授权资料里的具体细节放回上下文，说明它为什么在这个场景里成立，同时标出它不能代表的范围，避免把个例当成普遍结论。"),
+        ("说明边界", "明确哪些情况下这套做法不适用、哪些前提必须成立。把限制写清楚，比把结果说得更满更能帮读者做出自己的决定。"),
+        ("回到读者", f"对{brief.audience}来说，最省力的起点是先挑一个高频场景试一次，再用自己的记录判断要不要继续扩大使用范围。"),
+        ("收束与下一步", "把结论压成一句话：先小范围验证，再决定是否放大；如果结果和预期相反，保留记录，它就是下一次调整的起点。"),
+    ]
+    # Short scripts (30/60 秒) need short blocks: a 168-character budget
+    # cannot hold three long paragraphs plus their timeline labels.
+    compact_angles = [
+        ("先说结论", f"{_clip(objective, 36, strip_punctuation=True)}：先锁定一个能验证的点。"),
+        ("问题从哪来", f"围绕「{_clip(requirements, 24, strip_punctuation=True)}」，先说清读者卡在哪一步。"),
+        ("给一个动作", "今天先记录现状，再按同一标准复测一次。"),
+        ("用材料支撑", "授权材料只作例子，结论仍要回到自己的场景。"),
+        ("说明边界", "写清适用前提，比把结果说得更满更有用。"),
+        ("回到读者", f"对{_clip(brief.audience, 18, strip_punctuation=True)}，先挑高频场景试一次。"),
+        ("收束", "先小范围验证，再决定是否放大。"),
+    ]
+    pool = compact_angles if compact else angles
+
+    paragraphs: list[str] = []
+    index = 0
+    while len(paragraphs) < 24:
+        heading, body = pool[index % len(pool)]
+        detail = ""
+        if excerpts and not compact:
+            source = excerpts[index % len(excerpts)]
+            offset = (index * 47) % max(len(source), 1)
+            fragment = source[offset:offset + 90].strip()
+            if fragment:
+                detail = f"材料原文提示「{fragment}」，这里只作为例子，不替代结论。"
+        candidate = paragraphs + [f"【{heading}】{body}{detail}"]
+        projected = _body_count(candidate, seconds)
+        if len(paragraphs) >= 3 and projected > maximum:
+            break
+        paragraphs.append(candidate[-1])
+        index += 1
+        if fit and projected >= target:
+            break
+    if not paragraphs:
+        paragraphs = [f"【结论】{objective}。"]
+
+    if fit:
+        # Exact fit: labels were measured with the real digits, so this is
+        # normally a no-op, but it also covers very long user objectives.
+        # Shrink the longest paragraph instead of dropping whole paragraphs:
+        # keeping at least three blocks lets the segmenter split on paragraph
+        # boundaries, so a "[第 30–60 秒]" label can never be cut in half.
+        for _ in range(64):
+            count = _body_count(paragraphs, seconds)
+            if count <= maximum:
+                break
+            index = max(range(len(paragraphs)), key=lambda i: len(paragraphs[i]))
+            text = paragraphs[index]
+            if len(text) <= 24:
+                break
+            paragraphs[index] = _clip(text, max(24, len(text) - (count - maximum) - 1))
+        fillers = [
+            "这一步的重点是让判断有依据，而不是把结论说得更满。",
+            "把适用前提写清楚，读者才能决定要不要照做。",
+            "如果复测结果相反，保留记录，它就是下一次调整的起点。",
+            "先小范围验证，再决定是否扩大使用范围。",
+        ]
+        for index in range(40):
+            count = _body_count(paragraphs, seconds)
+            if count >= minimum:
+                break
+            sentence = fillers[index % len(fillers)]
+            if _nonspace(sentence) >= maximum - count:
+                break
+            paragraphs[-1] += sentence
+
+    rendered = _timeline(paragraphs, seconds)
+    if len(reserved) >= 3 and len(rendered) >= 3:
+        # Split on paragraph boundaries so a timeline label is never cut in
+        # half when the script is split into hook / body / closing segments.
+        groups: list[list[str]] = [[] for _ in range(3)]
+        for i, text in enumerate(rendered):
+            groups[min(2, i * 3 // len(rendered))].append(text)
+        texts = ["\n\n".join(group) for group in groups]
+        segments = [Segment(segment_id=reserved[i], kind=kind,
+                            text=(texts[i] or "继续说明。")[:20000], source_refs=refs)
+                    for i, kind in enumerate(("hook", "body", "closing"))]
+    else:
+        # Fewer than three blocks (or only one reserved ID): keep the whole
+        # script in a single body segment. A character-based three-way split
+        # used to cut "[第 30–60 秒]" into "[第 30–" and "60 秒]" across two
+        # segments, which looked broken in the downloaded Markdown.
+        segments = [Segment(segment_id=reserved[0], kind="body",
+                            text=("\n\n".join(rendered))[:20000], source_refs=refs)]
+
+    raw_titles = [
+        ("Mock示例：" + objective)[:1000],
+        ("从需求出发：" + core)[:1000],
+        ("给" + brief.audience + "：" + objective)[:1000],
+    ]
+    titles = [normalize_mentions(item, spec) if spec else item for item in raw_titles]
+    cover = ("Mock封面：" + core)[:1000]
+    if spec:
+        cover = normalize_mentions(cover, spec)
+    return ContentCandidate(titles=titles, cover_copy=cover, segments=segments)
+
+
 class ContentDirectorAgent:
     def __init__(self,adapter:ModelAdapter|None=None,*,mode="mock",model_id=None):
         if mode not in {"mock","live"}:raise ValueError("invalid mode")
@@ -190,7 +379,18 @@ class ContentDirectorAgent:
         schema=Envelope[ContentCandidate] if snapshot.brief.input_mode=="idea" else Envelope[Revision]
         context=snapshot.model_dump(mode="json");fingerprint=sha256_json(context);version_id="v_"+uuid4().hex
         call_id="director_"+uuid4().hex
-        request=ModelRequest(call_id=call_id,role="director",messages=(ModelMessage("system",SYSTEM+"\n输出schema："+canonical_bytes(schema.model_json_schema()).decode()),ModelMessage("user",canonical_bytes(context).decode())),
+        # Live models must see the same hard length/duration contract that the
+        # deterministic validator enforces; otherwise a configured provider can
+        # freely return a 120-character stub for an 800-character request.
+        spec=spec_from_requirements(r.text for r in snapshot.brief.requirements)
+        constraint=""
+        if spec is not None:
+            low=snapshot.brief.length_rule.minimum or spec.minimum
+            high=snapshot.brief.length_rule.maximum or spec.maximum
+            constraint=(f"\n本任务硬性约束：正文非空白字符数必须在 {low}–{high} 之间（目标「{spec.describe()}」）；"
+                        f"标题与封面中的时长/字数数字必须与「{spec.duration_label()}」一致，不得出现其它时长数字；"
+                        f"若写时间轴，末段必须正好落在所选时长，不得超出或提前结束。")
+        request=ModelRequest(call_id=call_id,role="director",messages=(ModelMessage("system",SYSTEM+constraint+"\n输出schema："+canonical_bytes(schema.model_json_schema()).decode()),ModelMessage("user",canonical_bytes(context).decode())),
             model_id=self.model_id,max_completion_tokens=4000,timeout_seconds=90,temperature=0.2,top_p=1.0,json_mode=True,mode=self.mode)
         adapter=self.adapter
         if adapter is None:
@@ -220,9 +420,11 @@ class ContentDirectorAgent:
     def _mock(snapshot,schema):
         brief=snapshot.brief
         if brief.input_mode=="idea":
-            excerpts="\n".join("素材摘录："+m.text[:300] for m in snapshot.materials[:3])
-            text="【Mock模板，尚非真实创作】"+brief.objective+"\n读者："+brief.audience+"\n写作要求："+"；".join(r.text for r in brief.requirements)+"\n"+excerpts
-            data=ContentCandidate(titles=[("Mock示例："+brief.objective)[:1000],("如何理解："+brief.objective)[:1000],("从需求出发："+brief.objective)[:1000]],cover_copy=("Mock封面："+brief.core_promise)[:1000],segments=[Segment(segment_id=snapshot.reserved_segment_ids[0],kind="body",text=text[:20000],source_refs=[m.material_id for m in snapshot.materials[:3]])])
+            spec=spec_from_requirements(r.text for r in brief.requirements)
+            minimum=brief.length_rule.minimum or 0
+            maximum=brief.length_rule.maximum or 20000
+            data=_mock_article(brief,snapshot.materials,spec,minimum,maximum,
+                               snapshot.reserved_segment_ids)
         else:
             targets={i.location for i in snapshot.edit_requests if i.location not in {"titles","cover"}}
             if len(targets)>len(snapshot.reserved_segment_ids):

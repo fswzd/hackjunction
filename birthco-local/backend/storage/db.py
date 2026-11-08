@@ -14,6 +14,9 @@ MIGRATIONS = (
 )
 VERSION = MIGRATIONS[-1][0]
 
+IMMEDIATE_MAX_ATTEMPTS = 8
+IMMEDIATE_DEADLINE_SECONDS = 20.0
+
 
 class ManagedConnection(sqlite3.Connection):
     def __exit__(self, exc_type, exc, traceback):
@@ -27,45 +30,105 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
+# Short-lived SQLite/OS failures. They must be retried, never escalated into a
+# permanent task failure: on Windows a concurrent connection switching journal
+# mode can briefly surface as "attempt to write a readonly database".
+TRANSIENT_DB_MESSAGES = (
+    "locked", "busy", "readonly", "read-only", "disk i/o error", "disk full",
+)
+
+
+def is_transient_db_error(exc: BaseException) -> bool:
+    text = str(exc).lower()
+    return isinstance(exc, sqlite3.OperationalError) and any(
+        token in text for token in TRANSIENT_DB_MESSAGES
+    )
+
+
 def connect(path: Path | str, *, require_migrated: bool = True) -> sqlite3.Connection:
     path = Path(path)
     if not path.is_file():
         raise DomainError("STORAGE_UNAVAILABLE", "Database is not migrated", "Run the migrate command")
-    db = sqlite3.connect(path, timeout=5, isolation_level=None, check_same_thread=False, factory=ManagedConnection)
-    try:
-        db.row_factory = sqlite3.Row
-        db.execute("PRAGMA foreign_keys=ON")
-        db.execute("PRAGMA journal_mode=WAL")
-        db.execute("PRAGMA busy_timeout=5000")
-        if require_migrated:
-            row = db.execute("SELECT max(version) FROM schema_migrations").fetchone()
-            if not row or row[0] != VERSION:
-                raise DomainError("STORAGE_UNAVAILABLE", "Unsupported database schema", "Run migrate or restore a compatible backup")
-        return db
-    except (sqlite3.Error, DomainError) as exc:
-        db.close()
-        if isinstance(exc, DomainError):
+    last: sqlite3.Error | None = None
+    for attempt in range(IMMEDIATE_MAX_ATTEMPTS):
+        db = sqlite3.connect(path, timeout=5, isolation_level=None,
+                             check_same_thread=False, factory=ManagedConnection)
+        try:
+            db.row_factory = sqlite3.Row
+            db.execute("PRAGMA foreign_keys=ON")
+            db.execute("PRAGMA busy_timeout=5000")
+            # WAL is a persistent property of the database file, set once by
+            # migrate(). Re-issuing it on EVERY connection is a write requiring
+            # an exclusive lock; with the API, worker and preview processes
+            # opening connections concurrently it can produce spurious
+            # readonly errors. Only repair a file switched to another mode.
+            mode = str(db.execute("PRAGMA journal_mode").fetchone()[0] or "").lower()
+            if mode != "wal":
+                db.execute("PRAGMA journal_mode=WAL")
+            if require_migrated:
+                row = db.execute("SELECT max(version) FROM schema_migrations").fetchone()
+                if not row or row[0] != VERSION:
+                    raise DomainError("STORAGE_UNAVAILABLE", "Unsupported database schema", "Run migrate or restore a compatible backup")
+            # Two connections opening a freshly migrated WAL database at the
+            # same instant race while creating the -wal/-shm files. The loser
+            # then reports "attempt to write a readonly database" on EVERY
+            # later write, and retrying on that same connection never
+            # recovers. A no-op write transaction here serialises that
+            # one-time setup under SQLite's own busy handler; on a transient
+            # failure we discard the poisoned connection and open a fresh one.
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("COMMIT")
+            return db
+        except DomainError:
+            db.close()
             raise
-        raise DomainError("STORAGE_UNAVAILABLE", "Database schema unavailable", "Run migrate") from exc
+        except sqlite3.Error as exc:
+            db.close()
+            if not is_transient_db_error(exc):
+                raise DomainError("STORAGE_UNAVAILABLE", "Database schema unavailable", "Run migrate") from exc
+            last = exc
+            time.sleep(min(0.02 * (2 ** min(attempt, 5)), 0.2))
+    raise DomainError("STORAGE_UNAVAILABLE", "本地数据库暂时繁忙或不可写",
+                      "稍后重试同一请求；已提交的步骤会跳过，不会重复计费",
+                      retryable=True) from last
 
 
 class immediate:
-    """At most two SQLITE_BUSY retries inside five seconds; no network in block."""
+    """Bounded exponential backoff for transient SQLite contention.
+
+    Removing the redundant per-connection WAL write means two local processes
+    can now reach ``BEGIN IMMEDIATE`` at the same instant. A short backoff lets
+    the loser acquire the lease on the next attempt instead of surfacing a
+    storage error that would fail the whole task.
+
+    The number of attempts is the real bound: SQLite's own ``busy_timeout``
+    (5s here) can consume most of a wall-clock deadline in a single attempt,
+    so bailing out on elapsed time alone made concurrent claims fail on a
+    loaded machine even though every failure was retryable.
+    """
     def __init__(self, db: sqlite3.Connection):
         self.db = db
 
     def __enter__(self):
-        deadline = time.monotonic() + 5
-        for attempt in range(3):
+        deadline = time.monotonic() + IMMEDIATE_DEADLINE_SECONDS
+        last: sqlite3.OperationalError | None = None
+        for attempt in range(IMMEDIATE_MAX_ATTEMPTS):
             try:
                 self.db.execute("BEGIN IMMEDIATE")
                 return self.db
             except sqlite3.OperationalError as exc:
-                if "locked" not in str(exc).lower() and "busy" not in str(exc).lower():
+                if not is_transient_db_error(exc):
                     raise
-                if attempt == 2 or time.monotonic() >= deadline:
-                    raise DomainError("STORAGE_UNAVAILABLE", "Database is busy", "Retry with the same idempotency key", retryable=True) from exc
-                time.sleep(min(0.05 * (attempt + 1), max(0, deadline - time.monotonic())))
+                last = exc
+                remaining = deadline - time.monotonic()
+                if remaining > 0:
+                    time.sleep(min(0.05 * (2 ** min(attempt, 5)), 0.25, remaining))
+        raise DomainError(
+            "STORAGE_UNAVAILABLE",
+            "本地数据库暂时繁忙或不可写",
+            "稍后重试同一请求；已提交的步骤会跳过，不会重复计费",
+            retryable=True,
+        ) from last
 
     def __exit__(self, exc_type, exc, traceback):
         if exc_type is None:

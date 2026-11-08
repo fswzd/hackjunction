@@ -37,6 +37,8 @@ def _ensure_bc_path() -> None:
 class TeamEntry:
     """AgentAdapter-compatible wrapper; bridge constructed lazily per task."""
 
+    mode = "live"  # a real (non-mock) adapter entry, even with an offline model
+
     def __init__(self, bridge_factory: Callable[[str], Any]):
         self._factory = bridge_factory
         self._cache: dict[str, Any] = {}

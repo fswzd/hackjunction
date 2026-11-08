@@ -25,16 +25,18 @@ live 模式绝不回退 Mock。
 ## 启动（一键）
 
 ```powershell
-python run.py        # 跨平台 Python 启动器：迁移 → Flask API(5001) → 前端 Vite(4173)
+python run.py --detach # 迁移数据库并启动 API、后台任务进程和工作台
 .\start.ps1          # PowerShell 版（等价，PID/日志约定相同）
 .\stop.ps1           # 停止（run.py 前台模式用 Ctrl+C 连带清理进程树）
 ```
 
-- 前端工作台 `http://127.0.0.1:4173`（默认演示适配器，不连后端也可体验）
+- 打开 [任务中心](http://127.0.0.1:4173/workspace/tasks)。首次进入可用示例身份完成四步本地设置。
+- 默认连接本地 API，并使用离线 Mock 模型。创建任务后等待任务书，确认后查看候选稿。勾选试映可查看模拟观众和分析结果。退回修改会生成下一版，验收后可到「素材库」下载 Markdown。
+- 要演示七角色，创建时勾选商单和试映，提供已授权的参考资料。简报中分行填写 `品牌：城市脚步` 和 `产品：周末步行指南`，再填写正文需求。
 - 后端 API `http://127.0.0.1:5001`（`/api/v1/session` 等；数据目录 `birthco-local\data`）
-- run.py 参数：`--skip-api` / `--skip-frontend` / `--data-dir X:\data` / `--detach`
-- 前置：Python 3.13 + `pip install -r birthco-local/requirements-dev.lock langgraph==1.1.10`；前端需 Node.js（首启自动 `npm install`）
-- 已知边界（评审 F-01）：队列→工作流自动执行 worker 未接入，业务推进用 CLI 与 Mock 演示驱动
+- run.py 参数：`--skip-api` / `--skip-worker` / `--skip-frontend` / `--data-dir X:\data` / `--detach`
+- 前置为 Python 3.13 和 Node.js。启动器会补装 Python 和前端依赖。
+- 后台日志位于 `.run/worker.err.log`。排查时先看任务事件，再核对数据库里的 `runs`、`model_calls` 和 `checkpoints`。结果未知的调用会中断并保留记录，需先对账。
 
 ## 快速开始（验证）
 
@@ -48,8 +50,9 @@ cd birthco-local; python tools/export_contracts.py --check    # 契约导出一�
 
 ## Mock 与 live
 
-- 默认全部 Mock，零联网零费用；Mock 与真实实现**同一契约**，live 模式失败不回退 Mock。
-- 按角色启用真实模式（其余角色保持 Mock，单角色灰度）：
+- 工作台默认使用 Mock，验收链路无需模型密钥。Mock 稿件和诊断只用于验证流程。
+- 工作台的百炼模式使用运行环境里的 `BIRTHCO_MODEL_MODE=live`、`DASHSCOPE_API_KEY` 和可选 `QWEN_MODEL_ID`（默认 `qwen3.8-flash`）。模型调用按服务商账户计费。
+- 独立的编排验证工具仍支持按角色启用真实模式：
 
 ```python
 from backend.workflow.five_agent.adapters import AdapterRouter

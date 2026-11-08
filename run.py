@@ -37,9 +37,10 @@ NODE_DOWNLOAD = "https://nodejs.org/zh-cn （国内镜像 https://npmmirror.com/
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="本地一键启动器（迁移 + Flask API + 前端）")
+    parser = argparse.ArgumentParser(description="本地一键启动器（迁移 + Flask API + worker + 前端）")
     parser.add_argument("--skip-api", action="store_true", help="不启动 Flask API")
     parser.add_argument("--skip-frontend", action="store_true", help="不启动前端 Vite")
+    parser.add_argument("--skip-worker", action="store_true", help="不启动后台任务执行进程")
     parser.add_argument("--data-dir", default="", help="数据目录（默认 birthco-local/data）")
     parser.add_argument("--detach", action="store_true", help="后台启动后立即返回")
     return parser
@@ -59,6 +60,7 @@ def configure_env(data_dir: str) -> dict[str, str]:
 def ensure_python_deps(env: dict[str, str]) -> None:
     try:
         import flask  # noqa: F401
+        import httpx  # noqa: F401
         import pydantic  # noqa: F401
         return
     except ImportError:
@@ -220,6 +222,8 @@ def cleanup(services: list[tuple[str, subprocess.Popen, str]]) -> None:
 def main() -> int:
     args = build_parser().parse_args()
     env = configure_env(args.data_dir)
+    if not args.skip_api:
+        env.setdefault("VITE_DATA_MODE", "api")
     print(f"[cfg] HOST={env.get('BIRTHCO_HOST', '127.0.0.1')} PORT={env['BIRTHCO_PORT']} "
           f"DATA={env['BIRTHCO_DATA_DIR']} MODEL_MODE={env.get('BIRTHCO_MODEL_MODE', 'mock')}")
 
@@ -244,6 +248,15 @@ def main() -> int:
                 print("[api] 30s 内未就绪，日志尾部：")
                 dump_log(RUN_DIR / "api.err.log")
                 dump_log(RUN_DIR / "api.log")
+                raise SystemExit("[api] API 未就绪")
+
+        if not args.skip_worker and not args.skip_api:
+            worker = spawn_logged([sys.executable, "-m", "backend.manage", "worker", "--data-dir",
+                                   env["BIRTHCO_DATA_DIR"]], API_DIR, RUN_DIR / "worker.log",
+                                  RUN_DIR / "worker.err.log", env)
+            write_pid("worker", worker)
+            services.append(("worker", worker, "worker"))
+            print(f"[wrk] 后台任务进程 pid={worker.pid}")
 
         if not args.skip_frontend:
             if ensure_node():
@@ -251,7 +264,8 @@ def main() -> int:
                     npm_install(env)
                 ensure_port_free(fe_port, "前端 Vite")
                 frontend = spawn_logged(
-                    npm_command(["run", "dev", "--", "--port", fe_port]), FRONTEND_DIR,
+                    ["node", str(FRONTEND_DIR / "node_modules" / "vite" / "bin" / "vite.js"),
+                     "--port", fe_port, "--strictPort"], FRONTEND_DIR,
                     RUN_DIR / "frontend.log", RUN_DIR / "frontend.err.log", env)
                 write_pid("frontend", frontend)
                 services.append(("frontend", frontend, "frontend"))
@@ -264,6 +278,7 @@ def main() -> int:
                     dump_log(RUN_DIR / "frontend.err.log")
                     dump_log(RUN_DIR / "frontend.log")
                     print(f"      常见原因：Node 版本 < 18、npm install 未完成、{fe_port} 被其他程序占用。")
+                    raise SystemExit("[fe ] 工作台未就绪")
     except BaseException:
         # 启动中途失败不留孤儿进程
         cleanup(services)
@@ -271,13 +286,11 @@ def main() -> int:
 
     print()
     print("=== 启动完成 ===")
-    print(f"前端工作台  http://127.0.0.1:{fe_port}   （默认演示适配器，无需后端也可体验）")
+    if not args.skip_frontend:
+        print(f"前端工作台  http://127.0.0.1:{fe_port}")
     if not args.skip_api:
         print(f"后端 API    http://127.0.0.1:{env['BIRTHCO_PORT']}")
     print("停止服务    Ctrl+C（本进程连带清理）或 stop.ps1")
-    print("已知边界：自动执行 worker 未接入（评审 F-01），业务推进用：")
-    print("  python run_mock_demo.py                                    # 编排 Mock 全流程")
-    print("  cd birthco-local; python tools/run_operator.py --input examples/operator-task.json --output out.json")
 
     if not services:
         print("[run] 无服务需要启动（迁移已完成）")

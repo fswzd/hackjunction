@@ -57,7 +57,7 @@ ACCEPTED ACCEPTED revision_saved
 ACCEPTED ACCEPTED revision_exported
 ACCEPTED ACCEPTED restore_head
 """.strip().splitlines())
-_TASK_EDGES.update((state, "CANCELLED", "cancel") for state in ("DRAFT", "PLANNING", "WAITING_CONFIRMATION", "QUEUED", "GENERATING", "VALIDATING", "REVISING", "EXPORTING", "WAITING_INPUT", "NEEDS_REVIEW", "FAILED", "INTERRUPTED"))
+_TASK_EDGES.update((state, "CANCELLED", "cancel") for state in ("DRAFT", "PLANNING", "WAITING_CONFIRMATION", "QUEUED", "GENERATING", "VALIDATING", "REVISING", "EXPORTING", "WAITING_INPUT", "NEEDS_REVIEW", "FAILED", "INTERRUPTED", "READY"))
 _CANCELLABLE_STATES = frozenset(start for start, _, action in _TASK_EDGES if action == "cancel")
 
 
@@ -125,6 +125,10 @@ def accept_version_tx(db, task_id: str, version_id: str, content_hash: str, expe
         return {"task_id": task_id, "state": "ACCEPTED", "row_version": task["row_version"]}
     if task["ready_version_id"] != version_id:
         raise DomainError("VERSION_CONFLICT", "Version is not the ready head", "Reload the task", current_row_version=task["row_version"])
+    if db.execute("SELECT 1 FROM preview_runs WHERE task_id=? AND version_id=? AND state IN ('QUEUED','RUNNING')",
+                  (task_id, version_id)).fetchone():
+        raise DomainError("INVALID_TRANSITION", "模拟观众试映仍在进行中，请稍候再验收",
+                          "等待试映完成后重试；工作台会自动等待", retryable=True)
     version = db.execute("SELECT content_hash FROM content_versions WHERE id=? AND task_id=?", (version_id, task_id)).fetchone()
     if version is None:
         raise DomainError("NOT_FOUND", "Content version not found", "Reload task versions")
@@ -149,18 +153,23 @@ def cancel_task_tx(db, task_id: str, expected_row_version: int, summary: str = "
         raise DomainError("VERSION_CONFLICT", "Task version changed", "Reload task", current_row_version=task["row_version"])
     if task["state"] not in _CANCELLABLE_STATES:
         raise DomainError("INVALID_TRANSITION", "Task cannot be cancelled from this state", "Reload task state")
-    db.execute("UPDATE tasks SET state='CANCELLED',row_version=row_version+1,updated_at=? WHERE id=?", (now, task_id))
+    db.execute("UPDATE tasks SET state='CANCELLED',pending_json=NULL,row_version=row_version+1,updated_at=? WHERE id=?", (now, task_id))
     active = db.execute("SELECT id,lease_owner,lease_epoch FROM runs WHERE task_id=? AND state IN ('QUEUED','RUNNING','WAITING','INTERRUPTED')", (task_id,)).fetchall()
     for run in active:
-        db.execute("UPDATE model_calls SET status='unknown',finished_at=? WHERE run_id=? AND status='sent'", (now, run["id"]))
-        db.execute("UPDATE model_calls SET status='failed',finished_at=? WHERE run_id=? AND status='reserved'", (now, run["id"]))
-        db.execute("UPDATE checkpoints SET status='unknown' WHERE run_id=? AND status='reserved' AND EXISTS (SELECT 1 FROM model_calls c WHERE c.run_id=checkpoints.run_id AND c.step=checkpoints.step AND c.attempt=checkpoints.attempt AND c.status='unknown')", (run["id"],))
-        db.execute("UPDATE checkpoints SET status='rejected' WHERE run_id=? AND status='reserved'", (run["id"],))
-        db.execute("UPDATE runs SET state='CANCELLED',lease_owner=NULL,lease_until=NULL,lease_epoch=lease_epoch+1,queue_seq=NULL,finished_at=?,updated_at=?,row_version=row_version+1 WHERE id=?", (now, now, run["id"]))
-        if run["lease_owner"]:
-            db.execute("UPDATE worker_slot SET owner=NULL,lease_until=NULL,epoch=epoch+1 WHERE id=1 AND owner=? AND epoch=?", (run["lease_owner"], run["lease_epoch"]))
+        cancel_run_tx(db, run, now)
     _event(db, task_id, task["current_run_id"], "cancel", "cancel", "CANCELLED", summary, now)
     return {"task_id": task_id, "state": "CANCELLED", "row_version": expected_row_version + 1}
+
+
+def cancel_run_tx(db, run, now):
+    db.execute("UPDATE model_calls SET status='unknown',finished_at=? WHERE run_id=? AND status='sent'", (now, run["id"]))
+    db.execute("UPDATE model_calls SET status='failed',finished_at=? WHERE run_id=? AND status='reserved'", (now, run["id"]))
+    db.execute("UPDATE checkpoints SET status='unknown' WHERE run_id=? AND status='reserved' AND EXISTS (SELECT 1 FROM model_calls c WHERE c.run_id=checkpoints.run_id AND c.step=checkpoints.step AND c.attempt=checkpoints.attempt AND c.status='unknown')", (run["id"],))
+    db.execute("UPDATE checkpoints SET status='rejected' WHERE run_id=? AND status='reserved'", (run["id"],))
+    db.execute("UPDATE runs SET state='CANCELLED',lease_owner=NULL,lease_until=NULL,lease_epoch=lease_epoch+1,queue_seq=NULL,finished_at=?,updated_at=?,row_version=row_version+1 WHERE id=?", (now, now, run["id"]))
+    db.execute("UPDATE preview_runs SET state='CANCELLED',row_version=row_version+1 WHERE run_id=? AND state!='CANCELLED'", (run["id"],))
+    if run["lease_owner"]:
+        db.execute("UPDATE worker_slot SET owner=NULL,lease_until=NULL,epoch=epoch+1 WHERE id=1 AND owner=? AND epoch=?", (run["lease_owner"], run["lease_epoch"]))
 
 
 @dataclass(frozen=True)
@@ -282,7 +291,7 @@ class Repository:
                 if changed != 1:
                     raise DomainError("INVALID_TRANSITION", "Call is not reserved", "Read call ledger")
 
-    def finish_call(self, call_id: str, *, status: str, input_tokens: int | None = None, output_tokens: int | None = None, total_tokens: int | None = None, response_hash: str | None = None) -> None:
+    def finish_call(self, call_id: str, *, status: str, input_tokens: int | None = None, output_tokens: int | None = None, total_tokens: int | None = None, response_hash: str | None = None, rejected_error: DomainError | None = None) -> None:
         if status not in {"received", "failed", "unknown", "discarded"}:
             raise ValueError("invalid call status")
         known = all(x is not None for x in (input_tokens, output_tokens, total_tokens))
@@ -297,6 +306,10 @@ class Repository:
                 run = db.execute("SELECT state,lease_epoch,lease_until FROM runs WHERE id=?", (call["run_id"],)).fetchone()
                 effective_status = "discarded" if status == "received" and (call["status"] == "unknown" or run["state"] != "RUNNING" or run["lease_epoch"] != call["lease_epoch"] or run["lease_until"] <= now) else status
                 db.execute("UPDATE model_calls SET status=?,response_hash=?,finished_at=? WHERE id=?", (effective_status, response_hash, now, call_id))
+                if effective_status == "received" and rejected_error is not None:
+                    db.execute("UPDATE checkpoints SET status='rejected',error_json=? WHERE status='reserved' "
+                               "AND (run_id,step,attempt)=(SELECT run_id,step,attempt FROM model_calls WHERE id=?)",
+                               (canonical_bytes(rejected_error.detail()).decode(), call_id))
                 db.execute("UPDATE usage_ledger SET input_tokens=?,output_tokens=?,total_tokens=?,usage_status=?,cost_status=?,updated_at=? WHERE call_id=?", (input_tokens, output_tokens, total_tokens, "known" if known else "unknown", "unpriced" if known else "unknown", now, call_id))
                 if known:
                     changed = db.execute("UPDATE runs SET token_reserved=token_reserved-?,token_known=token_known+? WHERE id=? AND token_reserved>=?", (call["reserved_tokens"], total_tokens, call["run_id"], call["reserved_tokens"]))

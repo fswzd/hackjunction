@@ -90,10 +90,10 @@ class AnalystAgent:
         if not isinstance(snapshot, PreviewAnalysisInput):
             raise TypeError("snapshot must be validated PreviewAnalysisInput")
         snapshot = PreviewAnalysisInput.model_validate(snapshot.model_dump(mode="python"))
-        left = snapshot.model_dump(mode="json")
+        left = snapshot.model_dump(mode="json", exclude={"max_segments"})
         metrics = summarize_sessions(left["sessions"], [segment.segment_id for segment in snapshot.segments])
         return self._run_validated({"left": left, "program_metrics": metrics, "right": None,
-            "comparison_metrics": None, "comparison_context": single_version_context()}, sha256_json(snapshot))
+            "comparison_metrics": None, "comparison_context": single_version_context()}, sha256_json(left))
 
     def _run_validated(self, context: dict, fingerprint: str) -> AnalystResult:
         left = context["left"]
