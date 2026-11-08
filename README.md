@@ -122,7 +122,7 @@ python run.py --detach
 | 服务商 | 环境变量 | 获取地址 |
 | --- | --- | --- |
 | 通义千问（百炼） | `DASHSCOPE_API_KEY` | https://bailian.console.aliyun.com |
-| MiMo | `MIMO_API_KEY` | MiMo 控制台 |
+| MiMo（默认） | `MIMO_API_KEY` | MiMo 控制台 |
 | OpenAI | `OPENAI_API_KEY` | https://platform.openai.com |
 | 其他兼容接口 | `AGENT_API_KEY` + `AGENT_BASE_URL` | 自行部署/第三方网关 |
 
@@ -133,9 +133,9 @@ python run.py --detach
 ```powershell
 # 打开「系统属性 → 高级 → 环境变量」，添加以下用户变量：
 BIRTHCO_MODEL_MODE = live
-DASHSCOPE_API_KEY  = sk-你的密钥
-# 可选：指定模型（默认 qwen3.8-flash）
-QWEN_MODEL_ID      = qwen3.8-flash
+MIMO_API_KEY       = 你的密钥
+# 可选：指定模型（默认 mimo-v2.6-pro）
+MIMO_MODEL_ID      = mimo-v2.6-pro
 ```
 
 设置后**重新启动**工作台，环境变量自动生效。
@@ -144,7 +144,7 @@ QWEN_MODEL_ID      = qwen3.8-flash
 
 ```powershell
 $env:BIRTHCO_MODEL_MODE = 'live'
-$env:DASHSCOPE_API_KEY  = 'sk-你的密钥'
+$env:MIMO_API_KEY       = '你的密钥'
 python run.py
 ```
 
@@ -154,7 +154,7 @@ python run.py
 
 ```env
 BIRTHCO_MODEL_MODE=live
-QWEN_MODEL_ID=qwen3.8-flash
+MIMO_MODEL_ID=mimo-v2.6-pro
 ```
 
 > **安全提示**：API Key 建议放系统环境变量，不要写入 `.env` 或任何会入库的文件。代码不读取 `.env` 中的密钥字段，真实凭据只经运行时进程环境变量注入。
@@ -180,10 +180,10 @@ QWEN_MODEL_ID=qwen3.8-flash
 | 环境变量 | 说明 | 默认值 |
 | --- | --- | --- |
 | `BIRTHCO_MODEL_MODE` | `mock` 或 `live` | `mock` |
-| `AGENT_PROVIDER` | `auto` / `mock` / `openai` / `mimo` / `qwen` | `auto` |
-| `AGENT_API_KEY` | 通用密钥（也可用 `OPENAI_API_KEY` / `MIMO_API_KEY` / `DASHSCOPE_API_KEY`） | — |
-| `AGENT_BASE_URL` | 通用端点（也可用 `OPENAI_BASE_URL`） | — |
-| `OPENAI_MODEL_ID` | 通用模型 | `gpt-4o-mini` |
+| `AGENT_PROVIDER` | `auto` / `mock` / `openai` / `mimo` / `qwen` | `auto`（自动检测，优先 MiMo） |
+| `MIMO_API_KEY` | MiMo 密钥（默认服务商） | — |
+| `MIMO_MODEL_ID` | MiMo 模型 | `mimo-v2.6-pro` |
+| `MIMO_BASE_URL` | MiMo 端点 | `https://api.xiaomimimo.com/anthropic` |
 
 ### 4. 验证配置
 

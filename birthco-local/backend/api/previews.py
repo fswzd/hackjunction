@@ -45,7 +45,7 @@ def _compute_hashes(spec: PreviewSpec, mode: str):
     s_hash = scenario_hash(spec.scenario)
     budget = _budget(len(spec.scenario.personas), spec.scenario.max_segments)
     c_hash = conditions_hash(
-        scenario=spec.scenario, model_id="mock-audience-v1" if mode == "mock" else os.environ.get("QWEN_MODEL_ID", "qwen3.8-flash"),
+        scenario=spec.scenario, model_id="mock-audience-v1" if mode == "mock" else os.environ.get("MIMO_MODEL_ID", "mimo-v2.6-pro"),
         temperature=_TEMPERATURE, top_p=_TOP_P,
         prompt_version=_PROMPT_VERSION, prompt_hash=_PROMPT_HASH,
         schema_version=_SCHEMA_VERSION,
