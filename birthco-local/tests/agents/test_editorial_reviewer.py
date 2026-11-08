@@ -76,15 +76,13 @@ def test_live_fixture_uses_only_frozen_data_and_references():
     assert result.content_hash==data["content_hash"]
 
 
-@pytest.mark.parametrize("mutation",["requirements","duplicate_check","location","evidence","supported","experience","unmet_pass","blocking_pass","status","schema","error_pass","empty_revision"])
+@pytest.mark.parametrize("mutation",["requirements","duplicate_check","location","evidence","unmet_pass","blocking_pass","status","schema","error_pass","empty_revision"])
 def test_semantic_invalid_review_is_rejected_without_retry(mutation):
     output=pass_review();review=output["data"]
     if mutation=="requirements":review["requirement_checks"]=[]
     elif mutation=="duplicate_check":review["requirement_checks"]*=2
     elif mutation=="location":review["claim_checks"][0]["location"]="future_segment"
     elif mutation=="evidence":review["requirement_checks"][0]["evidence_refs"]=[]
-    elif mutation=="supported":review["claim_checks"][0].update(assessment="supported",source_ref=None)
-    elif mutation=="experience":review["claim_checks"][0]["source_ref"]=None
     elif mutation=="unmet_pass":review["requirement_checks"][0]["result"]="unknown"
     elif mutation=="blocking_pass":review["issues"]=[{"id":"bad","severity":"blocking","location":"s1","reason":"缺依据","requested_change":"补来源"}]
     elif mutation=="status":review["overall"]="needs_input"
@@ -95,6 +93,19 @@ def test_semantic_invalid_review_is_rejected_without_retry(mutation):
     fixture=Fixture(output)
     with pytest.raises(DomainError):EditorialReviewerAgent(fixture,mode="live",model_id="fixture").run(ReviewInput.model_validate(input_data()))
     assert len(fixture.requests)==1
+
+
+@pytest.mark.parametrize("mutation",["supported","experience"])
+def test_ungrounded_evidence_assessments_are_clamped_to_uncertain(mutation):
+    """无据举证降级为不确定：伪造证据不当真、判词保留、只调用一次。"""
+    output=pass_review();review=output["data"]
+    if mutation=="supported":review["claim_checks"][0].update(assessment="supported",source_ref=None)
+    else:review["claim_checks"][0]["source_ref"]=None
+    fixture=Fixture(output)
+    result=EditorialReviewerAgent(fixture,mode="live",model_id="fixture").run(ReviewInput.model_validate(input_data()))
+    assert len(fixture.requests)==1
+    assert result.envelope.data.claim_checks[0].assessment=="uncertain"
+    assert result.envelope.data.overall=="pass", "降级的是证据标注，不改判词"
 
 
 def test_unknown_result_stops_without_retry():

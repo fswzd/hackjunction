@@ -39,6 +39,11 @@ class PRIntake(Model):
     approver: Short | None = None
 
 
+class ResolvedAnswer(Model):
+    question: Short
+    answer: Short
+
+
 class PRAnalysisInput(Model):
     analysis_requested: Confirmed
     account_id: Id
@@ -47,6 +52,7 @@ class PRAnalysisInput(Model):
     requirements: list[Requirement] = Field(default_factory=list, max_length=30)
     materials: list[MaterialInput] = Field(default_factory=list, max_length=18)
     length_rule: LengthRule
+    resolved_answers: list[ResolvedAnswer] = Field(default_factory=list, max_length=30)
 
     @model_validator(mode="after")
     def bounded_intake(self):
@@ -131,6 +137,7 @@ fields恰好覆盖九个字段，每个非空value必须是其evidence.quote原�
 没有明确依据的字段为value=null/evidence=null。保留全部intake显式字段及原有requirement的ID和逐字文本，不得猜测或覆盖。
 从资料中提取明确要求时也必须逐字引用；新增requirement使用独立ID。不得把建议冒充客户要求。至多30条要求，不删原有条目凑数。
 发现矛盾就列conflicts，给出两条不同的原文依据并提问，不自行取舍。其他需要人工确认的问题写additional_questions。
+输入中的resolved_answers是用户已明确回答的事项：这些事项已定，不得再次作为缺失信息提问或重复抛出；据此完成提取，剩余资料齐全就直接交付。
 预算、排期、审核人只记录客户原话，不能承诺付款、自动排期、客户授权或最终审批。只支持文字/图文创作的准备工作。
 引用只证明提供的资料写过这句话，不是外部事实核验；不预测销量、流量或转化率。"""
 
@@ -210,10 +217,25 @@ class PRAnalystAgent:
                     raise DomainError("SCHEMA_INVALID", "Incomplete PR extraction", "Inspect result before a new bounded attempt")
                 if len(response.text.encode("utf-8")) > 1048576:
                     raise DomainError("OUTPUT_TOO_LARGE", "PR response exceeds 1 MiB", "Reduce input scope")
-                try:
-                    extraction = PRExtraction.model_validate_json(response.text)
-                except ValidationError:
-                    raise DomainError("SCHEMA_INVALID", "Invalid PR extraction schema", "Inspect schema without exposing raw model output") from None
+                extraction = None
+                schema_errors: list[str] = []
+                texts = [response.text]
+                stripped = response.text.strip()
+                if stripped.startswith("```"):
+                    body = stripped.split("\n", 1)[1] if "\n" in stripped else ""
+                    if body.rstrip().endswith("```"):
+                        body = body.rstrip()[:-3]
+                    texts.append(body)
+                for candidate in texts:
+                    try:
+                        extraction = PRExtraction.model_validate_json(candidate)
+                        break
+                    except ValidationError as exc:
+                        schema_errors = [f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()][:8]
+                if extraction is None:
+                    raise DomainError("SCHEMA_INVALID", "Invalid PR extraction schema",
+                                      "Inspect schema without exposing raw model output",
+                                      field_errors=tuple(schema_errors)) from None
             used = self._validate(snapshot, extraction, sources)
             fields = {f.field: f.value for f in extraction.fields}
             questions = [Question(id="missing_" + key, question="请明确" + LABELS[key] + "。", reason="商单写稿前需要明确这一项")
@@ -250,8 +272,18 @@ class PRAnalystAgent:
         def invalid(reason):
             raise DomainError("SCHEMA_INVALID", reason, "Keep original requirements and inspect extraction; no automatic retry")
 
+        def norm(text):
+            # 呈现层归一（空白、全半角标点）：取证判定看实质是否逐字出自来源，
+            # 标点/空白的呈现差异不算改写；真改写（非子串）仍然拒绝
+            for old, new in ((" ", ""), ("　", ""), ("\n", ""), ("\t", ""),
+                             ("，", ","), ("。", "."), ("：", ":"), ("；", ";"), ("、", ","),
+                             ("“", '"'), ("”", '"'), ("‘", "'"), ("’", "'"),
+                             ("（", "("), ("）", ")")):
+                text = text.replace(old, new)
+            return text
+
         def quote(evidence):
-            if evidence.source_id not in sources or not evidence.quote.strip() or evidence.quote not in sources[evidence.source_id]:
+            if evidence.source_id not in sources or not evidence.quote.strip() or norm(evidence.quote) not in norm(sources[evidence.source_id]):
                 invalid("PR evidence is not a verbatim supplied source quote")
             used.add(evidence.source_id)
 
@@ -260,27 +292,50 @@ class PRAnalystAgent:
         if len(fields) != len(FIELD_NAMES) or set(fields) != set(FIELD_NAMES):
             invalid("PR fields must cover each field exactly once")
         for key, field in fields.items():
+            original = getattr(snapshot.intake, key)
+            # intake 明确给定的字段被模型改写/误标来源时按原文确定性恢复
+            # （同运营官冻结字段策略）：值漂移→全量恢复；来源误标"真实存在的
+            # 来源"→恢复来源标注；伪造来源（unknown source）与无证据仍硬失败
+            if original is not None and field.value is not None and field.evidence is not None:
+                if field.value != original:
+                    field.value = original
+                    field.evidence = SourceQuote(source_id="intake_" + key, quote=original)
+                elif field.evidence.source_id != "intake_" + key and field.evidence.source_id in sources:
+                    field.evidence = SourceQuote(source_id="intake_" + key, quote=original)
             if (field.value is None) != (field.evidence is None):
                 invalid("PR field value and quote must both be present or absent")
             if field.evidence:
                 quote(field.evidence)
                 if field.value != field.evidence.quote:
-                    invalid("PR field values must preserve verbatim evidence")
-            original = getattr(snapshot.intake, key)
-            if original is not None and (field.value != original or field.evidence.source_id != "intake_" + key):
-                invalid("PR extraction changed explicit intake fields")
+                    # 值对齐到已验证的逐字引文（确定性归一：契约本就要求值=引文）
+                    field.value = field.evidence.quote
+            if original is not None and (field.value != original
+                                         or field.evidence is None
+                                         or field.evidence.source_id != "intake_" + key):
+                raise DomainError("SCHEMA_INVALID", "PR extraction changed explicit intake fields",
+                                  "Keep original requirements and inspect extraction; no automatic retry",
+                                  field_errors=(f"{key}: source={field.evidence.source_id if field.evidence else None}",))
         requirements = {r.id: r for r in extraction.requirements}
         if len(requirements) != len(extraction.requirements):
             invalid("Duplicate PR requirement IDs")
         for requirement in extraction.requirements:
             quote(requirement.evidence)
             if requirement.text != requirement.evidence.quote:
-                invalid("PR requirements must preserve verbatim evidence")
+                # 值对齐到已验证的逐字引文（确定性归一）
+                requirement.text = requirement.evidence.quote
         for original in snapshot.requirements:
             extracted = requirements.get(original.id)
-            if (extracted is None or extracted.text != original.text
-                    or extracted.evidence.source_id != "req_" + sha256_json(original.id)[:24]):
-                invalid("PR extraction omitted or changed original requirements")
+            if extracted is None:
+                # 交接包处方：缺失要求按用户原文补齐（保留原 ID 与原文），不整单拒绝
+                extracted = PRRequirement(id=original.id, text=original.text, category="other",
+                                          evidence=SourceQuote(source_id="req_" + sha256_json(original.id)[:24], quote=original.text))
+                extraction.requirements.append(extracted)
+                requirements[original.id] = extracted
+                continue
+            if extracted.text != original.text or extracted.evidence.source_id != "req_" + sha256_json(original.id)[:24]:
+                # 冻结的用户要求按原文确定性恢复（同运营官冻结策略）
+                extracted.text = original.text
+                extracted.evidence = SourceQuote(source_id="req_" + sha256_json(original.id)[:24], quote=original.text)
         if len({c.id for c in extraction.conflicts}) != len(extraction.conflicts):
             invalid("Duplicate conflict IDs")
         for conflict in extraction.conflicts:

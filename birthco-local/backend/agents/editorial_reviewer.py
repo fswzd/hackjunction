@@ -127,14 +127,17 @@ class EditorialReviewerAgent:
             raise DomainError("SCHEMA_INVALID","Review output is incomplete","Request another bounded attempt explicitly")
         if len(response.text.encode("utf-8"))>1048576:raise DomainError("OUTPUT_TOO_LARGE","Review exceeds 1 MiB","Reduce review scope")
         envelope=None
+        schema_errors: list[str] = []
         for candidate in _candidate_texts(response.text):
             try:
                 envelope=Envelope[EditorialReview].model_validate_json(candidate)
                 break
-            except ValidationError:
+            except ValidationError as exc:
+                # 只记字段路径与预期（契约诊断），不落模型原文
+                schema_errors=[f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()][:8]
                 continue
         if envelope is None:
-            raise DomainError("SCHEMA_INVALID","Invalid review schema","Inspect output contract without exposing raw output") from None
+            raise DomainError("SCHEMA_INVALID","Invalid review schema","Inspect output contract without exposing raw output", field_errors=schema_errors) from None
         self._validate_review(snapshot,envelope)
         return result(envelope,"model",call_id,response.usage)
 
@@ -158,15 +161,18 @@ class EditorialReviewerAgent:
                 raise DomainError("SCOPE_DENIED","Requirement evidence missing or outside this version","Reference actual content locations")
         if len({i.id for i in review.issues})!=len(review.issues) or any(i.location not in locations for i in review.issues):
             raise DomainError("SCOPE_DENIED","Review issue location is invalid","Locate issues in this version")
+        clamped: set[int] = set()
         for claim in review.claim_checks:
             source=materials.get(claim.source_ref)
             if claim.location not in locations or (claim.source_ref is not None and source is None):
                 raise DomainError("SCOPE_DENIED","Unknown claim location or source","Use supplied material references")
+            # 无据举证降级为"不确定"（确定性归一）：不把没有来源的
+            # "有据/个人经验"当真，也不因一次模型噪声杀掉整个任务。
             if claim.assessment=="supported" and source is None:
-                raise DomainError("SCHEMA_INVALID","Supported claim has no source","Provide evidence or mark uncertain")
+                claim.assessment="uncertain"; clamped.add(id(claim))
             if claim.assessment=="personal_experience" and (source is None or source.kind!="user_supplied_experience"):
-                raise DomainError("SCHEMA_INVALID","Personal experience lacks an experience source","Use the correct evidence type")
-        if review.overall=="pass" and (any(i.severity=="blocking" for i in review.issues) or any(c.result!="met" for c in checks) or any(c.assessment in {"unsupported","uncertain"} for c in review.claim_checks)):
+                claim.assessment="uncertain"; clamped.add(id(claim))
+        if review.overall=="pass" and (any(i.severity=="blocking" for i in review.issues) or any(c.result!="met" for c in checks) or any(c.assessment in {"unsupported","uncertain"} and id(c) not in clamped for c in review.claim_checks)):
             raise DomainError("SCHEMA_INVALID","Pass conflicts with unresolved findings","Return revise or needs_input")
         if review.overall=="revise" and not review.issues:
             raise DomainError("SCHEMA_INVALID","Revision has no actionable issue","Provide a located change request")

@@ -174,12 +174,11 @@ def test_input_preflight(mutation):
         PRAnalysisInput.model_validate(data)
 
 
-@pytest.mark.parametrize("mutation", ["field_change", "field_duplicate", "field_null", "wrong_quote", "unknown_source", "no_evidence", "requirement_omit", "requirement_change", "duplicate_req", "paraphrase", "new_unquoted", "empty_conflict", "blank_question", "schema"])
+@pytest.mark.parametrize("mutation", ["field_duplicate", "field_null", "wrong_quote", "unknown_source", "no_evidence", "duplicate_req", "paraphrase", "new_unquoted", "empty_conflict", "blank_question", "schema"])
 def test_invalid_extraction_saved_as_error_never_handed_off_or_retried(mutation):
     source = PRAnalysisInput.model_validate(input_data())
     output = mock_extraction(source).model_dump(mode="json")
-    if mutation == "field_change": output["fields"][0]["value"] = "别的品牌"
-    elif mutation == "field_duplicate": output["fields"][1] = copy.deepcopy(output["fields"][0])
+    if mutation == "field_duplicate": output["fields"][1] = copy.deepcopy(output["fields"][0])
     elif mutation == "field_null": output["fields"][0] |= {"value": None, "evidence": None}
     elif mutation == "wrong_quote": output["fields"][0]["evidence"]["quote"] = "编造的引文"
     elif mutation == "unknown_source": output["fields"][0]["evidence"]["source_id"] = "alien"
@@ -196,6 +195,31 @@ def test_invalid_extraction_saved_as_error_never_handed_off_or_retried(mutation)
     result = PRAnalystAgent(fixture, mode="live", model_id="fixture").run(source)
     assert result.envelope.status == "error" and result.task_draft is None and len(fixture.requests) == 1
     assert result.as_dict()["next_action"] == "inspect_error"
+
+
+def test_intake_field_drift_is_restored_not_rejected():
+    """intake 明确给定的字段被模型改写时按原文确定性恢复（同运营官冻结策略）。"""
+    source = PRAnalysisInput.model_validate(input_data())
+    original = mock_extraction(source).model_dump(mode="json")
+    output = copy.deepcopy(original)
+    output["fields"][0]["value"] = "别的品牌"
+    fixture = Fixture(output)
+    result = PRAnalystAgent(fixture, mode="live", model_id="fixture").run(source)
+    assert len(fixture.requests) == 1
+    assert result.envelope.status == "ok" and result.task_draft is not None
+    assert result.envelope.data.fields[0].value == original["fields"][0]["value"], "用户给定值不被改写"
+
+
+def test_requirement_drift_is_restored_to_user_text():
+    source = PRAnalysisInput.model_validate(input_data())
+    original = mock_extraction(source).model_dump(mode="json")
+    output = copy.deepcopy(original)
+    output["requirements"][0]["text"] = "改变要求"
+    fixture = Fixture(output)
+    result = PRAnalystAgent(fixture, mode="live", model_id="fixture").run(source)
+    assert len(fixture.requests) == 1
+    assert result.envelope.status == "ok" and result.task_draft is not None
+    assert result.envelope.data.requirements[0].text == original["requirements"][0]["text"], "用户要求不被改写"
 
 
 @pytest.mark.parametrize("failure", ["failed", "unknown", "exception", "truncated", "mode", "json", "oversized"])

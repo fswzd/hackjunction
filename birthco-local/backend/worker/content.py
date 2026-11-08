@@ -40,15 +40,32 @@ def commercial_handoff(work, intake, source, pending):
     fields = {key: getattr(intake, key) for key in ("objective", "audience", "platform", "style")}
     fields.update({key: pending.get("answers", {}).get(key) or pending.get("answers", {}).get(f"missing_{key}")
                    for key in ("brand", "product")})
+    # 交接包处方：已答问题不得再作为缺失抛出——把答案按问题语义回灌九字段
+    answer_map = (("品牌", "brand"), ("产品", "product"), ("传播目标", "objective"), ("目标", "objective"),
+                  ("读者", "audience"), ("人群", "audience"), ("平台", "platform"), ("口吻", "style"),
+                  ("风格", "style"), ("语气", "style"), ("预算", "budget"), ("排期", "deadline"),
+                  ("时间", "deadline"), ("截止", "deadline"), ("审核", "approver"), ("对接", "approver"))
+    for question in pending.get("questions", []):
+        answer = ((pending.get("answers") or {}).get(question.get("id")) or "").strip()[:1000]
+        if not answer or answer.startswith("按商单简报") or answer.startswith("以商单简报"):
+            continue  # 兜底句与冲突裁定不入字段
+        text = question.get("question", "") + question.get("reason", "")
+        for label, key in answer_map:
+            if label in text and not fields.get(key):
+                fields[key] = answer
+                break
     for line in source["text"].splitlines():
         label, _, value = line.replace("：", ":", 1).partition(":")
         key = {"品牌": "brand", "产品": "product"}.get(label.strip())
         if key and not fields[key] and value.strip():
             fields[key] = value.strip()[:1000]
+    resolved = [{"question": q.get("question", ""), "answer": (pending.get("answers") or {}).get(q.get("id")) or ""}
+                for q in pending.get("questions", []) if (pending.get("answers") or {}).get(q.get("id"))]
     snapshot = pr_analyst.PRAnalysisInput(
         analysis_requested=True, account_id=intake.account_id,
         client_brief={"label": source["label"], "text": source["text"], "authorized": True},
         intake=fields, requirements=intake.requirements, length_rule=intake.length_rule,
+        resolved_answers=resolved,
     )
 
     def persist(db, result, _):
