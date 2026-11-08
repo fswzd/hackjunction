@@ -6,7 +6,7 @@ from uuid import uuid4
 from pydantic import Field, model_validator, ValidationError
 
 from backend.adapters.model.mock import MockAdapter
-from backend.adapters.model.protocol import ModelAdapter, ModelMessage, ModelRequest, ModelUsage
+from backend.adapters.model.protocol import MAX_COMPLETION_TOKENS, ModelAdapter, ModelMessage, ModelRequest, ModelUsage
 from backend.domain.errors import DomainError
 from backend.domain.hashing import canonical_bytes, sha256_json
 from backend.domain.schemas import (
@@ -193,7 +193,7 @@ class PRAnalystAgent:
                 request = ModelRequest(call_id=call_id, role="pr-analyst", model_id=self.model_id,
                     messages=(ModelMessage("system", SYSTEM + "\nSchema:" + canonical_bytes(PRExtraction.model_json_schema()).decode()),
                               ModelMessage("user", encoded.decode())),
-                    max_completion_tokens=4000, timeout_seconds=90, temperature=0.2, top_p=1.0, json_mode=True, mode=self.mode)
+                    max_completion_tokens=MAX_COMPLETION_TOKENS, timeout_seconds=90, temperature=0.2, top_p=1.0, json_mode=True, mode=self.mode)
                 adapter = self.adapter or MockAdapter({call_id: mock_extraction(snapshot).model_dump_json()})
                 try:
                     response = adapter.complete(request)

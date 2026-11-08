@@ -119,7 +119,7 @@ def test_existing_draft_scope_preserves_unselected_segments():
     assert result["data"]["edit_scope"]["target_segment_ids"] == ["s_1"]
 
 
-def test_tampered_requirements_are_a_known_error_not_a_retry():
+def test_tampered_requirements_are_restored_not_retried():
     call = make_call(idea_input(requirements=[{"id": "r1", "text": "解释预算"}]))
     mock_adapter = OperatorTeamAdapter(resolve_material=resolver(ROWS))
     envelope = mock_ok_envelope(mock_adapter, call, ROWS)
@@ -128,10 +128,10 @@ def test_tampered_requirements_are_a_known_error_not_a_retry():
                                   model_adapter=FixtureAdapter(envelope),
                                   mode="live", model_id="fixture-model")
     result = adapter.invoke(call)
-    assert result["status"] == "error" and result["data"] is None
-    issue = result["issues"][0]
-    assert issue["severity"] == "blocking" and issue["requested_change"]
-    assert len(result["issues"]) == 1
+    assert result["status"] == "ok" and result["data"] is not None
+    assert result["data"]["requirements"][0]["text"] == "解释预算", \
+        "冻结要求按任务原文确定性恢复，不改写、不重试"
+    assert len(adapter.agent.adapter.requests) == 1, "仍然只调用一次"
 
 
 def test_unknown_outcome_raises_for_explicit_resend_only():

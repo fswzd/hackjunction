@@ -39,6 +39,7 @@ from backend.storage.queue import Queue
 from backend.storage.repository import (
     ConfirmBrief as ConfirmBriefCommand,
     accept_version_tx,
+    cancel_run_tx,
     cancel_task_tx,
     confirm_brief_tx,
     edit_brief_tx,
@@ -188,9 +189,10 @@ def return_for_revision(task_id):
 
         payload = ReturnForRevision.model_validate(raw)
         task = _task(db, task_id)
-        if task["row_version"] != payload.expected_row_version or task["ready_version_id"] != payload.version_id:
+        head = task["ready_version_id"] or task["head_version_id"]
+        if task["row_version"] != payload.expected_row_version or head != payload.version_id:
             raise DomainError("VERSION_CONFLICT", "Ready version changed", "Reload the current draft")
-        if task["state"] != "READY":
+        if task["state"] not in {"READY", "NEEDS_REVIEW"}:
             raise DomainError("INVALID_TRANSITION", "Task is not ready for revision", "Wait for a ready version")
         version = db.execute("SELECT * FROM content_versions WHERE id=? AND task_id=?", (payload.version_id, task_id)).fetchone()
         if version is None or version["content_hash"] != payload.content_hash:
@@ -206,13 +208,16 @@ def return_for_revision(task_id):
             raise DomainError("OUTPUT_TOO_LARGE", "This draft exceeds the full-revision scope",
                               "Start an explicitly scoped revision of fewer paragraphs")
         now, run_id = utc_now(), "r_" + uuid4().hex
+        # NEEDS_REVIEW 退回时评审运行还停在 WAITING：先结清再开修订运行
+        for run in db.execute("SELECT id,lease_owner,lease_epoch FROM runs WHERE task_id=? AND state IN ('QUEUED','RUNNING','WAITING','INTERRUPTED')", (task_id,)).fetchall():
+            cancel_run_tx(db, run, now)
         feedback = FeedbackCreate(version_id=version["id"], kind="edit_request", text=payload.note,
                                   platform=None, window_start=None, window_end=None, metrics={}, source_ref=None)
         db.execute("INSERT INTO feedback(id,account_id,task_id,version_id,kind,evidence_kind,body_json,created_at) VALUES(?,?,?,?,?,?,?,?)",
                    ("fb_" + uuid4().hex, task["account_id"], task_id, version["id"], "edit_request", "user_statement",
                     canonical_bytes(feedback).decode(), now))
         db.execute("INSERT INTO runs(id,task_id,kind,state,mode,phase,brief_version,brief_hash,base_version_id,limits_json,created_at,updated_at) "
-                   "VALUES(?,?,'content','WAITING',?,'repair',?,?,?,'{\"max_model_calls\":4,\"max_total_tokens\":60000}',?,?)",
+                   "VALUES(?,?,'content','WAITING',?,'repair',?,?,?,'{\"max_model_calls\":4,\"max_total_tokens\":524288}',?,?)",
                    (run_id, task_id, task["mode"], version["brief_version"], version["brief_hash"], version["id"], now, now))
         pending = {"issues": [item.model_dump() for item in issues]}
         db.execute("UPDATE tasks SET state='QUEUED',current_run_id=?,ready_version_id=NULL,pending_json=?,row_version=row_version+1,updated_at=? WHERE id=?",

@@ -5,7 +5,7 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from backend.adapters.model.mock import MockAdapter
-from backend.adapters.model.protocol import ModelAdapter,ModelMessage,ModelRequest,ModelUsage,AdapterResponse
+from backend.adapters.model.protocol import MAX_COMPLETION_TOKENS, ModelAdapter,ModelMessage,ModelRequest,ModelUsage,AdapterResponse
 from backend.domain.errors import DomainError
 from backend.domain.hashing import canonical_bytes,sha256_json
 from backend.domain.schemas import Analysis,Envelope,Finding,ComparisonConclusion,Question,ErrorDetail
@@ -112,7 +112,7 @@ class AnalystAgent:
         call_id="analyst_"+uuid4().hex
         request=ModelRequest(call_id=call_id,role="analyst",model_id=self.model_id,
             messages=(ModelMessage("system",SYSTEM+"\n输出schema："+canonical_bytes(Envelope[Analysis].model_json_schema()).decode()),ModelMessage("user",encoded.decode())),
-            max_completion_tokens=3500,timeout_seconds=90,temperature=0.2,top_p=1.0,json_mode=True,mode=self.mode)
+            max_completion_tokens=MAX_COMPLETION_TOKENS,timeout_seconds=90,temperature=0.2,top_p=1.0,json_mode=True,mode=self.mode)
         def failed(code,cause,status="failed",usage=None):
             return result(status,call_id=call_id,usage=usage,error=DomainError(code,cause,"Keep the computed metrics; inspect the saved result before a new explicit attempt").detail())
         adapter=self.adapter

@@ -59,7 +59,7 @@ def test_old_draft_scope_preserves_unselected_segments():
 
 
 @pytest.mark.parametrize("mutation", ["ref","requirement","scope","schema","platform"])
-def test_invalid_model_output_fails_without_repair_or_retry(mutation):
+def test_invalid_model_output_is_gated_without_retry(mutation):
     value = OperatorAgent().run(task()).envelope.model_dump(mode="json")
     if mutation == "ref": value["data"]["material_ids"]=["invented"]
     elif mutation == "requirement": value["data"]["requirements"][0]["text"]="改写用户要求"
@@ -67,8 +67,18 @@ def test_invalid_model_output_fails_without_repair_or_retry(mutation):
     elif mutation == "platform": value["data"]["platform"]="TikTok"
     else: value["extra"]="unexpected"
     adapter=FixtureAdapter(value)
-    with pytest.raises(DomainError):OperatorAgent(adapter).run(task())
-    assert len(adapter.requests)==1
+    if mutation in ("requirement", "platform", "scope"):
+        # 冻结字段有用户原文可依、route 有确定性合法形状：按原文/合法形状
+        # 确定性归一（不是掩盖模型错误）；仍然只调用一次、绝不重试
+        result = OperatorAgent(adapter).run(task())
+        assert len(adapter.requests) == 1
+        assert result.envelope.data.requirements[0].text == task().requirements[0].text
+        assert result.envelope.data.platform == (task().platform.strip() or "generic")
+        assert set(result.envelope.data.route) <= {"draft", "review", "export"}
+    else:
+        # 发明引用/schema 垃圾没有原文可依：硬失败，不修复
+        with pytest.raises(DomainError):OperatorAgent(adapter).run(task())
+        assert len(adapter.requests)==1
 
 
 def test_material_instructions_stay_inside_data_and_are_not_system_prompt():
@@ -108,13 +118,14 @@ def test_original_paragraph_text_is_not_trimmed():
     assert [s["text"] for s in segments]==["  第一段","第二段\n"]
 
 
-def test_added_requirement_ids_are_rejected_when_requirements_frozen():
+def test_added_requirement_ids_are_restored_when_requirements_frozen():
     value = OperatorAgent().run(task()).envelope.model_dump(mode="json")
     value["data"]["requirements"].append({"id": "req_invented", "text": "模型自拟的额外要求"})
     adapter = FixtureAdapter(value)
-    with pytest.raises(DomainError) as caught:
-        OperatorAgent(adapter, mode="live", model_id="fixture-model").run(task())
-    assert caught.value.code == "SCOPE_DENIED" and len(adapter.requests) == 1
+    result = OperatorAgent(adapter, mode="live", model_id="fixture-model").run(task())
+    assert len(adapter.requests) == 1
+    assert [r.id for r in result.envelope.data.requirements] == [r.id for r in task().requirements], \
+        "模型自拟的额外要求被确定性剔除，冻结要求按任务原文恢复"
 
 
 def test_frozen_fields_subset_allows_derived_audience_but_keeps_objective():
@@ -123,9 +134,9 @@ def test_frozen_fields_subset_allows_derived_audience_but_keeps_objective():
     value["data"]["objective"] = "被改写的目标"
     adapter = FixtureAdapter(value)
     frozen = frozenset({"input_mode", "objective", "requirements", "length_rule"})
-    with pytest.raises(DomainError) as caught:
-        OperatorAgent(adapter, mode="live", model_id="fixture-model").run(task(), frozen_fields=frozen)
-    assert caught.value.code == "SCOPE_DENIED", "objective 仍被冻结"
+    result = OperatorAgent(adapter, mode="live", model_id="fixture-model").run(task(), frozen_fields=frozen)
+    assert result.envelope.data.objective == task().objective, "objective 仍被冻结（漂移被确定性恢复）"
+    assert result.envelope.data.audience == "从任务推断的目标读者", "未冻结字段保留模型派生"
     value["data"]["objective"] = "选择相机"
     adapter = FixtureAdapter(value)
     result = OperatorAgent(adapter, mode="live", model_id="fixture-model").run(task(), frozen_fields=frozen)

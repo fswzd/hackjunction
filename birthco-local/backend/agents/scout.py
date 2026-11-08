@@ -7,7 +7,7 @@ from pydantic import Field,ValidationError,model_validator
 
 from backend.adapters.model.mock import MockAdapter
 from backend.agents.output_contract import ENVELOPE_RULES
-from backend.adapters.model.protocol import ModelAdapter,ModelMessage,ModelRequest,ModelUsage
+from backend.adapters.model.protocol import MAX_COMPLETION_TOKENS, ModelAdapter,ModelMessage,ModelRequest,ModelUsage
 from backend.domain.errors import DomainError
 from backend.domain.hashing import canonical_bytes,sha256_json
 from backend.domain.schemas import Model,Id,Short,Text,Confirmed,Brief,Envelope,Opportunity,OpportunitySet,Question
@@ -112,7 +112,7 @@ class ScoutAgent:
         request=ModelRequest(call_id=call_id,role="scout",model_id=self.model_id,
             messages=(ModelMessage("system",SYSTEM+"\n输出schema："+canonical_bytes(Envelope[OpportunitySet].model_json_schema()).decode()),
                       ModelMessage("user",canonical_bytes(context).decode())),
-            max_completion_tokens=2000,timeout_seconds=90,temperature=0.2,top_p=1.0,json_mode=True,mode=self.mode)
+            max_completion_tokens=MAX_COMPLETION_TOKENS,timeout_seconds=90,temperature=0.2,top_p=1.0,json_mode=True,mode=self.mode)
         adapter=self.adapter
         if adapter is None:
             opportunities=[];seen_labels=set();seen_text=set()

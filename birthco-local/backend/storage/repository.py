@@ -32,6 +32,8 @@ VALIDATING NEEDS_REVIEW repair_exhausted
 VALIDATING WAITING_INPUT review_needs_input
 EXPORTING READY files_committed
 READY ACCEPTED accept
+NEEDS_REVIEW ACCEPTED accept_reviewed
+NEEDS_REVIEW QUEUED revise_from_review
 ACCEPTED ACCEPTED accept_new_ready
 READY EXPORTING reexport
 FAILED EXPORTING reexport_failed
@@ -110,20 +112,22 @@ def edit_brief_tx(db, task_id: str, brief_body: dict, expected_row_version: int,
 
 
 def accept_version_tx(db, task_id: str, version_id: str, content_hash: str, expected_row_version: int, session_id: str) -> dict:
-    """Accept the frozen READY version and persist the human acceptance record."""
+    """Accept the frozen READY version (or a NEEDS_REVIEW head the human approved)
+    and persist the human acceptance record."""
     now = utc_now()
-    task = db.execute("SELECT state,row_version,current_run_id,ready_version_id,accepted_version_id FROM tasks WHERE id=?", (task_id,)).fetchone()
+    task = db.execute("SELECT state,row_version,current_run_id,ready_version_id,head_version_id,accepted_version_id FROM tasks WHERE id=?", (task_id,)).fetchone()
     if task is None:
         raise DomainError("NOT_FOUND", "Task not found", "Reload tasks")
     if task["row_version"] != expected_row_version:
         raise DomainError("VERSION_CONFLICT", "Task version changed", "Reload task", current_row_version=task["row_version"])
-    if task["state"] not in {"READY", "ACCEPTED"}:
-        raise DomainError("INVALID_TRANSITION", "Task is not ready for acceptance", "Wait for READY")
+    if task["state"] not in {"READY", "NEEDS_REVIEW", "ACCEPTED"}:
+        raise DomainError("INVALID_TRANSITION", "Task is not ready for acceptance", "Wait for READY or a review decision")
     if task["state"] == "ACCEPTED":
         if task["accepted_version_id"] != version_id:
             raise DomainError("VERSION_CONFLICT", "Another version was accepted", "Reload task", current_row_version=task["row_version"])
         return {"task_id": task_id, "state": "ACCEPTED", "row_version": task["row_version"]}
-    if task["ready_version_id"] != version_id:
+    expected_version = task["ready_version_id"] if task["state"] == "READY" else task["head_version_id"]
+    if expected_version != version_id:
         raise DomainError("VERSION_CONFLICT", "Version is not the ready head", "Reload the task", current_row_version=task["row_version"])
     if db.execute("SELECT 1 FROM preview_runs WHERE task_id=? AND version_id=? AND state IN ('QUEUED','RUNNING')",
                   (task_id, version_id)).fetchone():
@@ -139,6 +143,9 @@ def accept_version_tx(db, task_id: str, version_id: str, content_hash: str, expe
     except sqlite3.IntegrityError as exc:
         raise DomainError("VERSION_CONFLICT", "Version was already accepted", "Reload task", current_row_version=task["row_version"]) from exc
     db.execute("UPDATE tasks SET state='ACCEPTED',accepted_version_id=?,row_version=row_version+1,updated_at=? WHERE id=?", (version_id, now, task_id))
+    # NEEDS_REVIEW 批准时评审运行还停在 WAITING：一并结清，不留悬置运行
+    for run in db.execute("SELECT id,lease_owner,lease_epoch FROM runs WHERE task_id=? AND state IN ('QUEUED','RUNNING','WAITING','INTERRUPTED')", (task_id,)).fetchall():
+        cancel_run_tx(db, run, now)
     _event(db, task_id, task["current_run_id"], "accept", "export", "ACCEPTED", "Content accepted", now)
     return {"task_id": task_id, "state": "ACCEPTED", "row_version": expected_row_version + 1}
 
@@ -225,7 +232,7 @@ class Repository:
                     raise DomainError("NOT_FOUND", "Account not found", "Choose an existing account")
                 seq = db.execute("UPDATE queue_sequence SET next_seq=next_seq+1 WHERE id=1 RETURNING next_seq").fetchone()[0]
                 db.execute("INSERT INTO tasks(id,account_id,input_json,state,mode,current_run_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", (task_id, task.account_id, canonical_bytes(task).decode(), "DRAFT", mode, run_id, now, now))
-                db.execute("INSERT INTO runs(id,task_id,kind,state,mode,phase,limits_json,created_at,updated_at,queue_seq) VALUES(?,?,?,?,?,?,?,?,?,?)", (run_id, task_id, "content", "QUEUED", mode, "planning", '{"max_model_calls":7,"max_total_tokens":60000}', now, now, seq))
+                db.execute("INSERT INTO runs(id,task_id,kind,state,mode,phase,limits_json,created_at,updated_at,queue_seq) VALUES(?,?,?,?,?,?,?,?,?,?)", (run_id, task_id, "content", "QUEUED", mode, "planning", '{"max_model_calls":7,"max_total_tokens":917504}', now, now, seq))
                 for item in task.materials:
                     material_id = _id("m_")
                     db.execute("INSERT INTO materials(id,account_id,task_id,kind,label,text,source_url,content_hash,authorized_at) VALUES(?,?,?,?,?,?,?,?,?)", (material_id, task.account_id, task_id, item.kind, item.label, item.text, item.source_url, sha256_json(item.text), now))
@@ -273,7 +280,7 @@ class Repository:
                     raise DomainError("CONDITIONS_MISMATCH", "Run mode is frozen", "Use the run's persisted mode")
                 import json
                 limits = json.loads(run["limits_json"])
-                if run["calls_reserved"] + 1 > limits.get("max_model_calls", 7) or run["token_known"] + run["token_reserved"] + token_estimate > limits.get("max_total_tokens", 60000):
+                if run["calls_reserved"] + 1 > limits.get("max_model_calls", 7) or run["token_known"] + run["token_reserved"] + token_estimate > limits.get("max_total_tokens", 917504):
                     raise DomainError("BUDGET_EXCEEDED", "Run budget exhausted", "Stop and request a new run")
                 if db.execute("SELECT 1 FROM checkpoints WHERE task_id=? AND run_id=? AND step=? AND attempt=?", (task_id, run_id, step, attempt)).fetchone():
                     raise DomainError("IDEMPOTENCY_CONFLICT", "Step attempt already reserved", "Use the persisted call")

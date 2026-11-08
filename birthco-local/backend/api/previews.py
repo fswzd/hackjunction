@@ -148,7 +148,7 @@ def enqueue_preview(db, task_id, spec, mode, now):
     preview_id, run_id = "pv_" + uuid4().hex, "r_" + uuid4().hex
     scenario_id = "sc_" + uuid4().hex
     seq = db.execute("UPDATE queue_sequence SET next_seq=next_seq+1 WHERE id=1 RETURNING next_seq").fetchone()[0]
-    limits = {**budget, "max_model_calls": budget["max_calls"] + 1, "max_total_tokens": 200000}
+    limits = {**budget, "max_model_calls": budget["max_calls"] + 1, "max_total_tokens": 2228224}
     db.execute("INSERT INTO runs(id,task_id,kind,state,mode,phase,limits_json,created_at,updated_at,queue_seq) VALUES(?,?,?,?,?,?,?,?,?,?)",
                (run_id, task_id, "preview", "QUEUED", mode, "audience", json.dumps(limits), now, now, seq))
     db.execute("INSERT INTO preview_scenarios(id,scenario_hash,body_json) VALUES(?,?,?) ON CONFLICT(scenario_hash) DO NOTHING",

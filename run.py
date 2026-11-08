@@ -12,14 +12,16 @@
 换新机器"直接 python run.py"即可：缺 Python 依赖自动安装（requirements-dev.lock），
 缺 node_modules 自动 npm install（失败自动换国内镜像重试）；起不来时打印
 服务日志尾部和可操作提示，而不是让你对着 404 猜。
-只使用进程环境变量（BIRTHCO_* / MIMO_* 等），**不读取任何 .env 文件**；
-真实模型凭据按"用完即弃"注入进程环境（如 $env:MIMO_API_KEY='…'），不落盘、不入库。
+环境配置：进程环境变量优先，其次读取仓库根 .env（只注入子进程、不回显值）。
+API Key 建议放系统环境变量（MIMO_API_KEY），.env 放 BIRTHCO_MODEL_MODE 与型号配置；
+配置好后直接 python run.py，七角色即以 live 模式调用模型。
 日志与 PID 写入 .run/（api.pid / frontend.pid 与 stop.ps1 约定一致）。
 """
 from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -47,12 +49,38 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def configure_env(data_dir: str) -> dict[str, str]:
-    """只继承进程环境变量；不读取任何 .env 文件（去 Key 化口径）。"""
+    """继承进程环境变量并叠加 .env（进程环境优先）。"""
     env = dict(os.environ)
     env["BIRTHCO_DATA_DIR"] = (data_dir or env.get("BIRTHCO_DATA_DIR")
                                or str(API_DIR / "data"))
     env.setdefault("BIRTHCO_PORT", "5001")
+    loaded = load_env_file(env, ROOT / ".env")
+    if loaded:
+        print(f"[env ] 已从 .env 注入：{', '.join(loaded)}（值不回显；系统环境变量优先）")
     return env
+
+
+def load_env_file(env: dict[str, str], path: Path) -> list[str]:
+    """把 .env 的 KEY=VALUE 注入服务进程环境：已在环境中的变量优先，值不回显。
+    API Key 建议放系统环境变量（如 MIMO_API_KEY），.env 只放开关与型号配置。"""
+    if not path.is_file():
+        return []
+    loaded: list[str] = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        if not key or not value or env.get(key):
+            continue  # 空值行（单列覆盖占位）跳过；进程环境已有的不覆盖
+        # 引用约定：值是全大写环境变量名且该变量有值 → 取其值
+        # （如 *_API_KEY=MIMO_API_KEY 表示"用系统环境变量 MIMO_API_KEY"）
+        if re.fullmatch(r"[A-Z_][A-Z0-9_]*", value) and env.get(value):
+            value = env[value]
+        env[key] = value
+        loaded.append(key)
+    return loaded
 
 
 # ---------- 环境自检：换机器直接跑得起来 ----------

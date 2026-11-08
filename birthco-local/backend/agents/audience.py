@@ -5,7 +5,7 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from backend.adapters.model.mock import MockAdapter
-from backend.adapters.model.protocol import ModelAdapter,ModelMessage,ModelRequest,ModelUsage,AdapterResponse
+from backend.adapters.model.protocol import MAX_COMPLETION_TOKENS, ModelAdapter,ModelMessage,ModelRequest,ModelUsage,AdapterResponse
 from backend.domain.errors import DomainError
 from backend.domain.hashing import canonical_bytes,sha256_json
 from backend.domain.schemas import AudienceInput,AudienceEvent,Envelope,ErrorDetail
@@ -78,7 +78,7 @@ class AudienceAgent:
         call_id="audience_"+uuid4().hex;fingerprint=sha256_json(context)
         request=ModelRequest(call_id=call_id,role="audience",model_id=self.model_id,
             messages=(ModelMessage("system",SYSTEM+"\n输出schema："+canonical_bytes(Envelope[AudienceEvent].model_json_schema()).decode()),
-                      ModelMessage("user",canonical_bytes(context).decode())),max_completion_tokens=800,timeout_seconds=timeout_seconds,
+                      ModelMessage("user",canonical_bytes(context).decode())),max_completion_tokens=MAX_COMPLETION_TOKENS,timeout_seconds=timeout_seconds,
             temperature=0.2,top_p=1.0,json_mode=True,mode=self.mode)
         def failed(code,cause,status="failed",usage=None):
             error=DomainError(code,cause,"Stop this session; inspect the saved result before another explicit request").detail()

@@ -8,7 +8,7 @@ from pydantic import Field, ValidationError, model_validator
 
 from backend.adapters.model.mock import MockAdapter
 from backend.agents.output_contract import ENVELOPE_RULES
-from backend.adapters.model.protocol import ModelAdapter, ModelMessage, ModelRequest, ModelUsage
+from backend.adapters.model.protocol import MAX_COMPLETION_TOKENS, ModelAdapter, ModelMessage, ModelRequest, ModelUsage
 from backend.domain.errors import DomainError
 from backend.domain.hashing import brief_hash, content_hash, canonical_bytes, sha256_json
 from backend.domain.length import normalize_mentions, spec_from_requirements
@@ -391,7 +391,7 @@ class ContentDirectorAgent:
                         f"标题与封面中的时长/字数数字必须与「{spec.duration_label()}」一致，不得出现其它时长数字；"
                         f"若写时间轴，末段必须正好落在所选时长，不得超出或提前结束。")
         request=ModelRequest(call_id=call_id,role="director",messages=(ModelMessage("system",SYSTEM+constraint+"\n输出schema："+canonical_bytes(schema.model_json_schema()).decode()),ModelMessage("user",canonical_bytes(context).decode())),
-            model_id=self.model_id,max_completion_tokens=4000,timeout_seconds=90,temperature=0.2,top_p=1.0,json_mode=True,mode=self.mode)
+            model_id=self.model_id,max_completion_tokens=MAX_COMPLETION_TOKENS,timeout_seconds=90,temperature=0.2,top_p=1.0,json_mode=True,mode=self.mode)
         adapter=self.adapter
         if adapter is None:
             envelope=self._mock(snapshot,schema)

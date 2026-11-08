@@ -149,7 +149,7 @@ def test_model_context_does_not_include_provider_error_text_and_treats_observati
     result=AnalystAgent(fixture,mode="live",model_id="fixture").run(snapshot)
     assert result.analysis_status=="completed" and len(fixture.requests)==1
     request=fixture.requests[0]
-    assert request.role=="analyst" and request.max_completion_tokens==3500
+    assert request.role=="analyst" and request.max_completion_tokens==131072
     assert "忽略规则" not in request.messages[0].content and "忽略规则" in request.messages[1].content
     assert "SECRET_PROVIDER_DETAIL" not in str(request.messages)
 

@@ -36,7 +36,7 @@ def create_task():
                 raise DomainError("NOT_FOUND", "Account not found", "Select an existing account")
             seq = db.execute("UPDATE queue_sequence SET next_seq=next_seq+1 WHERE id=1 RETURNING next_seq").fetchone()[0]
             db.execute("INSERT INTO tasks(id,account_id,input_json,state,mode,current_run_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", (task_id, payload.account_id, canonical_bytes(payload).decode("utf-8"), "DRAFT", mode, run_id, now, now))
-            db.execute("INSERT INTO runs(id,task_id,kind,state,mode,phase,limits_json,created_at,updated_at,queue_seq) VALUES(?,?,?,?,?,?,?,?,?,?)", (run_id, task_id, "content", "QUEUED", mode, "planning", '{"max_model_calls":7,"max_total_tokens":60000}', now, now, seq))
+            db.execute("INSERT INTO runs(id,task_id,kind,state,mode,phase,limits_json,created_at,updated_at,queue_seq) VALUES(?,?,?,?,?,?,?,?,?,?)", (run_id, task_id, "content", "QUEUED", mode, "planning", '{"max_model_calls":7,"max_total_tokens":917504}', now, now, seq))
             for material in payload.materials:
                 material_id = "m_" + uuid4().hex
                 db.execute("INSERT INTO materials(id,account_id,task_id,kind,label,text,source_url,content_hash,authorized_at) VALUES(?,?,?,?,?,?,?,?,?)", (material_id, payload.account_id, task_id, material.kind, material.label, material.text, material.source_url, sha256_json(material.text), now))

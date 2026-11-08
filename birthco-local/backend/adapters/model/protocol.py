@@ -22,6 +22,11 @@ class ModelMessage:
             raise ValueError("invalid model message")
 
 
+# MiMo mimo-v2.6-pro 的 max_tokens 上限（实测范围 (0, 131072]）。
+# 所有角色的单次输出上限统一取模型上限，不人为截断。
+MAX_COMPLETION_TOKENS = 131072
+
+
 @dataclass(frozen=True, slots=True)
 class ModelRequest:
     call_id: str
@@ -46,8 +51,8 @@ class ModelRequest:
             isinstance(message, ModelMessage) for message in self.messages
         ):
             raise ValueError("messages must be a nonempty tuple of ModelMessage")
-        if isinstance(self.max_completion_tokens, bool) or not isinstance(self.max_completion_tokens, int) or not 0 < self.max_completion_tokens <= 4000:
-            raise ValueError("max_completion_tokens must be between 1 and 4000")
+        if isinstance(self.max_completion_tokens, bool) or not isinstance(self.max_completion_tokens, int) or not 0 < self.max_completion_tokens <= MAX_COMPLETION_TOKENS:
+            raise ValueError(f"max_completion_tokens must be between 1 and {MAX_COMPLETION_TOKENS}")
         if isinstance(self.timeout_seconds, bool) or not isinstance(self.timeout_seconds, (int, float)) or not math.isfinite(self.timeout_seconds) or not 0 < self.timeout_seconds <= 90:
             raise ValueError("timeout_seconds must be between 0 and 90")
         if isinstance(self.temperature, bool) or not isinstance(self.temperature, (int, float)) or not math.isfinite(self.temperature) or not 0 <= self.temperature <= 2:

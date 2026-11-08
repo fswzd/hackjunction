@@ -7,10 +7,10 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from backend.adapters.model.mock import MockAdapter
-from backend.adapters.model.protocol import ModelAdapter, ModelMessage, ModelRequest, ModelUsage
+from backend.adapters.model.protocol import MAX_COMPLETION_TOKENS, ModelAdapter, ModelMessage, ModelRequest, ModelUsage
 from backend.domain.errors import DomainError, validate_brief_scope
 from backend.domain.hashing import canonical_bytes, sha256_json
-from backend.domain.schemas import Brief, CreateTask, EditScope, Envelope, Question
+from backend.domain.schemas import Brief, CreateTask, EditScope, Envelope, LengthRule, Question
 
 
 SYSTEM = """你是众幕 AI 的运营官，只负责把创作请求整理为任务书。
@@ -187,7 +187,7 @@ class OperatorAgent:
         request = ModelRequest(call_id=call_id, role="operator", messages=(
             ModelMessage("system", SYSTEM + "\n输出 schema：" + canonical_bytes(Envelope[Brief].model_json_schema()).decode()),
             ModelMessage("user", canonical_bytes(context).decode())), model_id=self.model_id,
-            max_completion_tokens=4000, timeout_seconds=90, temperature=0.2, top_p=1.0,
+            max_completion_tokens=MAX_COMPLETION_TOKENS, timeout_seconds=90, temperature=0.2, top_p=1.0,
             json_mode=True, mode=self.mode)
         adapter = self.adapter
         if adapter is None:
@@ -219,20 +219,44 @@ class OperatorAgent:
             raise DomainError("SCOPE_DENIED", "Unknown evidence reference", "Use supplied materials")
         brief = envelope.data
         if brief is not None:
-            validate_brief_scope(brief, material_kinds={m["material_id"]: m["kind"] for m in materials}, existing_segment_ids={s["segment_id"] for s in segments})
             required = {r.id: r.text for r in task.requirements}
             actual = {r.id: r.text for r in brief.requirements}
-            drifted = (
-                ("input_mode" in frozen and brief.input_mode != task.input_mode)
-                or ("objective" in frozen and brief.objective != task.objective)
-                or ("audience" in frozen and brief.audience != task.audience)
-                or ("platform" in frozen and brief.platform != (task.platform.strip() or "generic"))
-                or ("requirements" in frozen and actual != required)
-                or ("length_rule" in frozen and brief.length_rule != task.length_rule)
-                or brief.edit_scope != edit_scope
-            )
-            if drifted:
-                raise DomainError("SCOPE_DENIED", "Operator changed frozen user requirements", "Preserve the original goal and scope")
+            # 冻结字段不许被模型改写。检测到漂移时按任务原文确定性恢复，
+            # 而不是整单失败：用户要求的保护由构造保证（恢复后必然与任务
+            # 一致），一次模型噪声不再误杀整个任务。
+            restore: dict = {}
+            if "input_mode" in frozen and brief.input_mode != task.input_mode:
+                restore["input_mode"] = task.input_mode
+            if "objective" in frozen and brief.objective != task.objective:
+                restore["objective"] = task.objective
+            if "audience" in frozen and brief.audience != task.audience:
+                restore["audience"] = task.audience
+            if "platform" in frozen and brief.platform != (task.platform.strip() or "generic"):
+                restore["platform"] = task.platform.strip() or "generic"
+            if "requirements" in frozen and actual != required:
+                restore["requirements"] = task.requirements
+            if "length_rule" in frozen and brief.length_rule != task.length_rule:
+                restore["length_rule"] = task.length_rule
+            if brief.edit_scope != edit_scope:
+                restore["edit_scope"] = edit_scope
+            # 流程路线是自家管线的计划形状：按 P0 合法步骤集顺序归一，
+            # 模型自拟的禁用步骤滤掉；滤空回退默认路线（确定性形状归一，
+            # 不是内容修复）。
+            allowed_route = ("draft", "review", "export")
+            normalized_route = [s for s in brief.route if s in allowed_route]
+            if normalized_route != list(brief.route):
+                restore["route"] = normalized_route or list(allowed_route)
+            # 内容长度上限：length_rule.maximum 缺省时封顶 20000 字（与内容规则
+            # max_body_characters 一致），不允许无上限产出。
+            rule = restore.get("length_rule", brief.length_rule)
+            if rule is None:
+                restore["length_rule"] = LengthRule(minimum=None, maximum=20000)
+            elif rule.maximum is None:
+                restore["length_rule"] = rule.model_copy(update={"maximum": 20000})
+            if restore:
+                brief = brief.model_copy(update=restore)
+                envelope = envelope.model_copy(update={"data": brief})
+            validate_brief_scope(brief, material_kinds={m["material_id"]: m["kind"] for m in materials}, existing_segment_ids={s["segment_id"] for s in segments})
         if envelope.status == "ok" and brief and brief.open_questions:
             raise DomainError("SCHEMA_INVALID", "Open questions require user input", "Return needs_input")
         return OperatorResult(self.mode, call_id, input_hash, sha256_json(brief) if brief else None,

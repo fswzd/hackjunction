@@ -1172,7 +1172,7 @@ export class ApiWorkspaceAdapter implements WorkspaceAdapter {
         } else {
           await this.cancelTask(taskId, rowVersion);
         }
-      } else if (task.state === "READY") {
+      } else if (task.state === "READY" || task.state === "NEEDS_REVIEW") {
         if (decision === "approve") {
           await this.acceptContent(taskId, rowVersion, task, options.editedBody);
         } else if (decision === "revise") {

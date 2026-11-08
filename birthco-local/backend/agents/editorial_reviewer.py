@@ -5,13 +5,25 @@ from uuid import uuid4
 from pydantic import Field, model_validator, ValidationError
 from backend.agents.output_contract import ENVELOPE_RULES
 
-from backend.adapters.model.protocol import ModelAdapter, ModelMessage, ModelRequest, ModelUsage
+from backend.adapters.model.protocol import MAX_COMPLETION_TOKENS, ModelAdapter, ModelMessage, ModelRequest, ModelUsage
 from backend.domain.errors import DomainError
 from backend.domain.hashing import canonical_bytes, content_hash, sha256_json
 from backend.domain.schemas import (Model, Id, Text, Short, Hash, Confirmed, Brief, ContentCandidate,
     EditorialReview, Envelope, Issue, RequirementCheck, Question, RuleReport)
 from backend.validators.content import validate_content
 from typing import Literal
+
+
+def _candidate_texts(text: str) -> list[str]:
+    """原文/剥 markdown 围栏两级候选（与运营官同款有界传输解析，不做内容修复）。"""
+    candidates = [text]
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        body = stripped.split("\n", 1)[1] if "\n" in stripped else ""
+        if body.rstrip().endswith("```"):
+            body = body.rstrip()[:-3]
+        candidates.append(body)
+    return candidates
 
 
 class ReviewMaterial(Model):
@@ -106,7 +118,7 @@ class EditorialReviewerAgent:
         call_id="review_"+uuid4().hex
         request=ModelRequest(call_id=call_id,role="editorial-reviewer",model_id=self.model_id,
             messages=(ModelMessage("system",SYSTEM+"\n输出 schema："+canonical_bytes(Envelope[EditorialReview].model_json_schema()).decode()),ModelMessage("user",canonical_bytes(context).decode())),
-            max_completion_tokens=4000,timeout_seconds=90,temperature=0.2,top_p=1.0,json_mode=True,mode=self.mode)
+            max_completion_tokens=MAX_COMPLETION_TOKENS,timeout_seconds=90,temperature=0.2,top_p=1.0,json_mode=True,mode=self.mode)
         response=self.adapter.complete(request)
         if response.mode!=self.mode:raise DomainError("MODEL_REJECTED","Model mode mismatch","Check adapter configuration")
         if response.status=="unknown":raise DomainError("INTERRUPTED","Review outcome is unknown","Reconcile usage before explicitly requesting another call")
@@ -114,8 +126,15 @@ class EditorialReviewerAgent:
         if response.finish_reason!="stop" or response.truncated or response.text is None:
             raise DomainError("SCHEMA_INVALID","Review output is incomplete","Request another bounded attempt explicitly")
         if len(response.text.encode("utf-8"))>1048576:raise DomainError("OUTPUT_TOO_LARGE","Review exceeds 1 MiB","Reduce review scope")
-        try:envelope=Envelope[EditorialReview].model_validate_json(response.text)
-        except ValidationError:raise DomainError("SCHEMA_INVALID","Invalid review schema","Inspect output contract without exposing raw output") from None
+        envelope=None
+        for candidate in _candidate_texts(response.text):
+            try:
+                envelope=Envelope[EditorialReview].model_validate_json(candidate)
+                break
+            except ValidationError:
+                continue
+        if envelope is None:
+            raise DomainError("SCHEMA_INVALID","Invalid review schema","Inspect output contract without exposing raw output") from None
         self._validate_review(snapshot,envelope)
         return result(envelope,"model",call_id,response.usage)
 
