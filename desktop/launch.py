@@ -83,6 +83,30 @@ def ensure_venv() -> str:
     return exe
 
 
+def ensure_frontend() -> None:
+    index = ROOT / "frontend" / "dist" / "index.html"
+    if index.is_file():
+        return
+    fe = ROOT / "frontend"
+    npm = shutil.which("npm")
+    if not npm:
+        raise SystemExit(
+            "前端未构建且未找到 npm。请安装 Node.js 18+ 后重试，"
+            "或手动执行：cd frontend && npm install && npm run build")
+    log("building frontend (first launch only, may take a few minutes)")
+    print("[desktop] 首次启动：正在构建前端（可能需要几分钟）...")
+    for label, args in [("npm install", ["install"]), ("npm run build", ["run", "build"])]:
+        result = subprocess.run([npm, *args], cwd=str(fe), capture_output=True)
+        if result.returncode != 0:
+            detail = (result.stderr or b"").decode("utf-8", errors="replace")
+            log(f"{label} failed: {detail[-800:]}")
+            raise SystemExit(
+                f"{label} 失败。请手动执行：\n  cd frontend && npm install && npm run build\n"
+                "常见原因：Node.js 版本 < 18、网络不通（可设置 npm 镜像后重试）")
+    if not index.is_file():
+        raise SystemExit("前端构建完成但 dist/index.html 仍不存在，请手动执行 npm run build")
+
+
 def ensure_deps(exe: str) -> None:
     probe = subprocess.run([exe, "-c", "import flask, httpx, pydantic"],
                            capture_output=True)
@@ -252,6 +276,7 @@ def main() -> int:
     check_writable()
     exe = ensure_venv()
     ensure_deps(exe)
+    ensure_frontend()
 
     api_ready = health()
     if api_ready and web_health():

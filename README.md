@@ -78,16 +78,10 @@
 
 ### 方式一：桌面版一键启动（推荐）
 
-适合最终用户。双击即用，无需命令行。
-
-> **首次使用**：需先构建前端（仅一次）：
-> ```bash
-> cd frontend && npm install && npm run build
-> ```
-> 桌面版运行时读取 `frontend/dist` 静态产物，不需要 Node.js。
+适合最终用户。双击即用，无需命令行。首次启动会自动构建前端（需 Node.js 18+，仅一次）。
 
 ```
-双击「启动.vbs」  →  自动启动三个本地进程 + 打开工作台窗口
+双击「启动.vbs」  →  自动安装依赖 + 构建前端 + 启动三个本地进程 + 打开工作台窗口
 双击「停止.vbs」  →  一键停止所有进程
 ```
 
@@ -317,9 +311,8 @@ cd birthco-local; python tools/export_contracts.py --check
 ## 常见问题
 
 **Q: 双击「启动.vbs」没反应？**
-- 检查 `frontend/dist/index.html` 是否存在。桌面版读取预构建产物，不存在会静默退出。
-- 解决：`cd frontend && npm install && npm run build`，然后重新双击。
-- 查看 `.run/web.err.log` 可确认原因。
+- 查看 `.run/desktop.log` 排查。首次启动会自动构建前端（需几分钟），请耐心等待。
+- 若提示找不到 npm，需先安装 Node.js 18+。
 
 **Q: 端口被占用怎么办？**
 - 桌面版：前端端口自动换到 4274~4292 的空闲端口；API 端口（5210）被占会明确报错，可设置 `BIRTHCO_PORT` 换端口。

@@ -62,7 +62,8 @@
 
 重新构建前端（仅改动前端源码时需要）
   cd app\frontend && npm install && npm run build
-  桌面版运行时不需要 Node.js，直接读取 app\frontend\dist。
+  首次启动会自动构建前端（需 Node.js 18+，仅一次）；
+  构建完成后桌面版运行时不需要 Node.js，直接读取 app\frontend\dist。
 
 常见问题
   - 端口被占用：4273 会自动换到 4274~4292 的空闲端口；5210 若被非本应用
