@@ -12,6 +12,7 @@ import type {
   Decision,
   DecisionOptions,
   Profile,
+  TaskContinuation,
   WorkspaceSnapshot,
 } from "@/domain/types";
 
@@ -28,6 +29,7 @@ interface Toast {
 interface WorkspaceState {
   status: "loading" | "ready" | "error";
   error: string | null;
+  refreshFailed: boolean;
   snapshot: WorkspaceSnapshot | null;
   mode: "demo" | "api";
   autoplay: boolean;
@@ -42,14 +44,15 @@ interface WorkspaceState {
   refresh: () => Promise<void>;
   setMode: (mode: "demo" | "api") => Promise<void>;
   completeOnboarding: (profile: Profile) => Promise<void>;
-  createTask: (input: CreateTaskInput) => Promise<boolean>;
+  createTask: (input: CreateTaskInput) => Promise<{ taskId: string } | { error: string }>;
   advanceTask: (taskId: string) => Promise<void>;
   advanceOldest: () => Promise<void>;
   decideTask: (
     taskId: string,
     decision: Decision,
     options?: DecisionOptions,
-  ) => Promise<void>;
+  ) => Promise<string | null>;
+  continueTask: (taskId: string, action: TaskContinuation) => Promise<string | null>;
   selectAgent: (agentId: AgentId | null) => void;
   openNewTask: (open: boolean) => void;
   setImmersive: (open: boolean) => void;
@@ -85,6 +88,7 @@ function errorMessage(error: unknown): string {
 export const useWorkspace = create<WorkspaceState>((set, get) => ({
   status: "loading",
   error: null,
+  refreshFailed: false,
   snapshot: null,
   mode: getStoredMode(),
   autoplay: readAutoplay(),
@@ -115,20 +119,20 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     const epoch = snapshotEpoch;
     try {
       const snapshot = await adapter.load();
-      if (epoch === snapshotEpoch) set({ status: "ready", snapshot, error: null });
+      if (epoch === snapshotEpoch) set({ status: "ready", snapshot, error: null, refreshFailed: false });
     } catch (error) {
       if (epoch === snapshotEpoch) set({ status: "error", error: errorMessage(error) });
     }
   },
 
   refresh: async () => {
-    if (get().mode !== "api") return;
+    if (get().mode !== "api" || get().status !== "ready") return;
     const epoch = snapshotEpoch;
     try {
       const snapshot = await adapter.load();
-      if (epoch === snapshotEpoch) set({ snapshot });
+      if (epoch === snapshotEpoch) set({ snapshot, refreshFailed: false });
     } catch {
-      /* polling must not replace a usable workspace with an error screen */
+      if (epoch === snapshotEpoch) set({ refreshFailed: true });
     }
   },
 
@@ -138,7 +142,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     const epoch = snapshotEpoch;
     setStoredMode(mode);
     adapter = createAdapter(mode);
-    set({ status: "loading", mode, error: null, selectedAgentId: null });
+    set({ status: "loading", mode, error: null, refreshFailed: false, selectedAgentId: null });
     try {
       const snapshot = await adapter.load();
       if (epoch !== snapshotEpoch) return;
@@ -155,7 +159,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
         },
       });
     } catch (error) {
-      set({ status: "error", error: errorMessage(error) });
+      if (epoch === snapshotEpoch) set({ status: "error", error: errorMessage(error) });
     }
   },
 
@@ -163,15 +167,19 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     snapshotEpoch += 1;
     const epoch = snapshotEpoch;
     const snapshot = await adapter.saveProfile(profile);
-    if (epoch === snapshotEpoch) set({ snapshot, status: "ready" });
+    if (epoch === snapshotEpoch) {
+      snapshotEpoch += 1;
+      set({ snapshot, status: "ready", refreshFailed: false });
+    }
   },
 
   createTask: async (input) => {
     snapshotEpoch += 1;
     const epoch = snapshotEpoch;
     try {
-      const snapshot = await adapter.createTask(input);
-      if (epoch !== snapshotEpoch) return false;
+      const { snapshot, taskId } = await adapter.createTask(input);
+      if (epoch !== snapshotEpoch) return { error: "工作台状态已变化，请刷新任务列表核对。" };
+      snapshotEpoch += 1;
       set({
         snapshot,
         toast: {
@@ -180,10 +188,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
           tone: "success",
         },
       });
-      return true;
+      return { taskId };
     } catch (error) {
-      get().showToast(errorMessage(error), "error");
-      return false;
+      void get().refresh();
+      return { error: errorMessage(error) };
     }
   },
 
@@ -224,10 +232,12 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     const epoch = snapshotEpoch;
     try {
       const snapshot = await adapter.decideTask(taskId, decision, options);
-      if (epoch !== snapshotEpoch) return;
+      if (epoch !== snapshotEpoch) return "工作台状态已变化，请查看任务当前状态。";
+      snapshotEpoch += 1;
       const briefGate = pendingAction === "confirm_brief";
       set({
         snapshot,
+        refreshFailed: false,
         toast: {
           id: ++toastSeq,
           message:
@@ -249,8 +259,27 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
           tone: decision === "approve" ? "success" : "info",
         },
       });
+      return null;
     } catch (error) {
-      get().showToast(errorMessage(error), "error");
+      void get().refresh();
+      return errorMessage(error);
+    }
+  },
+
+  continueTask: async (taskId, action) => {
+    const activeAdapter = adapter;
+    if (!activeAdapter.continueTask) return "请在连接后端的工作台中操作。";
+    const epoch = ++snapshotEpoch;
+    try {
+      const snapshot = await activeAdapter.continueTask(taskId, action);
+      if (epoch !== snapshotEpoch) return "工作台状态已变化，请查看任务当前状态。";
+      snapshotEpoch += 1;
+      set({ snapshot, refreshFailed: false });
+      get().showToast(action.type === "supply_input" ? "资料已提交，任务已排队。" : "已从保存的进度继续。", "success");
+      return null;
+    } catch (error) {
+      void get().refresh();
+      return errorMessage(error);
     }
   },
 

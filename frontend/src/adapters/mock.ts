@@ -700,7 +700,7 @@ export class MockWorkspaceAdapter implements WorkspaceAdapter {
     });
   }
 
-  async createTask(input: CreateTaskInput): Promise<WorkspaceSnapshot> {
+  async createTask(input: CreateTaskInput) {
     const snapshot = readSnapshot();
     const now = iso();
     const stage = creatorStageMeta(snapshot.profile?.creatorStage);
@@ -736,13 +736,14 @@ export class MockWorkspaceAdapter implements WorkspaceAdapter {
     });
     const tasks = [task, ...snapshot.tasks];
     const projects = syncProjects(tasks, snapshot.projects);
-    return writeSnapshot({
+    const updated = writeSnapshot({
       ...snapshot,
       tasks,
       projects,
       agents: derivedAgents(tasks, snapshot.agents),
       updatedAt: now,
     });
+    return { taskId: task.id, snapshot: updated };
   }
 
   async advanceTask(taskId: string): Promise<WorkspaceSnapshot> {

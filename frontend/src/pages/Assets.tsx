@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowUpRight,
   Copy,
@@ -45,16 +45,18 @@ function downloadText(filename: string, body: string) {
 
 function downloadAsset(asset: AssetVM) {
   const url = (asset as AssetVM & AssetWithDownload).download_url;
+  const extension = asset.name.endsWith(".txt") ? "txt" : "md";
+  const filename = `${safeFilename(asset.name.replace(/\.(?:md|txt)$/i, ""))}.${extension}`;
   if (url) {
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `${safeFilename(asset.name)}.${asset.name.endsWith(".txt") ? "txt" : "md"}`;
+    anchor.download = filename;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
     return;
   }
-  downloadText(`${safeFilename(asset.name)}.md`, asset.body);
+  downloadText(filename, asset.body);
 }
 
 function safeFilename(name: string): string {
@@ -128,7 +130,14 @@ export function Assets() {
   const showToast = useWorkspace((state) => state.showToast);
   const [kind, setKind] = useState<"all" | AssetKind>("all");
   const [query, setQuery] = useState("");
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
+  const activeId = params.get("asset");
+  const setActiveId = (id: string | null) => {
+    const next = new URLSearchParams(params);
+    if (id) next.set("asset", id);
+    else next.delete("asset");
+    setParams(next, { replace: true });
+  };
 
   const assets = useMemo(() => {
     return (snapshot?.assets ?? [])

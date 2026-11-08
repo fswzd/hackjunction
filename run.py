@@ -89,6 +89,7 @@ def ensure_python_deps(env: dict[str, str]) -> None:
     try:
         import flask  # noqa: F401
         import httpx  # noqa: F401
+        import playwright  # noqa: F401
         import pydantic  # noqa: F401
         return
     except ImportError:

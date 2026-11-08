@@ -25,6 +25,10 @@ export interface ExternalAccount {
   session_status: SessionStatus;
   baseline_plays: number | null;
   imported_count: number;
+  login_error?: string | null;
+  import_error?: string | null;
+  last_synced_at?: string | null;
+  last_sync_count?: number | null;
 }
 
 export interface ExternalAccountStatus {
@@ -38,6 +42,8 @@ export interface ExternalAccountStatus {
   baseline_plays: number | null;
   /** 后端登录/导入线程仍在运行（前端据此等最终结果再下结论） */
   job_running?: boolean;
+  last_synced_at?: string | null;
+  last_sync_count?: number | null;
 }
 
 export interface ManualVideo {
@@ -137,30 +143,28 @@ class ApiExternalAccounts implements ExternalAccountsClient {
     init: RequestInit = {},
     allowSessionRetry = true,
   ): Promise<T> {
+    const sessionAtDispatch = this.session;
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
     const response = await fetch(`${this.base}${path}`, {
       ...init,
       credentials: "include",
       headers,
+      signal: init.signal ?? AbortSignal.timeout(15_000),
     });
     const payload = (await response.json().catch(() => ({}))) as {
       data?: T;
     } & BackendErrorBody;
     if (!response.ok) {
       if (response.status === 401 && allowSessionRetry && path !== "/api/v1/session") {
-        this.session = null;
-        this.sessionPromise = null;
-        try {
-          const fresh = await this.ensureSession();
-          const replay = new Headers(init.headers);
-          replay.set("X-CSRF-Token", fresh.csrf_token);
-          if (replay.has("Idempotency-Key")) replay.set("Idempotency-Key", randomKey());
-          return this.request<T>(path, { ...init, headers: replay }, false);
-        } catch {
+        if (this.session === sessionAtDispatch) {
           this.session = null;
           this.sessionPromise = null;
         }
+        const fresh = await this.ensureSession();
+        const replay = new Headers(init.headers);
+        if (replay.has("X-CSRF-Token")) replay.set("X-CSRF-Token", fresh.csrf_token);
+        return this.request<T>(path, { ...init, headers: replay }, false);
       }
       throw backendError(response.status, payload);
     }
@@ -222,7 +226,11 @@ class ApiExternalAccounts implements ExternalAccountsClient {
 
   async list(): Promise<ExternalAccount[]> {
     await this.ensureSession();
-    return this.request<ExternalAccount[]>("/api/v1/accounts/external");
+    const accounts = await this.request<{ account_id: string }[]>("/api/v1/accounts");
+    const accountId = accounts[0]?.account_id;
+    return accountId ? this.request<ExternalAccount[]>(
+      `/api/v1/accounts/external?account_id=${encodeURIComponent(accountId)}`,
+    ) : [];
   }
 
   async register(input: RegisterInput): Promise<ExternalAccount> {
@@ -267,6 +275,7 @@ class ApiExternalAccounts implements ExternalAccountsClient {
       {
         method: "POST",
         headers: await this.writeHeaders(),
+        signal: AbortSignal.timeout(120_000),
         body: JSON.stringify({ source: "adapter", count }),
       },
     );

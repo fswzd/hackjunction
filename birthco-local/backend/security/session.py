@@ -20,6 +20,12 @@ def _digest(value: str) -> str:
     return hmac.new(current_app.config["SESSION_SECRET"], value.encode(), hashlib.sha256).hexdigest()
 
 
+def _cookie_name() -> str:
+    # Browsers share cookies across ports on one host. A separate database's
+    # workspace must not overwrite this workspace's cookie.
+    return f"{COOKIE}_{_digest(str(current_app.config['DB_PATH']))[:16]}"
+
+
 def _csrf_token(session_id: str) -> str:
     """会话绑定的确定性 CSRF token：同会话恒等，bootstrap 可重复调用（幂等）。
 
@@ -77,7 +83,7 @@ def validate_origin() -> None:
 
 
 def require_session():
-    cookie = request.cookies.get(COOKIE)
+    cookie = request.cookies.get(_cookie_name()) or request.cookies.get(COOKIE)
     if not cookie:
         raise DomainError("SESSION_REQUIRED", "本地会话缺失，请刷新工作台",
                           "重新打开或刷新页面以建立会话", retryable=True)
@@ -106,7 +112,8 @@ def require_write():
 @blueprint.get("/api/v1/session")
 def bootstrap():
     from backend.api import success
-    cookie = request.cookies.get(COOKIE)
+    cookie_name = _cookie_name()
+    cookie = request.cookies.get(cookie_name) or request.cookies.get(COOKIE)
     session_id = _digest(cookie) if cookie else None
     new_cookie = cookie or secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
@@ -123,5 +130,5 @@ def bootstrap():
             csrf = _csrf_token(session_id)
             db.execute("UPDATE app_sessions SET csrf_hash=?,expires_at=? WHERE id=?", (_digest(csrf), expiry, session_id))
     response = success({"session_id": session_id, "csrf_token": csrf, "capabilities": ["creator"]})
-    response.set_cookie(COOKIE, new_cookie, httponly=True, samesite="Strict", secure=False, path="/", max_age=12 * 3600)
+    response.set_cookie(cookie_name, new_cookie, httponly=True, samesite="Strict", secure=False, path="/", max_age=12 * 3600)
     return response

@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from backend.integrations import intake, storage  # noqa: E402
+from backend.integrations.browser_session import session_path  # noqa: E402
 from backend.integrations.types import ExternalAccountCreate, ManualImport  # noqa: E402
 
 
@@ -66,7 +67,8 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 from backend.integrations.douyin import session as platform_session
             try:
-                path = platform_session.login_interactive(args.external_id)
+                path = platform_session.login_interactive(
+                    args.external_id, session_file=session_path(args.external_id, db))
             except platform_session.PlaywrightNotInstalled as exc:
                 print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
                 return 2

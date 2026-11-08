@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import time
 
+import pytest
+
 from backend.app import create_app
 from backend.integrations import intake, storage
 from backend.storage.db import migrate
@@ -67,7 +69,7 @@ def test_login_thread_failure_surfaces_login_error(tmp_path, monkeypatch):
     client, headers = _client(tmp_path)
     external_id = _register(client, headers)
 
-    def boom(external_account_id, *, headless=False):
+    def boom(external_account_id, *, headless=False, session_file=None):
         raise RuntimeError("未安装 playwright，请改用 manual 导入")
 
     monkeypatch.setattr(douyin_session, "login_interactive", boom)
@@ -79,6 +81,80 @@ def test_login_thread_failure_surfaces_login_error(tmp_path, monkeypatch):
     payload = _wait_status(client, external_id, lambda p: p["session_status"] != "logging_in")
     assert payload["session_status"] == "none", "登录线程失败后不应卡在 logging_in"
     assert "playwright" in (payload["login_error"] or ""), "登录错误应可操作、可轮询"
+
+
+@pytest.mark.parametrize("platform", ["douyin", "xiaohongshu"])
+def test_restart_reuses_saved_session_and_refreshes_metrics(tmp_path, monkeypatch, platform):
+    from backend.integrations.browser_session import save_session
+    from backend.integrations.douyin import fetch as douyin_fetch
+    from backend.integrations.xiaohongshu import fetch as xiaohongshu_fetch
+    from backend.integrations.types import PerfVideo
+
+    monkeypatch.delenv("BIRTHCO_SESSION_DIR", raising=False)
+    client, headers = _client(tmp_path)
+    external_id = _register(client, headers, platform=platform)
+    path = f"/api/v1/accounts/external/{external_id}"
+    launches = []
+    plays = iter([100, 245])
+
+    class BrowserContext:
+        def storage_state(self, *, indexed_db):
+            assert indexed_db
+            return {"cookies": [], "origins": []}
+
+    def login(external_account_id, *, session_file):
+        launches.append(external_account_id)
+        assert session_file.parent == tmp_path / "sessions"
+        save_session(BrowserContext(), session_file)
+        return session_file
+
+    def recent(external_account_id, *, count, session_file):
+        assert session_file.is_file()
+        return [PerfVideo(platform_video_id="v1", title="测试作品", plays=next(plays))]
+
+    monkeypatch.setattr(intake._platform_session(platform), "login_interactive", login)
+    fetch = douyin_fetch if platform == "douyin" else xiaohongshu_fetch
+    monkeypatch.setattr(fetch, "fetch_recent_works", recent)
+
+    for number, expected_plays in enumerate((100, 245)):
+        # New app instance with the same data directory, as after a restart.
+        client, headers = _client(tmp_path)
+        started = client.post(path + "/login", headers={
+            **headers, "Idempotency-Key": f"restart-login-key-{number}",
+        }, base_url=BASE)
+        assert started.status_code == 202
+        status = _wait_status(client, external_id, lambda p: not p["job_running"])
+        assert status["session_status"] == "logged_in"
+        assert status["last_synced_at"]
+        assert status["last_sync_count"] == 1
+        assert status["imported_count"] == 1
+        assert status["baseline_plays"] == expected_plays
+        works = client.get(path + "/videos", base_url=BASE).get_json()["data"]
+        assert works[0]["plays"] == expected_plays
+    assert launches == [external_id]
+
+
+def test_selected_history_is_frozen_into_task(tmp_path):
+    client, headers = _client(tmp_path)
+    external_id = _register(client, headers)
+    path = f"/api/v1/accounts/external/{external_id}"
+    imported = client.post(path + "/import", headers=headers, base_url=BASE, json={
+        "videos": [{"platform_video_id": "history1", "title": "我的历史作品", "likes": 42}],
+    })
+    assert imported.status_code == 201
+    account = client.get("/api/v1/accounts", base_url=BASE).get_json()["data"][0]
+    response = client.post("/api/v1/tasks", headers=headers, base_url=BASE, json={
+        "account_id": account["account_id"], "input_mode": "idea", "objective": "创作一篇新稿",
+        "audience": "入门读者", "style": "清楚", "requirements": [{"id": "r1", "text": "内容实用"}],
+        "materials": [], "length_rule": {"minimum": None, "maximum": None},
+        "history_account_id": external_id,
+    })
+    assert response.status_code == 202
+    task_id = response.get_json()["data"]["task_id"]
+    materials = client.get(f"/api/v1/tasks/{task_id}/materials", base_url=BASE).get_json()["data"]
+    assert len(materials) == 1
+    assert materials[0]["kind"] == "user_supplied_experience"
+    assert "我的历史作品" in materials[0]["text"] and "点赞 42" in materials[0]["text"]
 
 
 def test_experience_aggregates_manual_import(tmp_path):

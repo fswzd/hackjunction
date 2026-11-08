@@ -5,13 +5,13 @@ import type { WorkspaceAdapter } from "./types";
 export const MODE_KEY = "creator-os.mode.v2";
 
 export function getStoredMode(): "demo" | "api" {
-  if (import.meta.env.VITE_DATA_MODE === "api") return "api";
-  if (import.meta.env.VITE_DATA_MODE === "demo") return "demo";
   try {
-    return window.localStorage.getItem(MODE_KEY) === "api" ? "api" : "demo";
+    const mode = window.localStorage.getItem(MODE_KEY);
+    if (mode === "api" || mode === "demo") return mode;
   } catch {
-    return "demo";
+    /* use the startup default when browser storage is unavailable */
   }
+  return import.meta.env.VITE_DATA_MODE === "api" ? "api" : "demo";
 }
 
 export function setStoredMode(mode: "demo" | "api"): void {

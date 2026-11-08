@@ -2198,6 +2198,216 @@
     "title": "CreateTask",
     "type": "object"
   },
+  "CreateWorkspaceTask": {
+    "$defs": {
+      "LengthRule": {
+        "additionalProperties": false,
+        "properties": {
+          "minimum": {
+            "anyOf": [
+              {
+                "maximum": 20000,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Minimum"
+          },
+          "maximum": {
+            "anyOf": [
+              {
+                "maximum": 20000,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Maximum"
+          }
+        },
+        "title": "LengthRule",
+        "type": "object"
+      },
+      "MaterialInput": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "user_supplied_experience",
+              "source_text",
+              "existing_draft"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Url"
+          },
+          "authorized": {
+            "const": true,
+            "title": "Authorized",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "text",
+          "authorized"
+        ],
+        "title": "MaterialInput",
+        "type": "object"
+      },
+      "Requirement": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "Requirement",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "account_id": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+        "title": "Account Id",
+        "type": "string"
+      },
+      "input_mode": {
+        "enum": [
+          "idea",
+          "existing_draft"
+        ],
+        "title": "Input Mode",
+        "type": "string"
+      },
+      "objective": {
+        "maxLength": 1000,
+        "minLength": 1,
+        "title": "Objective",
+        "type": "string"
+      },
+      "audience": {
+        "maxLength": 1000,
+        "minLength": 1,
+        "title": "Audience",
+        "type": "string"
+      },
+      "platform": {
+        "default": "generic",
+        "maxLength": 1000,
+        "minLength": 1,
+        "title": "Platform",
+        "type": "string"
+      },
+      "format": {
+        "const": "text",
+        "default": "text",
+        "title": "Format",
+        "type": "string"
+      },
+      "style": {
+        "maxLength": 1000,
+        "minLength": 1,
+        "title": "Style",
+        "type": "string"
+      },
+      "requirements": {
+        "items": {
+          "$ref": "#/$defs/Requirement"
+        },
+        "maxItems": 30,
+        "minItems": 1,
+        "title": "Requirements",
+        "type": "array"
+      },
+      "materials": {
+        "items": {
+          "$ref": "#/$defs/MaterialInput"
+        },
+        "maxItems": 20,
+        "title": "Materials",
+        "type": "array"
+      },
+      "preview_requested": {
+        "default": false,
+        "title": "Preview Requested",
+        "type": "boolean"
+      },
+      "length_rule": {
+        "$ref": "#/$defs/LengthRule"
+      },
+      "history_account_id": {
+        "anyOf": [
+          {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "History Account Id"
+      }
+    },
+    "required": [
+      "account_id",
+      "input_mode",
+      "objective",
+      "audience",
+      "style",
+      "requirements",
+      "materials",
+      "length_rule"
+    ],
+    "title": "CreateWorkspaceTask",
+    "type": "object"
+  },
   "Expected": {
     "additionalProperties": false,
     "properties": {
@@ -5072,6 +5282,11 @@
             "type": "null"
           }
         ]
+      },
+      "can_resume": {
+        "default": false,
+        "title": "Can Resume",
+        "type": "boolean"
       }
     },
     "required": [
@@ -7865,6 +8080,11 @@
             "type": "null"
           }
         ]
+      },
+      "can_resume": {
+        "default": false,
+        "title": "Can Resume",
+        "type": "boolean"
       }
     },
     "required": [
@@ -12441,6 +12661,11 @@
                 "type": "null"
               }
             ]
+          },
+          "can_resume": {
+            "default": false,
+            "title": "Can Resume",
+            "type": "boolean"
           }
         },
         "required": [
@@ -17134,6 +17359,11 @@
                 "type": "null"
               }
             ]
+          },
+          "can_resume": {
+            "default": false,
+            "title": "Can Resume",
+            "type": "boolean"
           }
         },
         "required": [

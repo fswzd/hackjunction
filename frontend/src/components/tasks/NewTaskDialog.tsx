@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { useWorkspace } from "@/store/workspace";
+import { createExternalAccountsClient, PLATFORM_META, type ExternalAccount } from "@/adapters/externalAccounts";
 import { creatorStageMeta } from "@/domain/profile";
 import { findConflicts, normalizeMentions, parseLengthSpec } from "@/domain/length";
 import { cn } from "@/lib/format";
@@ -42,6 +43,9 @@ export function NewTaskDialog() {
   const [sourceText, setSourceText] = useState("");
   const [commercialBrief, setCommercialBrief] = useState(false);
   const [sourceAuthorized, setSourceAuthorized] = useState(false);
+  const [historyAccountId, setHistoryAccountId] = useState("");
+  const [historyAccounts, setHistoryAccounts] = useState<ExternalAccount[]>([]);
+  const [historyError, setHistoryError] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -63,9 +67,25 @@ export function NewTaskDialog() {
     setSourceText("");
     setCommercialBrief(false);
     setSourceAuthorized(false);
+    setHistoryAccountId("");
     setError("");
     setSubmitting(false);
   }, [open]);
+
+  useEffect(() => {
+    if (!open || mode !== "api") return;
+    let active = true;
+    setHistoryError(false);
+    void createExternalAccountsClient(mode).list().then((accounts) => {
+      if (active) setHistoryAccounts(accounts.filter((account) => account.imported_count > 0));
+    }).catch(() => {
+      if (active) {
+        setHistoryAccounts([]);
+        setHistoryError(true);
+      }
+    });
+    return () => { active = false; };
+  }, [open, mode]);
 
   // A title like "60 秒看懂" must not survive a 30-second selection. Warn the
   // user, offer a one-click fix, and normalise again on submit as a backstop.
@@ -99,6 +119,7 @@ export function NewTaskDialog() {
   };
 
   const submit = async () => {
+    if (submitting) return;
     if (!title.trim() || !idea.trim() || !audience.trim()) {
       setError("请填写任务标题、创作想法和目标受众。");
       return;
@@ -108,7 +129,8 @@ export function NewTaskDialog() {
       return;
     }
     setSubmitting(true);
-    const ok = await createTask({
+    setError("");
+    const result = await createTask({
       title: spec ? normalizeMentions(title, spec) : title,
       idea: spec ? normalizeMentions(idea, spec) : idea,
       audience,
@@ -119,28 +141,27 @@ export function NewTaskDialog() {
       previewRequested,
       sourceText: mode === "api" ? sourceText.trim() : undefined,
       commercialBrief,
+      historyAccountId: mode === "api" ? historyAccountId || undefined : undefined,
     });
     setSubmitting(false);
-    // Keep the dialog (and the typed input) intact when the backend rejects it,
-    // so the user can fix the input instead of losing everything.
-    if (!ok) return;
-    openNewTask(false);
-    const newest = useWorkspace.getState().snapshot?.tasks[0];
-    if (newest) {
-      navigate(`/workspace/tasks/${newest.id}`);
+    if ("error" in result) {
+      setError(result.error);
+      return;
     }
+    openNewTask(false);
+    navigate(`/workspace/tasks/${result.taskId}`);
   };
 
   return (
     <Modal
       open={open}
-      onClose={() => openNewTask(false)}
+      onClose={() => { if (!submitting) openNewTask(false); }}
       title="发起一个创作任务"
       description="说明你想表达什么、说给谁听。运营官会先整理 Brief，等你确认后再派发给内容主创。"
       size="lg"
       footer={
         <>
-          <Button variant="ghost" onClick={() => openNewTask(false)}>
+          <Button variant="ghost" disabled={submitting} onClick={() => openNewTask(false)}>
             取消
           </Button>
           <Button variant="primary" onClick={submit} disabled={submitting}>
@@ -159,9 +180,8 @@ export function NewTaskDialog() {
               </>
             ) : (
               <>
-                当前为<b className="text-text">真实接口模式</b>：任务提交到
-                <code className="mx-1">POST /api/v1/tasks</code>，由后端推进。
-                到达人工节点后，Brief 确认、内容验收与退回会写入本地后端。
+                当前已连接<b className="text-text">本地工作台</b>。
+                提交后由团队整理任务书，等你确认后再创作。
               </>
             )}
           </p>
@@ -373,6 +393,26 @@ export function NewTaskDialog() {
           </fieldset>
         ) : null}
 
+        {mode === "api" ? (
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-medium">参考账号历史实绩（选填）</span>
+            <select value={historyAccountId} onChange={(event) => setHistoryAccountId(event.target.value)}
+              className="h-10 w-full rounded-xl border border-line bg-raised px-3 text-xs">
+              <option value="">本次不引用账号历史</option>
+              {historyAccounts.map((account) => (
+                <option key={account.external_account_id} value={account.external_account_id}>
+                  {PLATFORM_META[account.platform].label} · {account.display_name || account.handle}（{account.imported_count} 条）
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-[11px] text-muted">
+              {historyError ? "暂时无法加载账号历史。可先创建任务，或检查设置里的账号连接。"
+                : historyAccounts.length ? "选中后，最近导入的作品和指标会加入本次任务的参考资料。"
+                  : "在设置里同步或导入平台实绩后，可以在这里选用。"}
+            </span>
+          </label>
+        ) : null}
+
         <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-raised/50 p-3.5">
           <input
             type="checkbox"
@@ -385,8 +425,7 @@ export function NewTaskDialog() {
               生成后运行模拟观众试映
             </span>
             <span className="mt-0.5 block text-[10px] leading-5 text-muted">
-              对应后端 CreateTask.preview_requested。试映会调用模拟观众与数据分析师，
-              在内容验收前补充逐段阅读和诊断建议。
+              在验收前查看模拟观众的逐段阅读反馈和修改建议。
             </span>
           </span>
         </label>

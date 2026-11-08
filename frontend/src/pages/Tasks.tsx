@@ -23,7 +23,7 @@ type Filter = "all" | "active" | "approval" | "completed" | "closed";
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "全部" },
   { key: "active", label: "执行中" },
-  { key: "approval", label: "待审批" },
+  { key: "approval", label: "待处理" },
   { key: "completed", label: "已完成" },
   { key: "closed", label: "已结束" },
 ];
@@ -31,7 +31,7 @@ const FILTERS: { key: Filter; label: string }[] = [
 function matchesFilter(task: TaskVM, filter: Filter): boolean {
   if (filter === "all") return true;
   if (filter === "active") return task.status === "running" || task.status === "queued";
-  if (filter === "approval") return task.status === "waiting_approval";
+  if (filter === "approval") return task.status === "waiting_approval" || task.backendState === "WAITING_INPUT";
   if (filter === "completed") return task.status === "completed";
   return task.status === "failed" || task.status === "cancelled";
 }
@@ -47,7 +47,7 @@ function TaskCard({ task }: { task: TaskVM }) {
         <p className="line-clamp-2 text-sm font-medium leading-5 text-text">
           {task.title}
         </p>
-        <TaskStatusBadge status={task.status} />
+        <TaskStatusBadge status={task.status} backendState={task.backendState} />
       </div>
       <p className="mt-2 text-[11px] text-muted">
         {agent.name} · {stageLabelForTask(task)}
@@ -56,9 +56,9 @@ function TaskCard({ task }: { task: TaskVM }) {
         <span>{task.brief.format} · {task.brief.duration}</span>
         <span>{formatRelative(task.updatedAt)}</span>
       </div>
-      {task.status === "waiting_approval" ? (
+      {matchesFilter(task, "approval") ? (
         <p className="mt-3 rounded-lg border border-violet/25 bg-violet/8 px-2.5 py-1.5 text-[10px] text-violet">
-          {task.pendingAction === "confirm_brief"
+          {task.backendState === "WAITING_INPUT" ? "补充资料后继续创作" : task.pendingAction === "confirm_brief"
             ? "Brief 已整理，等待你确认任务书"
             : "自动步骤已完成，等待你验收内容"}
         </p>
@@ -314,7 +314,7 @@ export function Tasks() {
                       <span className="hidden text-[10px] text-muted sm:block">
                         {formatRelative(task.updatedAt)}
                       </span>
-                      <TaskStatusBadge status={task.status} />
+                      <TaskStatusBadge status={task.status} backendState={task.backendState} />
                       <ArrowUpRight
                         size={14}
                         className="shrink-0 text-muted opacity-0 transition group-hover:opacity-100"

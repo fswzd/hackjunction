@@ -18,19 +18,27 @@ blueprint = Blueprint("external_accounts", __name__)
 
 _login_jobs: dict[str, threading.Thread] = {}
 # 删除账号时置位：登录线程无法中断外部扫码，但收尾时必须兜底清理它迟到的写入
-_login_cancel: dict[str, threading.Event] = {}
+_jobs_lock = threading.Lock()
+
+
+def _account_read(db_path, row):
+    with _jobs_lock:
+        thread = _login_jobs.get(row["id"])
+        state = intake.public_state(db_path, row, job_running=bool(thread and thread.is_alive()))
+    return ExternalAccountRead(
+        external_account_id=row["id"], account_id=row["account_id"], platform=row["platform"],
+        handle=row["handle"], display_name=row["display_name"], profile_url=row["profile_url"],
+        baseline_plays=row["baseline_plays"], imported_count=row["imported_count"],
+        **state,
+    ).model_dump()
 
 
 @blueprint.get("/api/v1/accounts/external")
 def list_external_accounts():
     account_id = request.args.get("account_id") or None
-    storage.ensure_integration_tables(current_app.config["DB_PATH"])
-    rows = storage.list_external_accounts(current_app.config["DB_PATH"], account_id)
-    return success([ExternalAccountRead(
-        external_account_id=r["id"], account_id=r["account_id"], platform=r["platform"],
-        handle=r["handle"], display_name=r["display_name"], profile_url=r["profile_url"],
-        session_status=r["session_status"], baseline_plays=r["baseline_plays"],
-        imported_count=r["imported_count"]).model_dump() for r in rows])
+    db_path = current_app.config["DB_PATH"]
+    rows = storage.list_external_accounts(db_path, account_id)
+    return success([_account_read(db_path, row) for row in rows])
 
 
 @blueprint.post("/api/v1/accounts/external")
@@ -44,12 +52,7 @@ def register_external_account():
     # 注册本身幂等（platform+handle 唯一）；idempotency 记录随后落库，
     # 避免嵌套事务互锁
     row = intake.register_account(current_app.config["DB_PATH"], payload)
-    result = ExternalAccountRead(
-        external_account_id=row["id"], account_id=row["account_id"],
-        platform=row["platform"], handle=row["handle"],
-        display_name=row["display_name"], profile_url=row["profile_url"],
-        session_status=row["session_status"], baseline_plays=row["baseline_plays"],
-        imported_count=row["imported_count"]).model_dump()
+    result = _account_read(current_app.config["DB_PATH"], row)
     from backend.storage.db import connect, immediate
     with connect(current_app.config["DB_PATH"]) as db:
         with immediate(db):
@@ -125,15 +128,6 @@ def login_external_account(external_account_id: str):
         storage.get_external_account(db_path, external_account_id)
     except KeyError:
         return success({"error": {"code": "NOT_FOUND", "detail": "unknown external account"}}, 404)
-    running = _login_jobs.get(external_account_id)
-    if running and running.is_alive():
-        return success({"external_account_id": external_account_id,
-                        "session_status": "logging_in"}, 202)
-    storage.set_session_state(db_path, external_account_id, status="logging_in")
-
-    cancel = threading.Event()
-    _login_cancel[external_account_id] = cancel
-
     def _run():
         try:
             intake.login_and_import(db_path, external_account_id, count=10)
@@ -146,22 +140,22 @@ def login_external_account(external_account_id: str):
             except Exception:
                 pass
         finally:
-            _login_jobs.pop(external_account_id, None)
-            _login_cancel.pop(external_account_id, None)
-            if cancel.is_set():
-                # 登录中途账号被删除：兜底清理线程迟到的写入（会话凭据文件/登记行）
-                try:
-                    intake.delete_account(db_path, external_account_id)
-                except Exception:
-                    pass
+            with _jobs_lock:
+                _login_jobs.pop(external_account_id, None)
 
     thread = threading.Thread(target=_run, name=f"login-{external_account_id}", daemon=True)
-    _login_jobs[external_account_id] = thread
-    thread.start()
+    with _jobs_lock:
+        running = _login_jobs.get(external_account_id)
+        if running and running.is_alive():
+            return success({"external_account_id": external_account_id,
+                            "session_status": "logging_in"}, 202)
+        storage.set_session_state(db_path, external_account_id, status="logging_in")
+        _login_jobs[external_account_id] = thread
+        thread.start()
     return success({
         "external_account_id": external_account_id,
         "session_status": "logging_in",
-        "next_action": "在弹出的浏览器窗口中扫码登录；登录成功后会自动抓取最近作品实绩写入经验库",
+        "next_action": "正在检查已保存的授权。如果需要重新授权，会打开平台登录窗口。",
     }, 202)
 
 
@@ -169,28 +163,30 @@ def login_external_account(external_account_id: str):
 def external_account_status(external_account_id: str):
     storage.ensure_integration_tables(current_app.config["DB_PATH"])
     try:
-        payload = intake.status(current_app.config["DB_PATH"], external_account_id)
+        with _jobs_lock:
+            thread = _login_jobs.get(external_account_id)
+            running = bool(thread and thread.is_alive())
+            payload = intake.status(current_app.config["DB_PATH"], external_account_id, job_running=running)
     except KeyError:
         return success({"error": {"code": "NOT_FOUND", "detail": "unknown external account"}}, 404)
-    thread = _login_jobs.get(external_account_id)
-    payload["job_running"] = bool(thread and thread.is_alive())
+    payload["job_running"] = running
     return success(payload)
 
 
 @blueprint.delete("/api/v1/accounts/external/<external_account_id>")
 def remove_external_account(external_account_id: str):
-    """回滚接入登记（登录失败后前端调用）：账号不入列、库里不留痕。"""
+    """Explicitly remove an account and its locally imported data."""
     require_write()
     db_path = current_app.config["DB_PATH"]
     storage.ensure_integration_tables(db_path)
-    cancel = _login_cancel.get(external_account_id)
-    if cancel is not None:
-        cancel.set()  # 通知登录线程：结束后必须兜底清理迟到写入
-    _login_jobs.pop(external_account_id, None)
-    try:
-        result = intake.delete_account(db_path, external_account_id)
-    except KeyError:
-        return success({"error": {"code": "NOT_FOUND", "detail": "unknown external account"}}, 404)
+    with _jobs_lock:
+        running = _login_jobs.get(external_account_id)
+        if running and running.is_alive():
+            return success({"error": {"code": "INVALID_TRANSITION", "detail": "请等账号同步结束后再解除绑定。"}}, 409)
+        try:
+            result = intake.delete_account(db_path, external_account_id)
+        except KeyError:
+            return success({"error": {"code": "NOT_FOUND", "detail": "unknown external account"}}, 404)
     return success({"external_account_id": external_account_id, **result})
 
 

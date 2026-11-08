@@ -10,7 +10,9 @@ import re
 from pathlib import Path
 
 from backend.integrations import storage
+from backend.integrations.browser_session import load_session, session_path, workspace_session_path
 from backend.integrations.types import ExternalAccountCreate, ManualImport, PerfVideo
+from backend.storage.db import utc_now
 
 
 def _platform_session(platform: str):
@@ -55,13 +57,16 @@ def import_via_adapter(db_path, external_account_id: str, *, count: int = 10) ->
         fetch = xhs_fetch
     else:
         raise ValueError(f"adapter import does not support {account['platform']}")
-    works: list[PerfVideo] = fetch.fetch_recent_works(external_account_id, count=count)
+    path = workspace_session_path(db_path, account)
+    works: list[PerfVideo] = fetch.fetch_recent_works(external_account_id, count=count, session_file=path)
     inserted = storage.upsert_imported_videos(
         db_path, external_account_id, [w.model_dump() for w in works], source="adapter")
     account = storage.get_external_account(db_path, external_account_id)
-    storage.set_session_state(db_path, external_account_id, status="logged_in")
-    storage.update_meta(db_path, external_account_id, {"import_error": None})
-    return {"imported": len(inserted), "baseline_plays": account["baseline_plays"],
+    attach_session(db_path, external_account_id, path)
+    storage.update_meta(db_path, external_account_id, {
+        "import_error": None, "last_synced_at": utc_now(), "last_sync_count": len(works),
+    })
+    return {"imported": len(inserted), "synced_count": len(works), "baseline_plays": account["baseline_plays"],
             "imported_count": account["imported_count"]}
 
 
@@ -70,7 +75,7 @@ def mark_pending_adapter(db_path, external_account_id: str) -> dict:
                                      status="pending_adapter_setup")
 
 
-AUTH_ERROR_MARKERS = ("登录已过期", "未登录", "会话不存在", "会话无效",
+AUTH_ERROR_MARKERS = ("登录已过期", "登录过期", "未登录", "会话不存在", "会话无效",
                       "not logged in", "unauthorized")
 # "401" 只按独立数字/HTTP 语境匹配：裸子串会把 "作品14015不存在" 误判为登录过期，
 # 进而级联触发账号回滚删除。整词边界：数字两侧不能是数字/字母。
@@ -87,7 +92,10 @@ def mark_import_failure(db_path, external_account_id: str, exc: Exception,
                         *, fallback: str) -> dict:
     """导入失败归类：登录类错误置 expired（会话不被平台认可，需重扫），
     否则置 fallback——绝不让"平台不认的会话"停留在 logged_in 假象上。"""
-    status = "expired" if _is_auth_error(str(exc)) else fallback
+    account = storage.get_external_account(db_path, external_account_id)
+    status = "expired" if _is_auth_error(str(exc)) else (
+        "logged_in" if load_session(workspace_session_path(db_path, account)) else fallback
+    )
     return storage.set_session_state(db_path, external_account_id, status=status)
 
 
@@ -96,8 +104,7 @@ def delete_account(db_path, external_account_id: str) -> dict:
     account = storage.get_external_account(db_path, external_account_id)
     result = storage.delete_external_account(db_path, external_account_id)
     try:
-        session_file = Path(_platform_session(account["platform"])
-                            .session_paths(external_account_id))
+        session_file = workspace_session_path(db_path, account)
         session_file.unlink(missing_ok=True)
     except Exception:
         pass  # 会话文件清理尽力而为，不影响删除结果
@@ -122,20 +129,31 @@ def login_and_import(db_path, external_account_id: str, *, count: int = 10) -> d
     """
     account = storage.get_external_account(db_path, external_account_id)
     platform_session = _platform_session(account["platform"])
+    previous = "logged_in" if load_session(workspace_session_path(db_path, account)) else "none"
     storage.set_session_state(db_path, external_account_id, status="logging_in")
     storage.update_meta(db_path, external_account_id,
-                        {"login_error": None, "import_error": None})
+                        {"login_error": None})
+    if previous == "logged_in":
+        try:
+            return import_via_adapter(db_path, external_account_id, count=count)
+        except Exception as exc:
+            if not _is_auth_error(str(exc)):
+                storage.update_meta(db_path, external_account_id, {"import_error": str(exc)})
+                storage.set_session_state(db_path, external_account_id, status="logged_in")
+                return {"imported": 0, "import_error": str(exc)}
+            previous = "expired"
     try:
-        session_path = platform_session.login_interactive(external_account_id)
+        db_file = Path(db_path)
+        target = session_path(external_account_id, db_file.parent if db_file.suffix == ".sqlite" else db_file)
+        saved_path = platform_session.login_interactive(external_account_id, session_file=target)
     except Exception as exc:
-        previous = storage.get_external_account(db_path, external_account_id)["session_status"]
         # 先写错误再翻状态：轮询看到终态时 login_error 必已可见
         storage.update_meta(db_path, external_account_id, {"login_error": str(exc)})
         storage.set_session_state(
             db_path, external_account_id,
-            status="expired" if previous == "logged_in" else "none")
+            status=previous)
         raise
-    attach_session(db_path, external_account_id, session_path)
+    attach_session(db_path, external_account_id, saved_path)
     try:
         return import_via_adapter(db_path, external_account_id, count=count)
     except Exception as exc:
@@ -150,17 +168,34 @@ def login_and_import(db_path, external_account_id: str, *, count: int = 10) -> d
                 "imported_count": latest["imported_count"]}
 
 
-def status(db_path, external_account_id: str) -> dict:
+def public_state(db_path, account: dict, *, job_running: bool = False) -> dict:
+    meta = json.loads(account.get("meta_json") or "{}")
+    state = account["session_status"]
+    if job_running:
+        state = "logging_in"
+    elif state == "logging_in":
+        state = "logged_in" if load_session(workspace_session_path(db_path, account)) else "none"
+        meta["login_error"] = "上次接入已中断，可以继续同步或重新授权。"
+    elif state == "logged_in" and account.get("session_ref") and not workspace_session_path(db_path, account).is_file():
+        state = "expired"
+        meta["login_error"] = "本地授权文件缺失，请重新授权。"
+    return {
+        "session_status": state,
+        "login_error": meta.get("login_error"),
+        "import_error": meta.get("import_error"),
+        "last_synced_at": meta.get("last_synced_at"),
+        "last_sync_count": meta.get("last_sync_count"),
+    }
+
+
+def status(db_path, external_account_id: str, *, job_running: bool = False) -> dict:
     """账号接入状态 + 最近一次登录/导入的可操作错误。"""
     account = storage.get_external_account(db_path, external_account_id)
-    meta = json.loads(account.get("meta_json") or "{}")
     return {
         "external_account_id": account["id"],
         "platform": account["platform"],
         "handle": account["handle"],
-        "session_status": account["session_status"],
-        "login_error": meta.get("login_error"),
-        "import_error": meta.get("import_error"),
+        **public_state(db_path, account, job_running=job_running),
         "imported_count": account["imported_count"],
         "baseline_plays": account["baseline_plays"],
     }

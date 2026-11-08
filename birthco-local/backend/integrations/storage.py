@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from backend.domain.errors import DomainError
 from backend.storage.db import connect, immediate, migrate, utc_now
 
 DDL = """
@@ -78,6 +79,8 @@ def register_external_account(db_path, *, account_id: str, platform: str, handle
             existing = db.execute("SELECT * FROM external_accounts WHERE platform=? AND handle=?",
                                   (platform, handle)).fetchone()
             if existing:
+                if existing["account_id"] != account_id:
+                    raise DomainError("SCOPE_DENIED", "平台账号已绑定到另一个工作区。", "请在原工作区管理该账号。")
                 return dict(existing)
             db.execute(
                 "INSERT INTO external_accounts(id,account_id,platform,handle,display_name,"
@@ -154,6 +157,19 @@ def upsert_imported_videos(db_path, external_account_id: str, videos: list[dict]
                     "SELECT id FROM imported_videos WHERE external_account_id=? AND platform_video_id=?",
                     (external_account_id, video["platform_video_id"])).fetchone()
                 if existing:
+                    if source == "adapter":
+                        comments = video.get("top_comments") or []
+                        db.execute(
+                            "UPDATE imported_videos SET title=COALESCE(NULLIF(?,''),title), "
+                            "published_at=COALESCE(?,published_at), plays=COALESCE(?,plays), "
+                            "likes=COALESCE(?,likes), comments=COALESCE(?,comments), "
+                            "shares=COALESCE(?,shares), favorites=COALESCE(?,favorites), "
+                            "top_comments_json=COALESCE(?,top_comments_json), source=?, raw_hash=? WHERE id=?",
+                            (video.get("title"), video.get("published_at"), video.get("plays"),
+                             video.get("likes"), video.get("comments"), video.get("shares"),
+                             video.get("favorites"), json.dumps(comments, ensure_ascii=False) if comments else None,
+                             source, raw_hash, existing["id"]),
+                        )
                     continue
                 db.execute(
                     "INSERT INTO imported_videos(id,external_account_id,platform_video_id,title,"
@@ -165,7 +181,7 @@ def upsert_imported_videos(db_path, external_account_id: str, videos: list[dict]
                      json.dumps(video.get("top_comments", []), ensure_ascii=False),
                      source, raw_hash, now))
                 inserted.append({"id": vid, **video})
-            if inserted:
+            if inserted or (source == "adapter" and videos):
                 rows = db.execute(
                     "SELECT plays FROM imported_videos WHERE external_account_id=? "
                     "AND plays IS NOT NULL ORDER BY plays", (external_account_id,)).fetchall()

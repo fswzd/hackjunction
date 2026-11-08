@@ -53,14 +53,17 @@ class Queue:
                 return self.enqueue_tx(db, run_id, now or utc_now())
 
     @staticmethod
+    def has_unresolved_calls_tx(db, run_id) -> bool:
+        return db.execute(
+            "SELECT 1 FROM model_calls c JOIN checkpoints s ON s.run_id=c.run_id AND s.step=c.step AND s.attempt=c.attempt "
+            "WHERE c.run_id=? AND (c.status IN ('sent','unknown') OR (c.status='received' AND s.status='reserved'))",
+            (run_id,)).fetchone() is not None
+
+    @staticmethod
     def check_resumable_tx(db, run_id, strategy):
         if strategy != "continue_checkpoint":
             raise DomainError("INVALID_TRANSITION", "Unknown calls require reconciliation", "Inspect the call ledger")
-        uncertain = db.execute(
-            "SELECT 1 FROM model_calls c JOIN checkpoints s ON s.run_id=c.run_id AND s.step=c.step AND s.attempt=c.attempt "
-            "WHERE c.run_id=? AND (c.status IN ('sent','unknown') OR (c.status='received' AND s.status='reserved'))",
-            (run_id,)).fetchone()
-        if uncertain:
+        if Queue.has_unresolved_calls_tx(db, run_id):
             raise DomainError("INVALID_TRANSITION", "A call has no committed result", "Reconcile the call before a new run")
 
     def claim(self, worker_id: str, now: datetime | None = None) -> Lease | None:

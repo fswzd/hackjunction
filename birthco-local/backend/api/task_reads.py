@@ -8,6 +8,7 @@ from backend.api import success
 from backend.domain.errors import DomainError
 from backend.domain.schemas import ErrorDetail, EventPage, MaterialRead, TaskEvent, TaskSummary, Usage
 from backend.storage.db import connect
+from backend.storage.queue import Queue
 
 blueprint = Blueprint("task_reads", __name__)
 
@@ -38,7 +39,8 @@ def summary(db, row):
     position = db.execute("SELECT count(*) FROM runs WHERE state='QUEUED' AND queue_seq<=?", (seq,)).fetchone()[0] if seq is not None else None
     pending = json.loads(row["pending_json"]) if row["pending_json"] else None
     run_error = ErrorDetail.model_validate(json.loads(run["error_json"])) if run["error_json"] else None
-    value = TaskSummary(task_id=row["id"], account_id=row["account_id"], state=row["state"], row_version=row["row_version"], current_run_id=run_id, brief_version=row["current_brief_version"], head_version_id=row["head_version_id"], ready_version_id=row["ready_version_id"], accepted_version_id=row["accepted_version_id"], pending_action=pending.get("action") if isinstance(pending, dict) else None, queue_position=position, mode=row["mode"], usage=usage, error=run_error)
+    can_resume = row["state"] in {"FAILED", "INTERRUPTED"} and not Queue.has_unresolved_calls_tx(db, run_id)
+    value = TaskSummary(task_id=row["id"], account_id=row["account_id"], state=row["state"], row_version=row["row_version"], current_run_id=run_id, brief_version=row["current_brief_version"], head_version_id=row["head_version_id"], ready_version_id=row["ready_version_id"], accepted_version_id=row["accepted_version_id"], pending_action=pending.get("action") if isinstance(pending, dict) else None, queue_position=position, mode=row["mode"], usage=usage, error=run_error, can_resume=can_resume)
     return value.model_dump(mode="json")
 
 

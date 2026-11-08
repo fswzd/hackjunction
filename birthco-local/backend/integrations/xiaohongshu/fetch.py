@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
+from backend.integrations.browser_session import read_json, save_session
 from backend.integrations.types import PerfVideo
 
 NOTES_API = ("https://creator.xiaohongshu.com/api/galaxy/user/posted?"
@@ -78,42 +80,42 @@ def _extract_notes(raw) -> list:
             raise FetchError(f"接口返回非 JSON（{raw[:80]!r}）；平台接口可能已变化") from exc
     if not isinstance(raw, dict):
         raise FetchError(f"接口返回结构异常（{type(raw).__name__}）；平台接口可能已变化")
-    if raw.get("success") is False:
-        raise FetchError(f"接口返回失败：{raw.get('msg') or raw.get('message') or raw}；"
-                         "请重新登录或改用 manual 通道")
+    if raw.get("success") is False or raw.get("code") not in (None, 0, "0"):
+        message = raw.get("msg") or raw.get("message") or ""
+        if raw.get("code") in (401, "401") or (isinstance(message, str) and any(
+                term in message for term in ("未登录", "登录过期", "登录已过期"))):
+            raise FetchError("小红书登录已过期，请重新授权。")
+        raise FetchError("小红书未返回可读取的笔记列表，请稍后重试。")
     data = raw.get("data")
     if data is None:
-        data = raw.get("notes") or raw.get("list") or raw.get("items") or []
+        data = raw
     if isinstance(data, str):
         try:
             data = json.loads(data)
         except ValueError as exc:
-            # 常见于未登录/风控时返回提示字符串
-            raise FetchError(f"接口返回数据异常（{data[:80]!r}）；请重新登录或改用 manual 通道") from exc
-    if isinstance(data, list):
-        return [item for item in data if isinstance(item, dict)]
+            raise FetchError("小红书返回的笔记数据格式异常。") from exc
     if isinstance(data, dict):
-        return [item for item in (data.get("notes") or data.get("list")
-                                  or data.get("items") or []) if isinstance(item, dict)]
-    raise FetchError(f"接口返回数据异常（{type(data).__name__}）；平台接口可能已变化")
+        data = next((data[key] for key in ("notes", "list", "items") if key in data), None)
+    if not isinstance(data, list) or any(not isinstance(item, dict) for item in data):
+        raise FetchError("未识别到小红书笔记列表。")
+    return data
 
 
-def _fetch_plain(external_account_id: str, count: int, with_comments: bool) -> list[PerfVideo]:
+def _fetch_plain(path, state, count: int, with_comments: bool) -> list[PerfVideo]:
     """通道 A：会话 cookie + 裸 fetch 直连平台接口。"""
     from backend.integrations.xiaohongshu import session as xhs_session  # noqa: PLC0415
 
     sync_playwright = xhs_session._playwright()
     works: list[PerfVideo] = []
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True, channel="chromium")
-        context = browser.new_context(
-            storage_state=str(xhs_session.session_paths(external_account_id)))
+        browser = xhs_session._launch_browser(pw, headless=True)
+        context = browser.new_context(storage_state=state)
         page = context.new_page()
         page.goto("https://creator.xiaohongshu.com/publish/publish-manage",
                   wait_until="domcontentloaded")
-        raw = page.evaluate(
-            "async (url) => (await (await fetch(url)).json())",
-            NOTES_API.format(count=min(50, count)))
+        if "/login" in page.url:
+            raise FetchError("小红书登录已过期，请重新授权。")
+        raw = read_json(page, NOTES_API.format(count=count))
         items = _extract_notes(raw)
         for item in items:
             video = normalize_note(item)
@@ -130,11 +132,12 @@ def _fetch_plain(external_account_id: str, count: int, with_comments: bool) -> l
             works.append(video)
             if len(works) >= count:
                 break
+        save_session(context, path)
         browser.close()
     return works
 
 
-def _intercept_notes(external_account_id: str, count: int) -> list[dict]:
+def _intercept_notes(path, state, count: int) -> list[dict]:
     """通道 B：裸 fetch 被拒（缺签名/接口变化）时，收平台页面自带请求的响应。
 
     页面自己的 JS 会带全签名头请求笔记列表，我们只旁听它拿到的 JSON，
@@ -145,16 +148,15 @@ def _intercept_notes(external_account_id: str, count: int) -> list[dict]:
     sync_playwright = xhs_session._playwright()
     captured: list = []
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True, channel="chromium")
-        context = browser.new_context(
-            storage_state=str(xhs_session.session_paths(external_account_id)))
+        browser = xhs_session._launch_browser(pw, headless=True)
+        context = browser.new_context(storage_state=state)
         page = context.new_page()
 
         def on_response(response):
-            if "/api/" not in response.url:
-                return
-            if not any(key in response.url for key in
-                       ("user/posted", "posted", "note", "publish", "content")):
+            location = urlsplit(response.url)
+            if (location.hostname != "creator.xiaohongshu.com" or not response.ok
+                    or not location.path.startswith("/api/")
+                    or not any(key in location.path for key in ("user/posted", "note/list", "note/manage"))):
                 return
             try:
                 captured.append(response.json())
@@ -183,7 +185,8 @@ def _intercept_notes(external_account_id: str, count: int) -> list[dict]:
                     items = _extract_notes(payload)
                 except FetchError:
                     continue
-                if items:
+                if items or isinstance(payload, dict) and payload.get('success') is True:
+                    save_session(context, path)
                     browser.close()
                     return items[:count]
         browser.close()
@@ -191,7 +194,7 @@ def _intercept_notes(external_account_id: str, count: int) -> list[dict]:
 
 
 def fetch_recent_works(external_account_id: str, *, count: int = 10,
-                       with_comments: bool = True) -> list[PerfVideo]:
+                       with_comments: bool = True, session_file=None) -> list[PerfVideo]:
     """用已登录会话抓取最近 count 条笔记（含 top 评论）。
 
     双通道：先裸 fetch；被拒则旁听平台页面自带的签名请求兜底。
@@ -201,15 +204,18 @@ def fetch_recent_works(external_account_id: str, *, count: int = 10,
 
     if not 1 <= count <= 50:
         raise FetchError("count must be between 1 and 50")
-    state = xhs_session.load_session(xhs_session.session_paths(external_account_id))
+    path = session_file or xhs_session.session_paths(external_account_id)
+    state = xhs_session.load_session(path)
     if not state:
         raise FetchError("会话不存在或未登录；请先 login 或使用 manual 通道")
     try:
-        return _fetch_plain(external_account_id, count, with_comments)
-    except FetchError as plain_error:
+        return _fetch_plain(path, state, count, with_comments)
+    except Exception as plain_error:
+        if '登录已过期' in str(plain_error):
+            raise FetchError(str(plain_error)) from plain_error
         try:
-            items = _intercept_notes(external_account_id, count)
-        except FetchError as intercept_error:
+            items = _intercept_notes(path, state, count)
+        except Exception as intercept_error:
             raise FetchError(f"{plain_error}；页面捕获兜底：{intercept_error}") from intercept_error
         works = [normalize_note(item) for item in items]
         return works[:count]

@@ -12,13 +12,13 @@ import {
 } from "@/adapters/externalAccounts";
 import { useWorkspace } from "@/store/workspace";
 import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/format";
+import { cn, formatDate, formatTime } from "@/lib/format";
 
 const STATUS_LABEL: Record<SessionStatus, string> = {
   none: "未登录",
   pending_adapter_setup: "待重试",
-  logging_in: "登录中…",
-  logged_in: "已登录",
+  logging_in: "正在接入或同步…",
+  logged_in: "已保存授权",
   expired: "已过期",
 };
 
@@ -59,10 +59,14 @@ export function AccountConnect() {
   const polling = useRef(false);
 
   const refresh = async () => {
+    const gen = generation.current;
     try {
-      setAccounts(await client.list());
-    } catch {
-      /* 列表失败不打断表单；下次操作会再报错 */
+      const result = await client.list();
+      if (gen === generation.current) setAccounts(result);
+    } catch (error) {
+      if (gen === generation.current) {
+        setMessage({ tone: "error", text: error instanceof Error ? error.message : "账号列表暂时无法读取。" });
+      }
     }
   };
 
@@ -73,6 +77,7 @@ export function AccountConnect() {
     generation.current += 1;
     polling.current = false;
     setAccounts([]);
+    setBusy("");
     setMessage(null);
     setExpandedId(null);
     setExperience(null);
@@ -83,6 +88,13 @@ export function AccountConnect() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client]);
+
+  const hasActiveJob = accounts.some((account) => account.session_status === "logging_in");
+  useEffect(() => {
+    if (!hasActiveJob || busy) return;
+    const timer = window.setInterval(() => void refresh(), 2500);
+    return () => window.clearInterval(timer);
+  }, [client, hasActiveJob, busy]);
 
   const pollUntilDone = async (externalId: string) => {
     const gen = generation.current;
@@ -105,6 +117,10 @@ export function AccountConnect() {
                   session_status: status.session_status,
                   imported_count: status.imported_count,
                   baseline_plays: status.baseline_plays,
+                  login_error: status.login_error,
+                  import_error: status.import_error,
+                  last_synced_at: status.last_synced_at,
+                  last_sync_count: status.last_sync_count,
                 }
               : item,
           ),
@@ -121,120 +137,78 @@ export function AccountConnect() {
     }
   };
 
+  const syncAccount = async (account: ExternalAccount) => {
+    const gen = generation.current;
+    setMessage({ tone: "info", text: mode === "api"
+      ? "正在检查已保存的授权。若需要扫码，请查看弹出的平台窗口。"
+      : "演示模式：正在模拟同步。" });
+    const started = await client.login(account.external_account_id);
+    if (gen !== generation.current) return;
+    if (started.next_action) setMessage({ tone: "info", text: started.next_action });
+    const status = await pollUntilDone(account.external_account_id);
+    if (gen !== generation.current) return;
+    await refresh();
+    if (gen !== generation.current) return;
+    const issue = status.login_error ?? status.import_error;
+    if (issue) {
+      setMessage({ tone: "error", text: issue });
+      return;
+    }
+    if (status.session_status !== "logged_in") {
+      setMessage({ tone: "info", text: "接入尚未完成。可以回来查看进度，或在账号列表继续接入。" });
+      return;
+    }
+    const exp = await client.experience(account.external_account_id);
+    if (gen !== generation.current) return;
+    setExperience(exp);
+    setExpandedId(account.external_account_id);
+    const synced = status.last_sync_count;
+    setMessage({
+      tone: "success",
+      text: synced === 0
+        ? "同步完成，平台返回的最近作品列表为空。"
+        : `同步完成。经验库中有 ${exp.imported_count} 条作品记录。`,
+    });
+  };
+
   const connect = async () => {
     const handleValue = handle.trim();
     if (!handleValue) {
       setMessage({ tone: "error", text: `请填写${PLATFORM_META[platform].handleLabel}。` });
       return;
     }
-    setBusy("login");
-    setMessage({
-      tone: "info",
-      text:
-        mode === "api"
-          ? "已启动登录：请在弹出的浏览器窗口中扫码，登录成功后会自动抓取最近作品实绩写入经验库…"
-          : "演示模式：正在模拟登录与实绩导入…",
-    });
-    let registered: ExternalAccount | null = null;
     const gen = generation.current;
-    // 仅本次新建的账号才允许失败回滚：register 对同 handle 幂等返回既有行，
-    // 无条件 remove 会误删既有账号并连带清掉其经验库实绩（数据灭失）。
-    // 必须在 register 之前测一次——之后 list 会包含本次新建行，无法区分。
-    let preexisting = false;
+    setBusy("login");
     try {
-      preexisting = (await client.list().catch(() => [])).some(
-        (item) => item.platform === platform && item.handle === handleValue,
-      );
-      registered = await client.register({
+      const registered = await client.register({
         platform,
         handle: handleValue,
         displayName: displayName.trim(),
       });
-      // 登录成功前不入列；失败只回滚本次新建的登记
-      await client.login(registered.external_account_id);
-      const status = await pollUntilDone(registered.external_account_id);
       if (gen !== generation.current) return;
-      if (status.session_status === "logged_in") {
-        const confirmedId = registered.external_account_id;
-        registered = null; // 已确认登录，后续异常不再回滚
-        const exp = await client.experience(confirmedId);
-        setExperience(exp);
-        setExpandedId(confirmedId);
-        const importNote = status.import_error
-          ? `实绩抓取未完成（${status.import_error}），可稍后“重新抓取”或手动导入。`
-          : `已导入 ${status.imported_count} 条作品实绩，基准播放 ${
-              status.baseline_plays ?? "—"
-            }，已写入经验库。`;
-        setMessage({
-          tone: status.import_error ? "info" : "success",
-          text: `登录成功。${importNote}`,
-        });
-        showToast("账号已接入，实绩已入库作为经验库。", "success");
-      } else {
-        const target = registered.external_account_id;
-        registered = null;
-        if (!preexisting) {
-          await client.remove(target).catch(() => undefined);
-        }
-        const reason =
-          status.login_error ??
-          (status.import_error
-            ? `平台不认这次登录：${status.import_error}`
-            : status.session_status === "logging_in"
-              ? "登录等待超时"
-              : `状态 ${status.session_status}`);
-        setMessage({
-          tone: "error",
-          text: preexisting
-            ? `登录失败（${reason}）。该账号已在经验库中，历史实绩已保留；请稍后重试，或用「手动导入 JSON」补录。`
-            : `登录失败（${reason}），账号未添加。可修改信息后重试；如需补录历史实绩，请用「手动导入 JSON」（会登记该账号）。`,
-        });
-      }
-      await refresh();
+      setAccounts((current) => current.some((row) => row.external_account_id === registered.external_account_id)
+        ? current : [...current, registered]);
+      await syncAccount(registered);
     } catch (error) {
-      if (registered) {
-        if (!preexisting) {
-          await client.remove(registered.external_account_id).catch(() => undefined);
-        }
-        registered = null;
-        await refresh().catch(() => undefined);
+      if (gen === generation.current) {
+        setMessage({ tone: "error", text: error instanceof Error ? error.message : "接入失败，请重试。" });
       }
-      if (gen !== generation.current) return;
-      setMessage({
-        tone: "error",
-        text: `登录失败，账号未添加：${
-          error instanceof Error ? error.message : "接入失败，请重试"
-        }。`,
-      });
     } finally {
-      setBusy("");
+      if (gen === generation.current) setBusy("");
     }
   };
 
   const reImport = async (account: ExternalAccount) => {
+    const gen = generation.current;
     setBusy("refresh");
-    setMessage({ tone: "info", text: "正在抓取最近作品实绩…" });
     try {
-      const result = await client.importAdapter(account.external_account_id);
-      setMessage({
-        tone: "success",
-        text: `已抓取：新增 ${result.imported} 条（去重 ${
-          result.skipped_duplicates ?? 0
-        }），基准播放 ${result.baseline_plays ?? "—"}。`,
-      });
-      if (expandedId === account.external_account_id) {
-        setExperience(await client.experience(account.external_account_id));
-      }
-      await refresh();
+      await syncAccount(account);
     } catch (error) {
-      setMessage({
-        tone: "error",
-        text: `抓取失败：${
-          error instanceof Error ? error.message : "未知错误"
-        }。会话可能过期，请重新登录，或改用“手动导入 JSON”。`,
-      });
+      if (gen === generation.current) {
+        setMessage({ tone: "error", text: error instanceof Error ? error.message : "同步暂时失败，请稍后重试。" });
+      }
     } finally {
-      setBusy("");
+      if (gen === generation.current) setBusy("");
     }
   };
 
@@ -306,13 +280,12 @@ export function AccountConnect() {
       <div>
         <h2 className="text-sm font-semibold">平台账号 · 经验库</h2>
         <p className="mt-1 text-[11px] leading-5 text-muted">
-          接入你已有的抖音 / 小红书账号：登录后自动抓取最近作品实绩（播放、点赞、评论、热评），
-          写入本地数据库作为<b className="text-text">经验库</b>，为选题、审稿与数据分析提供历史依据。
-          只读接入，不会发布或修改任何内容。
+          接入已有的抖音或小红书账号，读取近期作品及平台提供的互动数据。
+          同步后可以查看历史实绩，或在创建任务时选用。
         </p>
         <p className="mt-1 text-[10px] leading-5 text-muted">
           {mode === "api"
-            ? "真实接口模式：实绩写入本地 SQLite（imported_videos），基准线 baseline_plays 自动派生。"
+            ? "授权和历史记录保存在本地。下次同步会先尝试复用已保存的授权。"
             : "演示模式：模拟数据仅保存在浏览器；切换真实接口模式后才会连接平台并写入数据库。"}
         </p>
       </div>
@@ -475,9 +448,10 @@ export function AccountConnect() {
                         )
                       }
                       onClick={() => void reImport(account)}
-                      disabled={busy !== "" || account.session_status !== "logged_in"}
+                      disabled={busy !== "" || account.session_status === "logging_in"}
                     >
-                      重新抓取
+                      {account.session_status === "none" ? "继续接入"
+                        : account.session_status === "expired" ? "重新授权" : "同步实绩"}
                     </Button>
                     <Button
                       variant="ghost"
@@ -491,6 +465,15 @@ export function AccountConnect() {
                     </Button>
                   </div>
                 </div>
+                {account.last_synced_at ? (
+                  <p className="mt-1 text-[10px] text-muted">
+                    上次同步 {formatDate(account.last_synced_at)} {formatTime(account.last_synced_at)}
+                    {account.last_sync_count != null ? ` · 核对 ${account.last_sync_count} 条` : ""}
+                  </p>
+                ) : null}
+                {account.login_error || account.import_error ? (
+                  <p className="mt-1 text-[10px] text-amber">{account.login_error ?? account.import_error}</p>
+                ) : null}
                 {expandedId === account.external_account_id && experience ? (
                   <div className="mt-2 space-y-2 rounded-lg border border-line/60 bg-ink/40 p-3">
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">

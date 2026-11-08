@@ -7,10 +7,18 @@ import pytest
 
 from backend.app import create_app
 from backend.integrations import intake, storage
-from backend.integrations.douyin.fetch import FetchError, normalize_comments, normalize_work
+from backend.integrations.douyin.fetch import FetchError, _extract_works, normalize_comments, normalize_work
 from backend.integrations.types import ExternalAccountCreate, ManualImport
 
 BASE = "http://127.0.0.1:5000"
+
+
+def test_works_list_distinguishes_empty_list_from_platform_error():
+    assert _extract_works({"status_code": 0, "aweme_list": []}) == ([], False, None)
+    with pytest.raises(FetchError, match="登录已过期"):
+        _extract_works({"status_code": 401, "aweme_list": []})
+    with pytest.raises(FetchError, match="未识别"):
+        _extract_works({"status_code": 0, "data": {}})
 
 
 def sample_videos():

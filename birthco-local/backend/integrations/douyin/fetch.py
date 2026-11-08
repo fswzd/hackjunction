@@ -6,7 +6,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
+from backend.integrations.browser_session import read_json, save_session
 from backend.integrations.types import PerfVideo
 
 WORKS_API = ("https://creator.douyin.com/web/api/media/aweme/post/"
@@ -64,40 +66,80 @@ def normalize_comments(payload: dict, video_id: str) -> list[dict]:
     return comments[:20]
 
 
+def _extract_works(raw: dict) -> tuple[list[dict], bool, int | None]:
+    code = raw.get("status_code", raw.get("code"))
+    message = raw.get("status_msg") or raw.get("message") or raw.get("msg")
+    if code not in (None, 0, "0") or raw.get("success") is False:
+        if code in (401, "401") or (isinstance(message, str) and any(
+                term in message for term in ("未登录", "登录过期", "登录已过期"))):
+            raise FetchError("抖音登录已过期，请重新授权。")
+        raise FetchError(f"抖音作品列表请求失败（平台状态 {str(code)[:30]}）。")
+    data = raw.get("data")
+    container = data if isinstance(data, dict) else raw
+    items = container.get("aweme_list")
+    if items is None and isinstance(data, list):
+        items = data
+    if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+        raise FetchError("未识别到抖音作品列表，请重试或导入创作者中心导出的数据。")
+    cursor = container.get("cursor", container.get("max_cursor"))
+    return items, bool(container.get("has_more")), cursor
+
+
 def fetch_recent_works(external_account_id: str, *, count: int = 10,
-                       with_comments: bool = True) -> list[PerfVideo]:
+                       with_comments: bool = True, session_file=None) -> list[PerfVideo]:
     """用已登录会话抓取最近 count 条作品（含 top 评论）。"""
     from backend.integrations.douyin import session as douyin_session  # noqa: PLC0415
 
     if not 1 <= count <= 50:
         raise FetchError("count must be between 1 and 50")
-    state = douyin_session.load_session(douyin_session.session_paths(external_account_id))
+    path = session_file or douyin_session.session_paths(external_account_id)
+    state = douyin_session.load_session(path)
     if not state:
         raise FetchError("会话不存在或未登录；请先 login 或使用 manual 通道")
     sync_playwright = douyin_session._playwright()
     works: list[PerfVideo] = []
     try:
         with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=True, channel="chromium")
-            context = browser.new_context(storage_state=str(douyin_session.session_paths(external_account_id)))
+            browser = douyin_session._launch_browser(pw, headless=True)
+            context = browser.new_context(storage_state=state)
             page = context.new_page()
+            captured = []
+
+            def on_response(response):
+                location = urlsplit(response.url)
+                if (location.hostname != "creator.douyin.com"
+                        or "/aweme/post" not in location.path or not response.ok):
+                    return
+                try:
+                    captured.append(_extract_works(response.json()))
+                except (FetchError, ValueError, TypeError):
+                    pass
+
+            page.on("response", on_response)
             page.goto("https://creator.douyin.com/creator-micro/content/manage",
                       wait_until="domcontentloaded")
+            page.wait_for_timeout(2000)
+            if "/login" in page.url or page.url.startswith("https://sso.douyin.com/"):
+                raise FetchError("抖音登录已过期，请重新授权。")
             cursor = 0
-            while len(works) < count:
-                url = WORKS_API.format(count=min(20, count - len(works)), cursor=cursor)
-                raw = page.evaluate("async (url) => (await (await fetch(url)).json())", url)
-                aweme_list = raw.get("aweme_list") or raw.get("data") or []
+            seen = set()
+            for index in range(5):
+                if index == 0 and captured:
+                    aweme_list, has_more, next_cursor = captured[0]
+                else:
+                    url = WORKS_API.format(count=min(20, count - len(works)), cursor=cursor)
+                    aweme_list, has_more, next_cursor = _extract_works(read_json(page, url))
                 if not aweme_list:
                     break
                 for item in aweme_list:
                     video = normalize_work(item)
+                    if video.platform_video_id in seen:
+                        continue
+                    seen.add(video.platform_video_id)
                     if with_comments:
                         try:
-                            comments_raw = page.evaluate(
-                                "async (id) => (await (await fetch("
-                                "'/web/api/comment/list/?item_id='+id+'&count=20')).json())",
-                                video.platform_video_id)
+                            comments_raw = read_json(page,
+                                f"https://creator.douyin.com/web/api/comment/list/?item_id={video.platform_video_id}&count=20")
                             comments = normalize_comments(comments_raw, video.platform_video_id)
                             video = video.model_copy(update={"top_comments": comments})
                         except Exception:
@@ -105,11 +147,10 @@ def fetch_recent_works(external_account_id: str, *, count: int = 10,
                     works.append(video)
                     if len(works) >= count:
                         break
-                if not raw.get("has_more") and not aweme_list:
+                if len(works) >= count or not has_more or next_cursor is None or next_cursor == cursor:
                     break
-                cursor = raw.get("cursor") or (cursor + len(aweme_list))
-                if not raw.get("has_more"):
-                    break
+                cursor = next_cursor
+            save_session(context, path)
             browser.close()
     except FetchError:
         raise

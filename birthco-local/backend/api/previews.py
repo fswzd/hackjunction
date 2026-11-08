@@ -84,6 +84,7 @@ def _preview_read(db, preview_id: str) -> dict:
         started_at=run_row["started_at"], finished_at=run_row["finished_at"],
         metrics=metrics, analysis_id=analysis["id"] if analysis else None, analysis_status=row["analysis_status"],
         usage=usage, error=error,
+        can_resume=row["state"] in {"INTERRUPTED", "INCOMPLETE"} and not Queue.has_unresolved_calls_tx(db, row["run_id"]),
     ).model_dump(mode="json")
 
 

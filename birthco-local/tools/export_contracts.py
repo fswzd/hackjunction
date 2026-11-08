@@ -30,7 +30,7 @@ def outputs():
         ("get", "/api/v1/accounts", None, list[m.AccountRead], 200, "A02c"),
         ("post", "/api/v1/accounts", m.AccountCreate, m.AccountRead, 201, "A02c"),
         ("put", "/api/v1/accounts/{account_id}", m.AccountUpdate, m.AccountRead, 200, "A02c"),
-        ("post", "/api/v1/tasks", m.CreateTask, m.TaskSummary, 202, "A02c"),
+        ("post", "/api/v1/tasks", m.CreateWorkspaceTask, m.TaskSummary, 202, "A02c"),
         ("get", "/api/v1/tasks", None, list[m.TaskSummary], 200, "A02c"),
         ("get", "/api/v1/tasks/{task_id}", None, m.TaskSummary, 200, "A02c"),
         ("get", "/api/v1/tasks/{task_id}/materials", None, list[m.MaterialRead], 200, "A02c"),

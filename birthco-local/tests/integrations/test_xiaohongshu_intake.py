@@ -86,6 +86,9 @@ def test_extract_notes_handles_shapes():
     assert _extract_notes({"data": {"notes": [{"id": "n1"}]}}) == [{"id": "n1"}]
     assert _extract_notes({"data": [{"id": "n2"}]}) == [{"id": "n2"}]
     assert _extract_notes({"data": '[{"id": "n3"}]'}) == [{"id": "n3"}], "二次编码 JSON 也能解"
+    assert _extract_notes({"success": True, "data": {"notes": []}}) == []
+    with pytest.raises(FetchError):
+        _extract_notes({"success": True, "data": {}})
     with pytest.raises(FetchError):
         _extract_notes({"success": False, "msg": "登录已过期"}), "失败响应应报出平台 msg"
     with pytest.raises(FetchError):

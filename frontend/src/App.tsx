@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useWorkspace } from "@/store/workspace";
@@ -6,16 +6,17 @@ import { Button } from "@/components/ui/Button";
 import { AppShell } from "@/components/layout/AppShell";
 import { Landing } from "@/pages/Landing";
 import { Onboarding } from "@/pages/Onboarding";
-import { Overview } from "@/pages/Overview";
-import { Workforce } from "@/pages/Workforce";
-import { Projects } from "@/pages/Projects";
-import { Tasks } from "@/pages/Tasks";
-import { TaskDetail } from "@/pages/TaskDetail";
-import { CalendarPage } from "@/pages/Calendar";
-import { Assets } from "@/pages/Assets";
-import { Analytics } from "@/pages/Analytics";
-import { Settings } from "@/pages/Settings";
 import { NotFound } from "@/pages/NotFound";
+
+const Overview = lazy(() => import("@/pages/Overview").then((m) => ({ default: m.Overview })));
+const Workforce = lazy(() => import("@/pages/Workforce").then((m) => ({ default: m.Workforce })));
+const Projects = lazy(() => import("@/pages/Projects").then((m) => ({ default: m.Projects })));
+const Tasks = lazy(() => import("@/pages/Tasks").then((m) => ({ default: m.Tasks })));
+const TaskDetail = lazy(() => import("@/pages/TaskDetail").then((m) => ({ default: m.TaskDetail })));
+const CalendarPage = lazy(() => import("@/pages/Calendar").then((m) => ({ default: m.CalendarPage })));
+const Assets = lazy(() => import("@/pages/Assets").then((m) => ({ default: m.Assets })));
+const Analytics = lazy(() => import("@/pages/Analytics").then((m) => ({ default: m.Analytics })));
+const Settings = lazy(() => import("@/pages/Settings").then((m) => ({ default: m.Settings })));
 
 function Splash() {
   return (
@@ -85,6 +86,7 @@ export default function App() {
   if (status === "error") return <ErrorScreen />;
 
   return (
+    <Suspense fallback={<Splash />}>
     <Routes>
       <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/workspace" element={<AppShell />}>
@@ -101,5 +103,6 @@ export default function App() {
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </Suspense>
   );
 }

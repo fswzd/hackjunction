@@ -15,6 +15,7 @@ export function AppShell() {
   const autoplay = useWorkspace((state) => state.autoplay);
   const advanceOldest = useWorkspace((state) => state.advanceOldest);
   const refresh = useWorkspace((state) => state.refresh);
+  const refreshFailed = useWorkspace((state) => state.refreshFailed);
   const selectedAgentId = useWorkspace((state) => state.selectedAgentId);
   const immersive = useWorkspace((state) => state.immersive);
 
@@ -74,6 +75,14 @@ export function AppShell() {
         <Topbar onOpenMobile={() => setMobileOpen(true)} />
         <main className="inner-grid flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-[1320px]">
+            {refreshFailed ? (
+              <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber/30 bg-amber/8 px-4 py-3 text-xs text-amber">
+                <span>暂时无法更新。当前显示上次加载的数据。</span>
+                <button type="button" className="underline underline-offset-4" onClick={() => void refresh()}>
+                  重新连接
+                </button>
+              </div>
+            ) : null}
             <Outlet />
           </div>
         </main>

@@ -47,6 +47,10 @@ class ExternalAccountRead(Model):
     session_status: str = Field(min_length=1, max_length=32)
     baseline_plays: int | None = Field(default=None, ge=0)
     imported_count: int = Field(default=0, ge=0)
+    login_error: str | None = None
+    import_error: str | None = None
+    last_synced_at: str | None = None
+    last_sync_count: int | None = None
 
 
 class ManualImport(Model):

@@ -358,6 +358,10 @@ class CreateTask(Model):
         return self
 
 
+class CreateWorkspaceTask(CreateTask):
+    history_account_id: Id | None = None
+
+
 class Expected(Model):
     expected_row_version: int = Field(ge=0)
 
@@ -624,6 +628,7 @@ class TaskSummary(Model):
     mode: Literal["mock", "live"]
     usage: Usage
     error: ErrorDetail | None
+    can_resume: bool = False
 
 
 class BriefRead(Model):
@@ -821,6 +826,7 @@ class PreviewRead(Model):
     analysis_status: Literal["pending", "succeeded", "failed", "skipped"]
     usage: Usage
     error: ErrorDetail | None
+    can_resume: bool = False
 
 
 class PreflightRead(Model):

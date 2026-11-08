@@ -98,6 +98,12 @@ export interface TaskOutput {
   title: string;
   body: string;
   updatedAt: string;
+  cover?: string | null;
+  ruleIssues?: { rule_id: string; reason: string; segment_id: string | null }[];
+  review?: {
+    overall: "pass" | "revise" | "needs_input";
+    issues: { location: string; reason: string; requested_change: string; severity: string }[];
+  } | null;
 }
 
 export type TaskEventKind =
@@ -134,6 +140,17 @@ export interface BackendUsage {
   costStatus: string;
 }
 
+export interface TaskQuestion {
+  id: string;
+  question: string;
+  reason: string;
+}
+
+export type TaskContinuation =
+  | { type: "supply_input"; rowVersion: number; answers: Record<string, string> }
+  | { type: "resume_task"; rowVersion: number }
+  | { type: "resume_preview"; previewId: string; rowVersion: number };
+
 export interface TaskVM {
   id: string;
   title: string;
@@ -163,14 +180,23 @@ export interface TaskVM {
   queuePosition: number | null;
   briefConfirmed: boolean;
   previewRequested: boolean;
+  questions?: TaskQuestion[];
+  canResume?: boolean;
   preview?: {
+    id: string;
+    rowVersion: number;
     state: string;
+    analysisStatus: string;
     started: number | null;
     selected: number | null;
-    findings: string[];
+    findings: { id: string; segment_id: string; interpretation: string; suggested_edit: string }[];
+    error: string | null;
+    nextAction: string | null;
+    canResume: boolean;
   };
   usage: BackendUsage | null;
   backendError: string | null;
+  backendNextAction?: string | null;
 }
 
 export interface ProjectVM {
@@ -236,11 +262,14 @@ export interface CreateTaskInput {
   previewRequested: boolean;
   sourceText?: string;
   commercialBrief?: boolean;
+  historyAccountId?: string;
 }
 
 export interface DecisionOptions {
   note?: string;
   editedBody?: string;
+  expectedBriefVersion?: number;
+  expectedContentVersionId?: string;
 }
 
 export class ApiNotWiredError extends Error {
